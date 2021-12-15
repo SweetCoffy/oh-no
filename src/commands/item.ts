@@ -76,7 +76,7 @@ export var command: Command = {
                         if (el.user.id != i.user.id) {
                             el.reply({
                                 ephemeral: true,
-                                content: "fuk yu"
+                                content: "This is not for you"
                             })
                             return false
                         }

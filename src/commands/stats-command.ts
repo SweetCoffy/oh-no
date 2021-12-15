@@ -210,7 +210,7 @@ export var command: Command = {
             case "use": {
                 var id = i.options.getString("preset", true)
                 var p = getPreset(id, i.user)
-                if (!p) return await i.reply("fuk yu")
+                if (!p) return await i.reply("Unknown preset")
                 var u = getUser(i.user)
                 var total = Object.values(p.stats).reduce((prev, cur) => prev + cur, 0)
                 if (total > 600) return await i.reply(`Illegal preset, base stat total must not exceed 600`)

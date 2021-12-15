@@ -78,7 +78,7 @@ export var command: Command = {
         }
     ],
     async run(i) {
-        if (!(i.channel instanceof TextChannel)) return await i.reply("big bruh")
+        if (!(i.channel instanceof TextChannel)) return await i.reply("Wha")
         async function lobbyInfo(lobby: BattleLobby, i: CommandInteraction) {
             return await i.reply({
                 embeds: [
@@ -95,7 +95,7 @@ export var command: Command = {
                     embeds: [
                         {
                             title: `Lobby list`,
-                            description: lobbies.map(el => `${el.name} (\`${el.id}\`)`).join("\n") || "empty af"
+                            description: lobbies.map(el => `${el.name} (\`${el.id}\`)`).join("\n") || "Empty"
                         }
                     ]
                 })
@@ -105,7 +105,7 @@ export var command: Command = {
                 let lobby = findValidLobby(i.user)
                 if (lobby) {
                     await lobbyInfo(lobby, i)
-                } else return await i.reply("Could't find a valid lobby, big brug")
+                } else return await i.reply("Could't find a valid lobby")
                 break;
             }
             case "join": {
@@ -150,7 +150,10 @@ export var command: Command = {
                             await i.channel.send(`${lobby.users.map(el => el.toString()).join(", ")} Pingery\n${winner ? `${winner.name} Won` : `It was a tie`}`)
                         })
                     }
-                } else return i.reply("bruv")
+                } else {
+                    if (!lobby) await i.reply("You are not in a lobby")
+                    if (lobby?.start) await i.reply("The lobby already started")
+                }
                 break;
             }
             case "leave": {
@@ -158,17 +161,12 @@ export var command: Command = {
                 if (lobby) {
                     if (lobby.host.id != i.user.id) {
                         lobby.leave(i.user)
-                        if (!lobby.battle) {
-                            await i.reply("Left the lobby")
-                        } else {
-                            var lost = Math.floor(getUser(i.user).score * 0.075)
-                            await i.reply(`Left the lobby while a battle was running, lost ${lost} score`)
-                        }
+                        await i.reply("Left the lobby")
                     } else {
                         lobby.delete()
                         await i.reply("Ended the lobby")
                     }
-                } else return i.reply("bruh")
+                } else return i.reply("You are not in a lobby")
             }
         }
     }

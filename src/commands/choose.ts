@@ -13,52 +13,51 @@ export var command: Command = {
 
         {
             type: "SUB_COMMAND",
-            description: "bruv",
+            description: "Choose a move",
             name: "move",
             options: [
                 {
                     name: "move",
                     type: "STRING",
                     required: true,
-                    description: "bruhg",
+                    description: "The move to use",
                     choices: moves.map((el, k) => ({name: el.name, value: k}))
                 },
                 {
                     name: "target",
                     type: "INTEGER",
                     required: true,
-                    description: "bruv",
+                    description: "The target of the move",
                 }
             ]
         },
         {
             type: "SUB_COMMAND",
-            description: "bruv",
+            description: "Shows info about a move",
             name: "help",
             options: [
                 {
                     name: "move",
                     type: "STRING",
                     required: true,
-                    description: "bruhg",
+                    description: "The move to show info about",
                     choices: moves.map((el, k) => ({name: el.name, value: k}))
                 },
             ]
         },
     ],
     async run(i) {
-        if (!(i.channel instanceof TextChannel)) return await i.reply("big bruh")
+        if (!(i.channel instanceof TextChannel)) return await i.reply("What")
         var u = getUser(i.user)
         switch (i.options.getSubcommand()) {
             case "move": {
-                if (!u.lobby) return await i.reply("fuk yu")
-                if (!u.lobby.battle) return await i.reply("fuk yu 2: electric boogaloo")
+                if (!u.lobby?.battle) return await i.reply("You cannot choose outside of battle")
                 var moveId = i.options.getString("move", true)
                 var player = u.lobby.battle.players[i.options.getInteger("target", true)]
                 //var player = u.lobby.battle.players.find(el => el.user?.id == target.id)
-                if (!player) return await i.reply("bruv")
+                if (!player) return await i.reply("Invalid target")
                 var play = u.lobby.battle.players.find(el => el.user?.id == i.user.id)
-                if (!play) return await i.reply("faeoighnesoirgjenrgedrgjoiershgnsdfibgheutirhg34weti9unsdrjegeoirthgn")
+                if (!play) return await i.reply("What")
                 u.lobby.battle.moveAction(play, moveId, player)
                 await i.reply({
                     ephemeral: true,

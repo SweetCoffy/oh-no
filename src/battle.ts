@@ -338,7 +338,7 @@ export class Battle extends EventEmitter {
                             str += `\n[ ${a.join(" | ")} ]`
                         }
                         return str
-                    }).join("\n") || "bruv",
+                    }).join("\n") || "Empty",
                     fields: [
                         {
                             name: "Logs",

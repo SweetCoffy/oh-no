@@ -80,7 +80,7 @@ export var command: Command = {
                         if (el.user.id != i.user.id) {
                             el.reply({
                                 ephemeral: true,
-                                content: "fuk yu"
+                                content: "This is not for you"
                             })
                             return false
                         }
@@ -122,7 +122,7 @@ export var command: Command = {
                         var res = useItem(i.user, item, amount)
                         await itemResponseReply(res, i, item, amount)
                     }
-                } else await i.reply("Unknown item, bruhing")
+                } else await i.reply("Unknown item")
                 break;
             }
         }

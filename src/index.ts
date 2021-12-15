@@ -32,7 +32,7 @@ client.on("interactionCreate", async(i) => {
     try {
         console.log(`${i.user.username} /${i.commandName}`)
         var cmd = commands.get(i.commandName)
-        if (!cmd) return void await i.reply("Unknown command, fuk yu")
+        if (!cmd) return void await i.reply("Unknown command")
         //@ts-ignore
         await cmd.run(i)
     } catch (er) {
@@ -45,7 +45,6 @@ client.on("interactionCreate", async(i) => {
                         description: er.message,
                         color: 0xff0000,
                         //@ts-ignore
-                        footer: { text: er.intended ? `bruv` : `this error wasn't intended, might wanna send funni report... oh wait, you can't` },
                     }
                 ],
                 ephemeral: true
