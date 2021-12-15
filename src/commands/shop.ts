@@ -66,9 +66,7 @@ export var command: Command = {
                     fetchReply: true,
                     embeds: [
                         {
-                            title: "Doing ur mom...",
-                            description: "Doing ur mom...",
-                            footer: { text: "Doing ur mom..." }
+                            description: "...",
                         }
                     ],
                     

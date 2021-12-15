@@ -32,6 +32,25 @@ export var command: Command = {
                 },
             ]
         },
+        {
+            type: "SUB_COMMAND",
+            name: "sell",
+            description: "Sells an item",
+            options: [
+                {
+                    type: "STRING",
+                    name: "item",
+                    description: "The item to sell",
+                    required: true,
+                },
+                {
+                    type: "INTEGER",
+                    name: "amount",
+                    description: "The amount of items to sell",
+                    required: false,
+                },
+            ]
+        },
     ],
     async run(i) {
         var u = getUser(i.user)
@@ -62,9 +81,7 @@ export var command: Command = {
                     fetchReply: true,
                     embeds: [
                         {
-                            title: "Doing ur mom...",
-                            description: "Doing ur mom...",
-                            footer: { text: "Doing ur mom..." }
+                            description: "...",
                         }
                     ],
                     
@@ -104,6 +121,24 @@ export var command: Command = {
                 var amount = BigInt(i.options.getInteger("amount") || 0) || getItem(i.user, item)?.amount || 1n
                 var res = useItem(i.user, item, amount)
                 await itemResponseReply(res, i, item, amount)
+                break;
+            }
+            case "sell": {
+                var item = i.options.getString("item", true)
+                var amount = BigInt(i.options.getInteger("amount") || 0) || getItem(i.user, item)?.amount || 1n
+                var itemInfo = shopItems.get(item)
+                var it = getItem(i.user, item)
+                if (!it) return await i.reply("Bruh")
+                if (it.amount < amount) return await i.reply("No")
+                if (itemInfo) {
+                    var amt = itemInfo.cost/2n * amount
+                    it.amount -= amt
+                    getUser(i.user).money.points += amt
+                    if (itemInfo.stock != Infinity) {
+                        itemInfo.stock += Number(amount)
+                    }
+                    await i.reply(`Sold ${itemInfo.toString(amount)} for ${format(amt)}$`)
+                } else await i.reply("What\n\nHow")
                 break;
             }
         }
