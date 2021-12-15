@@ -10,6 +10,6 @@ After compiling, do `node .` to run, but before running, create a `config.json` 
 {
     "token": "Bot token goes here",
     "test_guild": "Test guild ID goes here",
-    "owner_id": "Bot owner ID goes here",
+    "owner_id": "Bot owner ID goes here"
 }
 ```
