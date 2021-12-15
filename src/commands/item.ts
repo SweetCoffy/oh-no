@@ -132,7 +132,7 @@ export var command: Command = {
                 if (it.amount < amount) return await i.reply("No")
                 if (itemInfo) {
                     var amt = itemInfo.cost/2n * amount
-                    it.amount -= amt
+                    it.amount -= amount
                     getUser(i.user).money.points += amt
                     if (itemInfo.stock != Infinity) {
                         itemInfo.stock += Number(amount)
