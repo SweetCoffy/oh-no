@@ -114,6 +114,7 @@ export var command: Command = {
                     var cost = itemInfo.cost * BigInt(amount)
                     if (cost > u.money.points) return await i.reply(`Can't afford item (${format(cost)}$)`)
                     u.money.points -= cost
+                    itemInfo.stock -= Number(amount)
                     addItem(i.user, { item: itemInfo.id, amount: amount })
                     await i.reply(`Bought ${itemInfo.toString(amount)} for ${format(cost)}$`)
                     if (autouse) {

@@ -86,6 +86,11 @@ process.on("SIGINT", () => {
     }
     console.log(obj)
     writeFileSync(`users.json`, JSON.stringify(obj, null, 4))
+    for (let [k, v] of shopItems) {
+        if (v.stock != Infinity) {
+            globalData.itemStock[k] = v.stock
+        }
+    }
     writeFileSync("global.json", JSON.stringify(globalData, function(k, v){
         if (typeof v == "bigint") return `BigInt:${v}`
         return v
