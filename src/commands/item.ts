@@ -130,7 +130,7 @@ export var command: Command = {
                 var it = getItem(i.user, item)
                 if (!it) return await i.reply("Bruh")
                 if (it.amount < amount) return await i.reply("No")
-                //asd
+                //asd asd
                 if (itemInfo) {
                     var amt = itemInfo.cost/2n * amount
                     it.amount -= amt
