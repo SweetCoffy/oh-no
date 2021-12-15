@@ -102,3 +102,13 @@ dist
 
 # TernJS port file
 .tern-port
+
+# Compiled JavaScript files shouldn't end up in the repo
+build/
+
+# Neither data files should
+users.json
+global.json
+
+# Unused file
+src/map.ts
