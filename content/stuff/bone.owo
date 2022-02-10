@@ -1,0 +1,6 @@
+item
+ContentID = bone
+Name = Bone
+Icon = 🦴
+Price = 600
+OnUse = "item-uses.js:bone"

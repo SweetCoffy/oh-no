@@ -1,5 +1,6 @@
 import { Collection, User } from "discord.js"
-import { Battle, Player } from "./battle.js"
+import { Battle, Player, BattleType } from "./battle.js"
+import { enemies } from "./enemies.js"
 import { items } from "./helditem.js"
 import { presets } from "./stats.js"
 import { getUser, users } from "./users.js"
@@ -11,6 +12,7 @@ export class LeaveError extends Error {
     name = "LeaveError"
     intended = true
 }
+export type Difficulty = "easy" | "medium" | "hard" | "hell"
 export const lobbies: Collection<string, BattleLobby> = new Collection<string, BattleLobby>()
 var bruhnum = 0
 export class BattleLobby {
@@ -24,7 +26,9 @@ export class BattleLobby {
     id: string
     name: string
     level: number = 1
+    type: BattleType = "ffa"
     botCount: number = 0
+    bossType?: string
     constructor(host: User, needed = 2, name?: string, capacity?: number) {
         this.needed = needed
         this.host = host
@@ -59,6 +63,7 @@ export class BattleLobby {
             this.battle.checkActions()
         }
     }
+    difficulty: Difficulty = "medium"
     start() {
         this.battle = new Battle(this)
         var l = this
@@ -69,20 +74,50 @@ export class BattleLobby {
         for (var u of this.users) {
             var play = new Player(u)
             play.level = this.level
-            console.log(getUser(u))
+            play.moveset = (getUser(u).moveset).slice(0, 4)
             play.helditems = (getUser(u).helditems || []).slice(0, 4).map(el => ({id: el}))
-            console.log(play.helditems)
+            
             play.updateStats()
             this.battle.players.push(play)
         }
-        var b = presets.map(el => el.stats)
         var it = items.map((el, k) => k)
+        var levelPerPlayer = 50
+        if (this.difficulty == "easy") levelPerPlayer = 25
+        if (this.difficulty == "hard") levelPerPlayer = 65
+        if (this.difficulty == "hell") levelPerPlayer = 100
+        var allowedPresets = [...presets.keys()]
+        if (this.type == "boss") {
+            var exclude = ["tonk", "extreme-tonk", "default"]
+            allowedPresets = allowedPresets.filter(el => !exclude.includes(el))
+        }
+        var b = allowedPresets.map(el => presets.get(el)?.stats)
         for (var i = 0; i < this.botCount; i++) {
             var bot = new Player()
             bot.level = this.level
-            bot.baseStats = b[Math.floor(Math.random() * b.length)]
-            for (var j = 0; j < 4; j++) {
-                bot.helditems.push({id: it[Math.floor(Math.random() * it.length)]})
+            if (this.type == "pve") {
+                bot.level = Math.ceil(bot.level * 0.6)
+            }
+            if (this.type == "boss") {
+                bot.level += levelPerPlayer * this.users.length
+                this.battle.statBoost(bot, "atk", 1);
+                this.battle.statBoost(bot, "def", 1);
+                this.battle.statBoost(bot, "spatk", 1);
+                this.battle.statBoost(bot, "spdef", 1);
+                bot.helditems.push({id: "bruh_orb"});
+            } else {
+                for (var j = 0; j < 4; j++) {
+                    bot.helditems.push({id: it[Math.floor(Math.random() * it.length)]})
+                }
+            }
+            //@ts-ignore
+            bot.baseStats = {...b[Math.floor(Math.random() * b.length)]}
+            if (this.bossType) {
+                var enemy = enemies.get(this.bossType);
+                if (enemy) {
+                    bot.baseStats = {...enemy.stats}
+                    bot._nickname = enemy.name
+                    bot.ai = enemy.ai
+                }
             }
             bot.updateStats()
             this.battle.players.push(bot)

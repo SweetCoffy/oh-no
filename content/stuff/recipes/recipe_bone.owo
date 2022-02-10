@@ -1,0 +1,5 @@
+recipe
+ContentID = recipe_bone
+Name = 3x Fish -> Bone
+Input = [3*fish]
+Output = 1*bone

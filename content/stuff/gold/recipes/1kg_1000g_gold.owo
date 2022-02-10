@@ -1,0 +1,5 @@
+recipe
+ContentID = 1kg_1g_gold
+Name = 1kg -> 1000g Gold
+Input = [1*1kg_gold]
+Output = 1000*1g_gold

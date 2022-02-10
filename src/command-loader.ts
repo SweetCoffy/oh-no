@@ -1,11 +1,12 @@
-import { ApplicationCommandDataResolvable, CommandInteraction, Collection, Guild, ContextMenuInteraction, ApplicationCommandData, ChatInputApplicationCommandData, UserApplicationCommandData } from "discord.js";
-import { readdir } from "fs/promises"
-import { resolve } from "path"
+import { CommandInteraction, Collection, Guild, ContextMenuInteraction, ChatInputApplicationCommandData, UserApplicationCommandData, AutocompleteInteraction } from "discord.js";
+import { statSync, readdirSync } from "fs"
+import { resolve, join } from "path"
+import { settings } from "./util.js"
 
-export type ChatInputCommand = ChatInputApplicationCommandData & { run(i: CommandInteraction): any }
+export type ChatInputCommand = ChatInputApplicationCommandData & { run(i: CommandInteraction): any, autocomplete?(i: AutocompleteInteraction): any }
 export type UserCommand = UserApplicationCommandData & { run(i: ContextMenuInteraction): any }
 
-export type Command = ChatInputCommand | UserCommand
+export type Command = (ChatInputCommand | UserCommand) & {dev?: boolean}
 
 export var commands: Collection<string, Command> = new Collection()
 
@@ -17,13 +18,28 @@ export async function load(file: string) {
 
 export async function loadDir(dir: string) {
     var fulldir = resolve(`./build/${dir}`)
-    var files = await readdir(fulldir)
-    return await Promise.all(files.map(el => load(`${fulldir}/${el}`)))
+    function readdirRecursive(dir: string) {
+        var files: string[] = []
+        for (var f of readdirSync(dir)) {
+            var p = join(dir, f)
+            if (f.startsWith("stable_") && settings.experimental) continue;
+            if (f.startsWith("exp_") && !settings.experimental) continue;
+            if (statSync(p).isDirectory()) {
+                files.push(...readdirRecursive(p))
+                continue
+            }
+            files.push(p)
+        }
+        return files
+    }
+    var files = readdirRecursive(fulldir)
+    return await Promise.all(files.map(el => load(`${el}`)))
 }
 
 export async function addCommands(g: Guild, cmds: Command[]) {
+    if (!process.argv.includes("-update")) return
     await Promise.all(cmds.map(el => {
-        console.log(el)
+        
         return g.commands.create(el)
     }))
 }

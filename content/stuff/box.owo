@@ -1,0 +1,9 @@
+item
+ContentID = "box"
+Name = "Box"
+Unstackable = True
+Shop = "main"
+Price = 999
+Icon = "📦"
+OnUse = "item-uses.js:box"
+DefaultData = {items: [], capacity: 4, type: "box"}

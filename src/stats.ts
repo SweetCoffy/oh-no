@@ -104,12 +104,13 @@ export function makeStats(obj?: {[key: string]: number}): Stats {
 export function calcStat(base: number, level: number, ev: number = 0) {
     return Math.floor(0.01 * (2 * base + 31 + Math.floor(0.25 * ev)) * level) + 5
 }
-export function calcStats(level: number, baseStats: Stats): Stats {
+export function calcStats(level: number, baseStats: Stats, hpboost: number = 1): Stats {
     var s = makeStats()
     for (var k in baseStats) {
         s[k] = calcStat(baseStats[k], level, 0)
     }
-    s.hp += level + 5
+    s.hp += (level + 5) * 1.1
+    s.hp = Math.floor(s.hp * 1.7821676118462508 * hpboost)
     return s
 }
 export function getPreset(name: string, user?: User) {

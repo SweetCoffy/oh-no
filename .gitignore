@@ -109,6 +109,7 @@ build/
 # Neither data files should
 users.json
 global.json
+map.txt
 
-# Unused file
-src/map.ts
+# Nor this test content folder
+content/exp_test

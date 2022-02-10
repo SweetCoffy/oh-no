@@ -4,7 +4,8 @@ import { getString, LocaleString } from "./locale.js";
 import { rng } from "./util.js"
 export interface HeldItem {
     id: string,
-    remove?: boolean
+    remove?: boolean,
+    durability?: number,
 }
 type HeldItemCallback = (battle: Battle, player: Player, item: HeldItem) => any
 function healEffect(percent: number, silent: boolean = false, message: LocaleString = "heal.generic"): HeldItemCallback {
@@ -79,15 +80,15 @@ export class HeldItemType {
 export var items: Collection<string, HeldItemType> = new Collection()
 items.set("eggs", 
 new HeldItemType("Eggs", healEffect(0.05), multiEffect(healEffect(1), statEffect("def", 1), statEffect("spdef", 1)))
-.setEffect("Heals the user by 5% of their max HP", "Fully heals the user and incrases Defense and Special Defense"))
+.setEffect("Heals the user by 5% of their max HP", "Fully heals the user and increases Defense and Special Defense"))
 
 items.set("shield", 
 new HeldItemType("Shield", everyXTurnsEffect(2, 
 
-    multiEffect(messageEffect("item.shield.unboost"), statEffect("def", -2, true), statEffect("spdef", -2, true),
+    multiEffect(messageEffect("item.shield.unboost"), statEffect("def", -1, true), statEffect("spdef", -1, true),
     statEffect("atk", 1, true), statEffect("spatk", 1, true)),
 
-    multiEffect(messageEffect("item.shield.boost"), statEffect("def", 2, true), statEffect("spdef", 2, true),
+    multiEffect(messageEffect("item.shield.boost"), statEffect("def", 1, true), statEffect("spdef", 1, true),
     statEffect("atk", -1, true), statEffect("spatk", -1, true))
 
     ), multiEffect(statEffect("def", 6), statEffect("spdef", 6)))
@@ -96,6 +97,7 @@ items.set("threat_orb",
 new HeldItemType("Threatening Orb", function(b, p, it) {
     if ((b.turn - 1) % 5 == 0) {
         b.log(`${p.name}'s Threatening Orb moment`, "red")
+        if (b.type == "pve") return b.log(`It had no effect!`)
         for (var player of b.players) {
             if (player != p) {
                 b.statBoost(player, "atk", -1)
@@ -113,3 +115,22 @@ new HeldItemType("Threatening Orb", function(b, p, it) {
     }
 }).setEffect("Every 3 turns, everyone else's Attack and Special Attack stats will be lowered", "Everyone else's Attack and Special Attack is lowered to oblivion")
 )
+items.set("category_swap",
+new HeldItemType("Category Swap").setEffect("Swaps the category of all moves used"))
+
+items.set("bruh_orb",
+new HeldItemType("Bruh Orb").setEffect("ae"))
+
+items.set("bruh_orb_attack",
+new HeldItemType("Bruh Orb (Attack)").setEffect("ae"))
+
+items.set("bruh_orb_defense",
+new HeldItemType("Bruh Orb (Defense)").setEffect("ae"))
+
+items.set("bruh_orb_hp",
+new HeldItemType("Bruh Orb (HP)").setEffect("ae"))
+
+items.set("mirror", 
+new HeldItemType("Mirror").setEffect("Halves damage taken and reflects it to the attacker with double the power. Turns into Broken Mirror when used"))
+items.set("broken_mirror", 
+new HeldItemType("Broken Mirror").setEffect("Doubles damage taken but reflects it to the attacker"))

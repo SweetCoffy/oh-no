@@ -1,0 +1,9 @@
+item
+ContentID = fishing_rod
+Name = Fishing Rod
+Icon = 🎣
+Price = 900
+Shop = main
+Unstackable = True
+DefaultData = { type: "tool", durability: 16, durability_max: 16 }
+OnUse = "item-uses.js:fishing_rod"

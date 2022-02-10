@@ -11,6 +11,14 @@
   "type": "module",
   "license": "ISC",
   "dependencies": {
-    "discord.js": "^13.3.1"
+    "canvas": "^2.8.0",
+    "discord.js": "^13.3.1",
+    "hjson": "^3.2.2",
+    "node-fetch": "^3.1.0",
+    "simplex-noise": "^3.0.0",
+    "vm2": "^3.9.5"
+  },
+  "devDependencies": {
+    "@types/hjson": "^2.4.3"
   }
 }
