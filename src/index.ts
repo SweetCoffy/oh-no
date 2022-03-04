@@ -8,7 +8,7 @@ for (var a of process.argv.slice(2)) {
 import Discord from "discord.js"
 import { BattleLobby, lobbies, createLobby } from "./lobby.js"
 import { commands, loadDir, addCommands } from "./command-loader.js"
-import { users, createUser, getUser, UserSaveData, data, globalData } from "./users.js"
+import { users, createUser, getUser, UserSaveData, data, globalData, clearUser, getUserSaveData, replacer } from "./users.js"
 import { writeFileSync, readFileSync, readdirSync, existsSync, statSync } from "fs"
 import { shopItems } from "./items.js"
 import canvas from "canvas"
@@ -17,7 +17,6 @@ import { resolve } from "path"
 import { map } from "./game-map.js"
 import { load } from "./content-loader.js"
 import { serialize } from "./serialize.js"
-import { log } from "./debugging.js"
 
 if (existsSync("map.txt")) {
     map.fromString(readFileSync("map.txt", "utf8"))
@@ -56,14 +55,14 @@ client.on("interactionCreate", async(i) => {
     if (!i.isCommand() && !i.isContextMenu()) return
     try {
         getUser(i.user).lastCommand = Date.now()
-        
+        console.log(`${i.user.username} /${i.commandName}`)
         var cmd = commands.get(i.commandName)
         if (!cmd) return void await i.reply("Unknown command")
         //@ts-ignore
         await cmd.run(i)
     } catch (er) {
         if (er instanceof Error) {
-            
+            console.error(er)
             var o = {
                 embeds: [
                     {
@@ -83,19 +82,11 @@ client.on("interactionCreate", async(i) => {
         }
     }
 })
-client.on("interactionCreate", async(i) => {
-    if (!i.isAutocomplete()) return;
-    
-})
 
 process.on("unhandledRejection", (er) => {
     console.error(er)
 })
 client.login(token);
-client.on("channelCreate", async (c) => {
-    if (!c.isThread()) return
-    await c.join()
-})
 function saveOther() {
     for (let [k, v] of shopItems) {
         if (v.stock != Infinity) {
@@ -107,6 +98,18 @@ function saveOther() {
         return v
     }, 4))
     writeFileSync("map.txt", map.toString())
+}
+function saveJSON_experimental() {
+    //@ts-ignore
+    var obj: { [key: string]: UserSaveData } = { ...data }
+    for (var [k, v] of users) {
+        obj[k] = getUserSaveData(v);
+    }
+    users.clear()
+    for (var k in obj) {
+        writeFileSync(`data/${k}.json`, JSON.stringify(obj[k], replacer, 4))
+    }
+    saveOther()
 }
 function saveJSON() {
     //@ts-ignore
@@ -120,30 +123,7 @@ function saveJSON() {
         }
     }
     for (var [k, v] of users) {
-        var m: any = {}
-        for (let k in v.money) {
-            //@ts-ignore
-            m[k] = v.money[k] + ""
-        }
-        obj[k] = {
-            baseStats: v.baseStats,
-            preset: v.preset,
-            presets: v.presets,
-            score: v.score ?? 1000,
-            money: m,
-            items: v.items.map(el => ({item: el.item, amount: el.amount + "", data: el.data})),
-            banks: v.banks + "",
-            multiplier: v.multiplier + "",
-            helditems: v.helditems,
-            bankLimit: v.bankLimit + "",
-            ownedTiles: tilesOwned[k] || [],
-            level: v.level,
-            xp: v.xp,
-            msgLvl_xp: v.msgLvl_xp,
-            msgLvl_messages: v.msgLvl_messages,
-            moveset: v.moveset,
-            rank_xp: v.rank_xp,
-        }
+        obj[k] = getUserSaveData(v)
     }
     
     writeFileSync(`users.json`, JSON.stringify(obj, function(k, v) {
@@ -164,29 +144,7 @@ function saveBin() {
         }
     }
     for (var [k, v] of users) {
-        var m: any = {}
-        for (let k in v.money) {
-            //@ts-ignore
-            m[k] = v.money[k] + ""
-        }
-        obj[k] = {
-            baseStats: v.baseStats,
-            preset: v.preset,
-            presets: v.presets,
-            score: v.score ?? 1000,
-            money: m,
-            items: v.items.map(el => ({item: el.item, amount: el.amount, data: el.data})),
-            banks: v.banks,
-            multiplier: v.multiplier,
-            helditems: v.helditems,
-            bankLimit: v.bankLimit,
-            ownedTiles: tilesOwned[k] || [],
-            level: v.level,
-            xp: v.xp,
-            msgLvl_xp: v.msgLvl_xp,
-            msgLvl_messages: v.msgLvl_messages,
-            moveset: v.moveset,
-        }
+        obj[k] = getUserSaveData(v)
     }
     var buf = serialize(obj)
     writeFileSync("userdata.bin", buf)
@@ -199,7 +157,10 @@ process.on("SIGINT", () => {
     }
     if (experimental.bin_save) {
         saveBin()
-    } else saveJSON()
+    } else {
+        if (experimental.airquotes_efficient_data) saveJSON_experimental()
+        else saveJSON()
+    }
     process.exit(0)
 })
 client.on("messageCreate", async(m) => {

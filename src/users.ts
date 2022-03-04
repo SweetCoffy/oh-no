@@ -2,37 +2,34 @@ import { User, Collection } from 'discord.js'
 import { BattleLobby } from './lobby.js'
 import { baseStats, Stats, getPreset, getPresetList, StatPreset } from './stats.js'
 import { ItemStack, ItemType } from "./items.js"
-import { writeFileSync, existsSync, readFileSync } from "fs"
-import { BitArray, BitArray2D, experimental } from './util.js'
+import { writeFileSync, existsSync, readFileSync, mkdirSync } from "fs"
+import { BitArray, BitArray2D, experimental, settings } from './util.js'
 import { map } from './game-map.js'
 import { client } from './index.js'
 import { Enemy } from './enemies.js'
 import { deserialize } from './serialize.js'
 export var data: any = {}
 
+function reviver(k: string, v: any) {
+    if (typeof v == "string" && v.startsWith("BigInt(") && v.endsWith(")")) return BigInt(v.slice("BigInt(".length, -1))
+    return v
+}
 /*if (false || experimental.bin_save) {
     if (existsSync("userdata.bin")) {
         data = deserialize(readFileSync("userdata.bin"))
     }
-} else */{
-    if (!existsSync("users.json")) {
-        writeFileSync("users.json", "{}")
-    }
-    data = JSON.parse(readFileSync("users.json", "utf8"), function(k, v) {
-        if (typeof v == "string" && v.startsWith("BigInt(") && v.endsWith(")")) return BigInt(v.slice("BigInt(".length, -1))
-        return v
-    })
-}
-for (var k in data) {
-    var owned = data[k].ownedTiles || []
-    for (var t of owned) {
-        var str = t.split(",")
-        var x = Number(str[0])
-        var y = Number(str[1])
-        var tile = map.get(x, y)
-        if (tile) tile.owner = k
+} else */
+{
+    if (experimental.airquotes_efficient_data) {
+        if (!existsSync("data/")) mkdirSync("data/")
+    } else {
+        if (!existsSync("users.json")) {
+            writeFileSync("users.json", "{}")
+        }
+        data = JSON.parse(readFileSync("users.json", "utf8"), reviver)
     }
 }
+
 export interface PresetList {
     [key: string]: StatPreset
 }
@@ -52,6 +49,7 @@ export interface UserInfo {
     items: ItemStack[],
     lastWork: number,
     helditems: string[],
+    unloadTimeout: NodeJS.Timeout | undefined,
     multiplier: bigint,
     banks: bigint,
     bankLimit: bigint,
@@ -89,6 +87,33 @@ export interface UserSaveData {
     moveset: string[],
     [key: string]: any,
 }
+export function getUserSaveData(info: UserInfo) {
+    var m: any = {}
+    for (let k in info.money) {
+        //@ts-ignore
+        m[k] = info.money[k] + ""
+    }
+    var obj = {
+        baseStats: info.baseStats,
+        preset: info.preset,
+        presets: info.presets,
+        score: info.score ?? 1000,
+        money: m,
+        items: info.items.map(el => ({item: el.item, amount: el.amount + "", data: el.data})),
+        banks: info.banks + "",
+        multiplier: info.multiplier + "",
+        helditems: info.helditems,
+        bankLimit: info.bankLimit + "",
+        ownedTiles: [],
+        level: info.level,
+        xp: info.xp,
+        msgLvl_xp: info.msgLvl_xp,
+        msgLvl_messages: info.msgLvl_messages,
+        moveset: info.moveset,
+        rank_xp: info.rank_xp,
+    }
+    return obj;
+}
 export interface GlobalData {
     itemStock: {
         [key: string]: number
@@ -107,13 +132,29 @@ if (existsSync("global.json")) {
     globalData = g || {}
 }
 export var users: Collection<string, UserInfo> = new Collection()
+export function replacer(k: string, v: any) {
+    if (typeof v == "bigint") return `BigInt(${v})`
+    return v
+}
 export function getUser(user: User | string): UserInfo {
     if (typeof user == "string") {
         user = client.users.cache.get(user) as User
     }
     if (!users.get(user.id)) createUser(user)
-    //@ts-ignore
-    return users.get(user.id)
+    var data = users.get(user.id) as UserInfo;
+    if (experimental.airquotes_efficient_data) {
+        if (!data.unloadTimeout) {
+            data.unloadTimeout = setTimeout(function() {
+                data.unloadTimeout = undefined;
+                writeFileSync(`data/${(user as User).id}.json`, JSON.stringify(getUserSaveData(data), replacer, 4))
+                users.delete((user as User).id);
+                console.log(`User ${(user as User).username} has been unloaded`)
+            }, settings.unloadTimeout)
+        } else {
+            data.unloadTimeout.refresh()
+        }
+    }
+    return data
 }
 export function level(user: User) {
     var u = getUser(user)
@@ -134,6 +175,7 @@ export function createUser(user: User) {
         score: 1000,
         banks: 0n,
         lastWork: 0,
+        unloadTimeout: undefined,
         money: {
             points: 3000n,
             gold: 0n,
@@ -144,7 +186,7 @@ export function createUser(user: User) {
         presets: {},
         lastShop: "main",
         bankLimit: 100n,
-        rank_xp: 7 * 7,
+        rank_xp: 0,
         selection: new BitArray2D(map.width, map.height),
         showGrid: false,
         buildMode: false,
@@ -159,9 +201,10 @@ export function createUser(user: User) {
         moveset: ["bonk", "nerf_gun", "stronk", "spstronk"],
         msgLvl_messages: 0,
         msgLvl_xp: 0,
-        
-        ...(data[user.id] || {})
     }
+    if (experimental.airquotes_efficient_data && existsSync(`data/${user.id}.json`)) {
+        obj = {...obj, ...JSON.parse(readFileSync(`data/${user.id}.json`, "utf8"), reviver)}
+    } else obj = {...obj, ...(data[user.id] || {})}
     for (var k in obj.money) {
         //@ts-ignore
         obj.money[k] = BigInt(obj.money[k])
@@ -190,5 +233,8 @@ export function addXP(user: User, amount: number) {
     return levels;
 }
 export function getRank(user: User) {
-    return Math.floor(Math.sqrt(getUser(user).rank_xp) / 7)
+    return Math.floor(Math.cbrt(getUser(user).rank_xp/1.5) / 3.5) + 1
+}
+export function clearUser(user: User) {
+
 }

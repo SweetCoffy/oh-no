@@ -1,5 +1,6 @@
 import { Collection, User } from "discord.js"
 import { getUser, PresetList } from "./users.js"
+import { experimental } from "./util.js"
 
 export interface Stats {
     [key: string]: number,
@@ -102,6 +103,7 @@ export function makeStats(obj?: {[key: string]: number}): Stats {
 // floor(0.01 x (2 x Base + IV + floor(0.25 x EV)) x Level) + Level + 10
 // floor(0.01 x (2 x Base + IV + floor(0.25 x EV)) x Level) + 5)
 export function calcStat(base: number, level: number, ev: number = 0) {
+    if (experimental.ohyes_stat_formula) Math.floor((base / 1.5) + (base * (level / 9)))
     return Math.floor(0.01 * (2 * base + 31 + Math.floor(0.25 * ev)) * level) + 5
 }
 export function calcStats(level: number, baseStats: Stats, hpboost: number = 1): Stats {
@@ -109,8 +111,12 @@ export function calcStats(level: number, baseStats: Stats, hpboost: number = 1):
     for (var k in baseStats) {
         s[k] = calcStat(baseStats[k], level, 0)
     }
-    s.hp += (level + 5) * 1.1
-    s.hp = Math.floor(s.hp * 1.7821676118462508 * hpboost)
+    if (experimental.ohyes_stat_formula) {
+        s.hp = Math.floor(s.hp*2.5 + baseStats.hp)
+    } else {
+        s.hp += (level + 5) * 1.1
+        s.hp = Math.floor(s.hp * 1.7821676118462508 * hpboost)
+    }
     return s
 }
 export function getPreset(name: string, user?: User) {

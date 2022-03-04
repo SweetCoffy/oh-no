@@ -1,5 +1,5 @@
 import { Collection } from "discord.js";
-import { Battle, Player } from "./battle";
+import { Battle, calcDamage, Player } from "./battle.js";
 import { getString, LocaleString } from "./locale.js";
 import { rng } from "./util.js"
 export interface HeldItem {
@@ -59,10 +59,15 @@ export class HeldItemType {
     removeUse: boolean = true
     onTurn?: HeldItemCallback
     onUse?: HeldItemCallback
+    icon?: string
     constructor(name: string, onTurn?: HeldItemCallback, onUse?: HeldItemCallback) {
         this.name = name
         this.onTurn = onTurn
         this.onUse = onUse
+    }
+    setIcon(icon: string) {
+        this.icon = icon;
+        return this
     }
     setEffect(passive?: string, active?: string) {
         if (passive) this.passiveEffect = passive
@@ -80,19 +85,24 @@ export class HeldItemType {
 export var items: Collection<string, HeldItemType> = new Collection()
 items.set("eggs", 
 new HeldItemType("Eggs", healEffect(0.05), multiEffect(healEffect(1), statEffect("def", 1), statEffect("spdef", 1)))
-.setEffect("Heals the user by 5% of their max HP", "Fully heals the user and increases Defense and Special Defense"))
+.setEffect("Heals the user by 5% of their max HP", "Fully heals the user and increases Defense and Special Defense").setIcon("<:EggItem:943340432690118698>"))
 
 items.set("shield", 
-new HeldItemType("Shield", everyXTurnsEffect(2, 
-
-    multiEffect(messageEffect("item.shield.unboost"), statEffect("def", -1, true), statEffect("spdef", -1, true),
-    statEffect("atk", 1, true), statEffect("spatk", 1, true)),
-
-    multiEffect(messageEffect("item.shield.boost"), statEffect("def", 1, true), statEffect("spdef", 1, true),
-    statEffect("atk", -1, true), statEffect("spatk", -1, true))
-
-    ), multiEffect(statEffect("def", 6), statEffect("spdef", 6)))
-.setEffect("Every other turn, the users Defense and Special defense are increased, at the cost of Attack and Special", "Sharply raises Defense and Special Defense and protects the user"))
+new HeldItemType("Shield", function(b, p, i) {
+    var d = i as HeldItem & { used: boolean }
+    if (!d.used) {
+        p.addModifier("def", { value: 4, label: "Shield Item" })
+        p.addModifier("spdef", { value: 4, label: "Shield Item" })
+        p.addModifier("atk", { value: 0.25, label: "Shield Item" })
+        p.addModifier("spatk", { value: 0.25, label: "Shield Item" })
+        p.addModifier("spd", { value: 0.25, label: "Shield Item" })
+        p.absorption += p.stats.hp / 4;
+        p.absorptionTier = 3;
+        
+        d.used = true;
+    }
+}, multiEffect(statEffect("def", 6), statEffect("spdef", 6)))
+.setEffect("Increases Defense and Special Defense drastically and grants 25% T2 absorption, lowers Attack, Special Attack and Speed severely", "Sharply raises Defense and Special Defense and protects the user"))
 items.set("threat_orb", 
 new HeldItemType("Threatening Orb", function(b, p, it) {
     if ((b.turn - 1) % 5 == 0) {
@@ -119,18 +129,16 @@ items.set("category_swap",
 new HeldItemType("Category Swap").setEffect("Swaps the category of all moves used"))
 
 items.set("bruh_orb",
-new HeldItemType("Bruh Orb").setEffect("ae"))
+new HeldItemType("Bruh Orb").setEffect("ae").setIcon("<:BruhOrb:943339300056072212>"))
 
 items.set("bruh_orb_attack",
-new HeldItemType("Bruh Orb (Attack)").setEffect("ae"))
+new HeldItemType("Bruh Orb (Attack)").setEffect("ae").setIcon("<:BruhOrbAttack:943339299598893057>"))
 
 items.set("bruh_orb_defense",
-new HeldItemType("Bruh Orb (Defense)").setEffect("ae"))
+new HeldItemType("Bruh Orb (Defense)").setEffect("ae").setIcon("<:BruhOrbDefense:943339299892514867>"))
 
 items.set("bruh_orb_hp",
-new HeldItemType("Bruh Orb (HP)").setEffect("ae"))
+new HeldItemType("Bruh Orb (HP)").setEffect("ae").setIcon("<:BruhOrbHP:943339299661807637>"))
 
 items.set("mirror", 
-new HeldItemType("Mirror").setEffect("Halves damage taken and reflects it to the attacker with double the power. Turns into Broken Mirror when used"))
-items.set("broken_mirror", 
-new HeldItemType("Broken Mirror").setEffect("Doubles damage taken but reflects it to the attacker"))
+new HeldItemType("Mirror").setEffect("Reflects damage inflicted by other players, will break if it takes too much damage"))

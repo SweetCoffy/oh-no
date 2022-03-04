@@ -85,7 +85,7 @@ export var command: Command = {
                         embeds: [
                             {
                                 title: `${shop.name}`,
-                                description: `Your money: ${shop.moneyIcon} ${format(shop.getMoney(i.user))}\n${shop.items.map(el => `${shopItems.get(el.id)?.toString()} - ${shop.moneyIcon} ${format(el.cost)}`).slice(page * pageSize, page * pageSize + pageSize).join("\n")}`,
+                                description: `Your money: ${shop.moneyIcon} ${format(shop.getMoney(i.user))}\n${shop.items.sort((a, b) => Number(b.cost - a.cost)).map(el => `${shopItems.get(el.id)?.toString()} - ${shop.moneyIcon} ${format(el.cost)}`).slice(page * pageSize, page * pageSize + pageSize).join("\n")}`,
                                 footer: { text: `Page ${page + 1}/${pageCount}` }
                             }
                         ],
@@ -140,11 +140,13 @@ export var command: Command = {
                 var amount = BigInt(i.options.getInteger("amount", false) || 0) || (shop.getMoney(i.user) / (itm?.cost || 1n)) || 1n
                 var autouse = i.options.getBoolean("auto_use")
                 if (itemInfo) {
-                    var res = shop.buyItem(i.user, item, amount)
+                    let res = shop.buyItem(i.user, item, amount)
                     await itemResponseReply(res, i)
                     if (autouse) {
-                        var res = useItem(i.user, item, amount)
-                        await itemResponseReply(res, i)
+                        let resGen = useItem(i.user, item, amount)
+                        for await (let res of resGen) {
+                            await itemResponseReply(res, i)
+                        }
                     }
                 } else await i.reply("Unknown item")
                 break;

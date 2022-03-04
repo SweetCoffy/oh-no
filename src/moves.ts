@@ -191,11 +191,12 @@ moves.set("sptonk", new Move("Magik Sheld", "status", 0, "status").set(move => {
 }).setDesc("Increases the user's Special Defense"))
 
 moves.set("mind_overwork", new Move("Neuro-Overclock", "status", 0, "status").set(move => {
-    move.targetStat.spatk = 1
-    move.targetStat.spdef = 1
-    move.recoil = 0.06
+    move.targetStat.spatk = 3
+    move.recoil = 0.15
+    move.userStat.spdef = -1
+    move.userStat.def = -1
     move.targetSelf = true
-}).setDesc("Increases the user's Special Defense and Special Attack. However, it costs some HP to use"))
+}).setDesc("Increases the user's Special Attack drastically. However, it costs some HP to use"))
 
 // P R O T E C T
 moves.set("protect", new Move("Protect", "protect", 0, "status").set(move => move.priority = 4).setDesc("Protects the user from any damage for the whole turn, sucess rate lowers the more times used"))

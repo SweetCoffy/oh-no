@@ -94,6 +94,19 @@ export var command: Command = {
                     type: "STRING",
                     description: "beuhg",
                     choices: enemies.filter(el => el.boss).map((el, k) => ({name: el.name, value: k}))
+                },
+                {
+                    name: "lobby_flags",
+                    required: false,
+                    type: "STRING",
+                    description: "ha ha flags"
+                },
+                {
+                    name: 'enemy_preset',
+                    required: false,
+                    type: "STRING",
+                    description: "The enemy preset to use, only has an effect in lobbies with the E flag",
+                    choices: enemies.map((v, k) => ({name: v.name, value: k}))
                 }
             ]
         },
@@ -125,9 +138,32 @@ export var command: Command = {
                     required: true,
                     type: "STRING",
                     description: "The ID of the lobby to join",
+                },
+                {
+                    name: 'enemy_preset',
+                    required: false,
+                    type: "STRING",
+                    description: "The enemy preset to use, only has an effect in lobbies with the E flag",
+                    choices: enemies.map((v, k) => ({name: v.name, value: k}))
+                },
+                {
+                    name: 'team',
+                    required: false,
+                    type: "INTEGER",
+                    description: "The team to join as, only has an effect in lobbies with the T flag",
+                    choices: [
+                        {
+                            name: "Player",
+                            value: 0
+                        },
+                        {
+                            name: "Enemy",
+                            value: 1
+                        }
+                    ]
                 }
             ]
-        }
+        },
     ],
     async run(i) {
         if (!i.channel?.isText()) return await i.reply("Wha")
@@ -136,7 +172,7 @@ export var command: Command = {
                 embeds: [
                     {
                         title: `${lobby.name}`,
-                        description: `ID: ${lobby.id}\nHas started: ${lobby.started ? "Yes" : "No"}\nPlayers: ${lobby.users.length}/${lobby.capacity}\nBot count: ${lobby.botCount}\nLevel: ${lobby.level}\nTotal score: ${lobby.battle?.totalScore ?? "N/A"}`
+                        description: `ID: ${lobby.id}\nHas started: ${lobby.started ? "Yes" : "No"}\nPlayers: ${lobby.users.length}/${lobby.capacity}\nBot count: ${lobby.botCount}\nLevel: ${lobby.level}\nFlags: ${lobby.flagsString}`
                     }
                 ],
                 components: [
@@ -147,7 +183,7 @@ export var command: Command = {
             reply.createMessageComponentCollector({time: 1000 * 60 * 5}).on("collect", async(i) => {
                 if (i.customId == "join") {
                     try {
-                        lobby.join(i.user)
+                        lobby.join(i.user, undefined, i.channel || undefined)
                         await i.reply({
                             content: `${i.user.username} has joined`,
                         })
@@ -185,7 +221,7 @@ export var command: Command = {
                 if (getUser(i.user).lobby) return await i.reply("eriughergieuhgr")
                 let lobby = lobbies.get(i.options.getString("lobby_id", true))
                 if (!lobby) return await i.reply("uaishfuiersnvgeiurgrgerg")
-                lobby.join(i.user)
+                lobby.join(i.user, { enemyPreset: i.options.getString("enemy_preset") || undefined, team: i.options.getInteger("team") || 0 }, i.channel)
                 await i.reply(`Joined the lobby`)
                 break;
             }
@@ -197,6 +233,9 @@ export var command: Command = {
                 lobby.type = (i.options.getString("lobby_battle_type", false) || "ffa") as BattleType
                 lobby.difficulty = (i.options.getString("lobby_difficulty", false) || "medium") as Difficulty
                 lobby.bossType = i.options.getString("lobby_boss_type") || undefined
+                lobby.flags = i.options.getString("lobby_flags") || ""
+                lobby.usersE[0].enemyPreset = i.options.getString("enemy_preset") || "default"
+                lobby.channels.push(i.channel)
                 await lobbyInfo(lobby, i)
                 if (i.options.getBoolean("lobby_bot_join")) {
                     if (i.client.user) lobby.join(i.client.user)
@@ -212,13 +251,22 @@ export var command: Command = {
                     })
                     let battle = lobby.battle
                     if (battle) {
-                        var lastInfo = await battle.infoMessage(i.channel)
+                        var lastInfos: Message[] = []
+                        for (var c of lobby.channels) {
+                            lastInfos.push(await battle.infoMessage(c))
+                        }
                         battle.checkActions();
                         battle.on("newTurn", async() => {
                             if (!battle) return
+                            if (!lobby) return
                             if (!(i.channel instanceof TextChannel)) return
-                            if (lastInfo.deletable) await lastInfo.delete()
-                            lastInfo = await battle.infoMessage(i.channel)
+                            for (var lastInfo of lastInfos) {
+                                if (lastInfo.deletable) await lastInfo.delete()
+                            }
+                            lastInfos = []
+                            for (var c of lobby.channels) {
+                                lastInfos.push(await battle.infoMessage(c))
+                            }
                             setTimeout(() => {
                                 battle?.checkActions();
                             }, 5000)

@@ -9,19 +9,31 @@ export var command: Command = {
     description: "pingery",
     options: [
         {
-            type: "INTEGER",
+            type: "STRING",
             name: "player",
             required: false,
-            description: "a"
+            description: "a",
+            autocomplete: true,
         }
     ],
+    async autocomplete(i) {
+        var u = getUser(i.user)
+        if (!u.lobby?.battle) return await i.respond([])
+        var b = u.lobby.battle;
+        return await i.respond(b.players.map((el, i) => ({name: `#${i} ${el.name}`, value: i + ""})))
+    },
     async run(i) {
+        function findPlayerID(name: string) {
+            var split = name.split(" ")
+            var num = Number(split[0].slice(1))
+            return num || Number(name)
+        }
         var lobby = getUser(i.user).lobby
         if (!lobby?.battle) return await i.reply({
             ephemeral: true,
             content: "bruh",
         })
-        var idx = i.options.getInteger("player") ?? lobby.battle.players.findIndex(el => el.user?.id == i.user.id)
+        var idx = findPlayerID(i.options.getString("player") || "") ?? lobby.battle.players.findIndex(el => el.user?.id == i.user.id)
         var player = lobby.battle.players[idx]
         if (!player) return await i.reply({
             ephemeral: true,
@@ -30,20 +42,13 @@ export var command: Command = {
         await i.reply({
             ephemeral: true,
             content: "```diff\n" +
-            `${player.name.padEnd(32, " ")} Lv ${player.level}\nStats:\n${Object.keys(player.stats).map(k => {
-                if (k == "hp") return `${player.hp < player.stats.hp / 5 ? "-" : " "}${k.toUpperCase().padEnd(6, " ")} ${Math.round(player.hp).toString().padStart(6, " ")}/${player.stats.hp.toString().padEnd(6, " ")} [${bar(player.hp, player.stats.hp, 10)}]`
-                var fill = player.statStages[k] > 0 ? "˄" : "˅"
-                var a = ""
-                while (a.length < Math.min(Math.abs(player.statStages[k]), 6)) {
-                    a += fill
-                }
-                while (a.length < 6) {
-                    a += "-"
-                }
-                return `${player.statStages[k] == 0 ? " " : (player.statStages[k] > 0 ? "+" : "-")}${k.toUpperCase().padEnd(6, " ")} ${Math.round(player[k]).toString().padStart(6, " ")} [${calcMul(player.statStages[k]).toFixed(1).padStart(3, " ")}x] ${a}`
-            }).join("\n")}\nCharge ${player.charge.toString().padStart(3, " ")}\nMagik  ${player.magic.toString().padStart(3, " ")}\n${player.status.map(el => {
+            `${player.name.padEnd(32, " ")} Lv ${player.level}\nHP [${bar(player.hp, player.stats.hp, 20)}]\n${Math.floor(player.hp)}/${Math.floor(player.stats.hp)}${player.absorption > 0 ? `\n\nT${player.absorptionTier} [${bar(player.absorption, player.stats.hp, 20)}]\n${Math.floor(player.absorption / player.stats.hp * 100)}%\n` : ``}\nCharge ${player.charge.toString().padStart(3, " ")}\nMagik  ${player.magic.toString().padStart(3, " ")}\n${player.status.map(el => {
                 return `${statusTypes.get(el.type)?.name.padEnd(16, " ")} | ${el.duration.toString().padEnd(2, " ")} Turns left`
-            }).join("\n") || "---------------- | -- Turns left"}\n`
+            }).join("\n") || "---------------- | -- Turns left"}\n` + 
+            `Stats:\n${Object.keys(player.modifiers).map(el => {
+                var mds = player.modifiers[el]
+                return `${el.toUpperCase()}: ${Math.floor(player.stats[el])}\n├${mds.filter(el => !el.disabled).map(el => `${el.label || "Unknown modifier"}: ${el.type == "add" ? `+` : "x"}${el.value.toFixed(2)}`).join("\n├")}\n└Stage modifier: ${calcMul(player.statStages[el]).toFixed(2)}x`
+            }).join("\n")}\n`
             +  "\n```"
         })
     }

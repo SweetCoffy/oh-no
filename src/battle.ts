@@ -1,6 +1,6 @@
-import { User, Collection, TextChannel, Message, TextBasedChannels, EmbedFieldData } from "discord.js"
+import { User, Collection, TextChannel, Message, TextBasedChannel, EmbedFieldData } from "discord.js"
 import { EventEmitter } from "events"
-import { setKeys, rng, randomRange, bar, experimental } from "./util.js"
+import { setKeys, rng, randomRange, bar, experimental, Dictionary, getID } from "./util.js"
 import { makeStats, calcStats, Stats, baseStats } from "./stats.js"
 import { moves, Category } from "./moves.js"
 import { lobbies, BattleLobby } from "./lobby.js"
@@ -12,7 +12,8 @@ import { FG_Blue, FG_Gray, FG_Green, FG_Red, FG_White, FG_Yellow, P, R, S } from
 
 export type BattleType = "ffa" | "pve" | "boss"
 export function calcDamage(pow: number, atk: number, def: number, level: number) {
-    return Math.floor((((2 * level) / 5 + 2) * pow * atk/def) / 50 + 2);
+    if (experimental.ohyes_stat_formula) return Math.ceil(((atk / def) * (pow / 15)) * (level / 2.1))
+    else return Math.floor((((2 * level) / 5 + 2) * pow * atk/def) / 50 + 2);
 }
 export interface CategoryStats {
     atk: string,
@@ -25,6 +26,7 @@ export class StatusType {
     minDuration = 3
     maxDuration = 5
     upgradeTo?: string
+    icon?: string
     negative: boolean = true
     onStart?: StatusCallback
     onTurn?: StatusCallback
@@ -45,6 +47,10 @@ export class StatusType {
         this.onTurn = onTurn
         this.onEnd = onEnd
         this.upgradeTo = upgradeTo
+    }
+    set(func: (el: StatusType) => any) {
+        func(this)
+        return this;
     }
 }
 type StatusCallback = (b: Battle, p: Player, s: Status) => any
@@ -67,7 +73,7 @@ function (b, p, s) {
         return
     }
     var base = 1/16
-    if (b.type == "pve" && p.user) {
+    if (b.type == "pve" && p.team == 0) {
         base = 1/24
     }
     
@@ -76,7 +82,7 @@ function (b, p, s) {
 statusTypes.set("toxic", new StatusType("Toxic", "TOXIC", statusMessageEffect("status.toxic.start"), 
 function (b, p, s) {
     var base = 1/16
-    if (b.type == "pve" && p.user) {
+    if (b.type == "pve" && p.team == 0) {
         base = 1/24
     }
     if (p.status.some(el => el.type == "poison")) {
@@ -88,7 +94,7 @@ function (b, p, s) {
 statusTypes.set("california", new StatusType("California", "CALIF", statusMessageEffect("status.toxic.start"), 
 function (b, p, s) {
     var base = 1/8
-    if (b.type == "pve" && p.user) {
+    if (b.type == "pve" && p.team == 0) {
         base = 1/12
     }
     if (p.status.some(el => el.type == "poison")) {
@@ -121,6 +127,29 @@ statusTypes.set("stronger_regen", new StatusType("Stronger Regeneration", "SRRGN
     }
     b.heal(p, Math.ceil(p.stats.hp * base))
 }, undefined))
+statusTypes.set("bruh", new StatusType("Bruh", "Bruh", function(b, p, s) {
+    s.duration = 3
+    p.statStages.atk -= 2
+    p.statStages.def -= 2
+    p.statStages.spatk -= 2
+    p.statStages.spdef -= 2
+    p.statStages.spd -= 2
+    b.inflictStatus(p, "strong_regen", p)
+}, function(b, p, s) {
+    p.statStages.atk   += 2/3
+    p.statStages.def   += 2/3
+    p.statStages.spatk += 2/3
+    p.statStages.spdef += 2/3
+    p.statStages.spd   += 2/3
+}, function(b, p, s) {
+    p.helditems = []
+    p.statStages.atk   += 2/3
+    p.statStages.def   += 2/3
+    p.statStages.spatk += 2/3
+    p.statStages.spdef += 2/3
+    p.statStages.spd   += 2/3
+    b.heal(p, p.stats.hp - p.hp)
+}).set(el => el.icon = "<a:Bruh:943612065338253422>"))
 var categories: {[key: string]: CategoryStats} = {
     "physical": {
         atk: "atk",
@@ -159,6 +188,13 @@ function colorToANSI(color: LogColor) {
     if (color == "yellow") return FG_Yellow
     return 0
 }
+interface StatModifier {
+    type?: "add" | "multiply",
+    value: number,
+    disabled?: boolean,
+    label?: string,
+}
+type StatID = "atk" | "def" | "spatk" | "spdef" | "spd"
 /**
  * Represents an in-battle player
  */
@@ -177,12 +213,47 @@ export class Player {
     protect: boolean = false
     /** The damage blocked in the previous turn, used for Counter */
     damageBlockedInTurn: number = 0
-    bruh: boolean = false
+    /** The type of bruh orb the player has activated */
+    bruh?: string = undefined
+    /** The team the player belongs to */
+    team: number = 0
+    /** The amount of absorption health the player has */
+    absorption: number = 0
+    /** The tier of absorption, each one reduces 40%, 60% and 80% respectively */
+    absorptionTier: number = 0
     private _charge: number = 0
     private _magic: number = 0
     maxCharge: number = 100
     maxMagic: number = 100
+    /** The list of usable moves for the player, only matters for user-controlled players */
     moveset: string[] = ["bonk", "nerf_gun", "stronk", "spstronk"]
+    modifiers: Dictionary<(StatModifier & {id: string})[]> = {
+        atk  : [],
+        def  : [],
+        spatk: [],
+        spdef: [],
+        spd  : [],
+    }
+    getModifierValue(value: number, mods: StatModifier[]) {
+        for (var mod of mods) {
+            if (mod.disabled) continue;
+            if (mod.type == "add") value += mod.value;
+            else value *= mod.value;
+        }
+        return value
+    }
+    addModifier(stat: StatID, mod: StatModifier) {
+        var id = getID(1000);
+        var e = {
+            ...mod,
+            id: id,
+        }
+        this.modifiers[stat].push(e);
+        return e;
+    }
+    getModifier(stat: StatID, id: string) {
+        return this.modifiers[stat].find(el => el.id == id);
+    }
     get charge(): number {
         return Math.min(Math.max(this._charge, 0), this.maxCharge)
     }
@@ -198,7 +269,7 @@ export class Player {
     /** The player's true stats */
     stats: Stats = makeStats()
     /** The player's base stats, usually taken from their preset */
-    baseStats: Stats = baseStats
+    baseStats: Stats = { ...baseStats }
     /** The Discord user the player belongs to, used to get the current name and other stuff that needs a Discord user */
     user?: User
     /** The player's status conditions */
@@ -209,20 +280,25 @@ export class Player {
     id: string
     /** The player's current held items */
     helditems: HeldItem[] = []
+    /** The type of AI the player uses if `user` is not present */
     ai: BotAIType = "normal"
+    /** The base XP yield, only used in hunt */
     xpYield: number = 0
 
     /** The player's current Attack stat, but with stat modifiers taken into account */
-    get atk()   { return this.stats.atk * calcMul(this.statStages.atk)     }
+    get atk()   { return this.getModifierValue(this.stats.atk   * calcMul(this.statStages.atk)  , this.modifiers.atk)   }
     /** The player's current Defense stat, but with stat modifiers taken into account */
-    get def()   { return this.stats.def * calcMul(this.statStages.def)     }
+    get def()   { return this.getModifierValue(this.stats.def   * calcMul(this.statStages.def)  , this.modifiers.def)   }
     /** The player's current Special Attack stat, but with stat modifiers taken into account */
-    get spatk() { return this.stats.spatk * calcMul(this.statStages.spatk) }
+    get spatk() { return this.getModifierValue(this.stats.spatk * calcMul(this.statStages.spatk), this.modifiers.spatk) }
     /** The player's current Special Defense stat, but with stat modifiers taken into account */
-    get spdef() { return this.stats.spdef * calcMul(this.statStages.spdef) }
+    get spdef() { return this.getModifierValue(this.stats.spdef * calcMul(this.statStages.spdef), this.modifiers.spdef) }
     /** The player's current Speed stat, but with stat modifiers taken into account */
-    get spd()   { return this.stats.spd * calcMul(this.statStages.spd)     }
+    get spd()   { return this.getModifierValue(this.stats.spd   * calcMul(this.statStages.spd)  , this.modifiers.spd)   }
     
+    /**
+     * The display name of the player, going from `_nickname`, `user.username` and `Bot-${id}`
+     */
     get name() {
         if (this._nickname) return this._nickname
         if (this.user) return this.user.username
@@ -231,12 +307,19 @@ export class Player {
     set name(v: string) {
         this._nickname = v
     }
+    /**
+     * The "nickname" of the player, used to properly name enemies in /hunt
+     */
     _nickname = ""
-    updateStats() {
+    /**
+     * Updates the player's current stats to match what they should be according to level and base stats
+     * @param changeHp Whether or not to increase/decrease current hp if Max HP is different
+     */
+    updateStats(changeHp: boolean = true) {
         var lastmax = this.stats.hp
         setKeys(calcStats(this.level, this.baseStats), this.stats)
         var max = this.stats.hp
-        this.hp += max - lastmax
+        if (changeHp) this.hp += max - lastmax
     }
     constructor(user?: User) {
         if (user) {
@@ -288,7 +371,7 @@ class BotAI {
         }
         var targets = this.battle.players.filter(el => el.id != player.id)
         if (this.battle.type == "pve") {
-            targets = targets.filter(el => el.user)
+            targets = targets.filter(el => el.team != player.team)
         }
         var target = targets[Math.floor(targets.length * Math.random())]
 
@@ -501,12 +584,24 @@ export class Battle extends EventEmitter {
     }
     ended: boolean = false
     botAI: BotAI
-    async infoMessage(channel: TextBasedChannels) {
+    async infoMessage(channel: TextBasedChannel) {
         var b = this
-        var humans = this.players.filter(el => el.user)
-        var bots = this.players.filter(el => !el.user)
+        var humans = this.players.filter(el => el.team == 0)
+        var bots = this.players.filter(el => el.team == 1)
+        function getIcons(player: Player) {
+            var icons = ""
+            for (var s of player.status) {
+                var icon = statusTypes.get(s.type)?.icon;
+                if (s.duration <= 0) continue;
+                if (!icon) continue;
+                icons += icon;
+            }
+            if (player.bruh) icons += items.get(player.bruh)?.icon + ""
+            return icons;
+        }
         var str = ((this.isPve || this.type == "boss") ? humans : b.players).map((el, i) => {
-            var str = `\`#${i}\` ${el.bruh ? "<:ohno:737474912666648688> " : ""}**${el.name}** ${Math.floor(el.hp)}/${Math.floor(el.stats.hp)} \`${el.status.map(el => `[${statusTypes.get(el.type)?.short}|${el.duration.toString().padStart(2, " ")}]`).join(" ") || "no"}\`` + `\n` +
+            var icons = getIcons(el)
+            var str = `${icons}**${el.name}** ${Math.floor(el.hp)}/${Math.floor(el.stats.hp)} \`${el.status.map(el => `[${statusTypes.get(el.type)?.short}|${el.duration.toString().padStart(2, " ")}]`).join(" ") || "no"}\`` + `\n` +
             `\`[${bar(el.hp, el.stats.hp, 20)}]\` ${(el.hp / el.stats.hp * 100).toFixed(1)}%`
             if (el.hp > 0) {
                 if (el.charge) {
@@ -532,11 +627,10 @@ export class Battle extends EventEmitter {
                 fields.push({
                     name: "Boss",
                     value: bots.map((el, i) => {
-                        let str = `\`#${(i + humans.length).toString().padEnd(2, " ")} ${el.name.padEnd(7, " ")}` + "\n" + 
+                        let str = `\`${getIcons(el)}${el.name.padEnd(7, " ")}` + "\n" + 
                         `[${bar(el.hp, el.stats.hp, 45)}]` + "\n" + 
                         `${(el.hp / el.stats.hp * 100).toFixed(1)}%` + "\n" + 
                         `${el.status.map(el => `${statusTypes.get(el.type)?.short}`).join(" ") || ""}\``
-                        if (el.bruh) str = "<:ohno:737474912666648688> " + str
                         var a = Object.entries(el.statStages).filter((el) => el[1] != 0).map(([k, v]) => `${k.toUpperCase().padEnd(6, " ")} x${calcMul(v).toFixed(1)}`)
                         if (a.length) {
                             str += `\n[ ${a.join(" | ")} ]`
@@ -559,8 +653,7 @@ export class Battle extends EventEmitter {
                 fields.push({
                     name: "Bots",
                     value: bots.map((el, i) => {
-                        let str = `\`#${(i + humans.length).toString().padEnd(2, " ")} ${el.name.padEnd(7, " ")} [${bar(el.hp, el.stats.hp, 10)}] ${el.status.map(el => `${statusTypes.get(el.type)?.short}`).join(" ") || ""}\``
-                        if (el.bruh) str = "<:ohno:737474912666648688> " + str
+                        let str = `${getIcons(el)}\`${el.name.padEnd(8, " ")} [${bar(el.hp, el.stats.hp, 10)}] ${el.status.map(el => `${statusTypes.get(el.type)?.short}`).join(" ") || ""}\``
                         return str
                     }).join("\n") || "what",
                     inline: true
@@ -702,7 +795,19 @@ export class Battle extends EventEmitter {
             }
         }
         if (damage == 0 && !silent) return this.log(`${user.name} Took no damage!`)
+        if (user.absorption > 0) {
+            var reduction = (Math.min(user.absorptionTier + 1, 4))/5
+            user.absorption -= damage * reduction;
+            damage *= 1 - reduction;
+            if (user.absorption <= 0) {
+                user.absorptionTier = 1
+                user.absorption = 0
+            };
+        }
+        if (isNaN(damage)) return this.log(`[WARN] Tried to deal NaN damage to ${user.name}`, "yellow")
         user.hp -= damage
+        if (isNaN(user.hp)) user.hp = 0;
+
         user.damageTaken += damage
         if (!silent) this.log(getString(message, {USER: user.name, DAMAGE: Math.floor(damage) + ""}), "red")
         if (user.hp <= 0) {
@@ -816,7 +921,7 @@ export class Battle extends EventEmitter {
             }
         }
     }
-    inflictStatus(u: Player, s: string, inf?: Player) {
+    inflictStatus(u: Player, s: string, inf?: Player): Status | undefined {
         var sType = statusTypes.get(s)
         if (sType) {
             var a = u.status.find(el => el.type == s)
@@ -830,14 +935,14 @@ export class Battle extends EventEmitter {
                 if (sType.upgradeTo) {
                     sType.end(this, u, a)
                     a.duration = 0;
-                    this.inflictStatus(u, sType.upgradeTo, inf);
-                    return
+                    return this.inflictStatus(u, sType.upgradeTo, inf)
                 }
                 a.duration = Math.max(a.duration, o.duration)
-                return
+                return a
             }
             u.status.push(o)
             sType.start(this, u, o)
+            return o
         }
     }
     doStatusUpdate(u: Player, s: Status) {
@@ -871,40 +976,47 @@ export class Battle extends EventEmitter {
             for (var it of p.helditems) {
                 if (it.id.startsWith("bruh_orb")) {
                     if (!p.bruh) {
-                        p.bruh = true
+                        p.bruh = it.id
                         var oldStats = {...p.stats}
 
                         var stat = it.id.slice("bruh_orb_".length)
                         
-
-                        p.baseStats.hp    += Math.floor(p.baseStats.hp    * 0.3)
-                        p.baseStats.atk   += Math.floor(p.baseStats.atk   * 0.3)
-                        p.baseStats.def   += Math.floor(p.baseStats.def   * 0.3)
-                        p.baseStats.spatk += Math.floor(p.baseStats.spatk * 0.3)
-                        p.baseStats.spdef += Math.floor(p.baseStats.spdef * 0.3)
-                        p.baseStats.spd   += Math.floor(p.baseStats.spd   * 0.3)
+                        var hp    = 1.2
+                        var atk   = 1.2
+                        var def   = 1.2
+                        var spatk = 1.2
+                        var spdef = 1.2
+                        var spd   = 1.2
 
                         if (stat) {
-                            p.baseStats.hp    -= Math.floor(p.baseStats.hp    * 0.15)
-                            p.baseStats.atk   -= Math.floor(p.baseStats.atk   * 0.15)
-                            p.baseStats.def   -= Math.floor(p.baseStats.def   * 0.15)
-                            p.baseStats.spatk -= Math.floor(p.baseStats.spatk * 0.15)
-                            p.baseStats.spdef -= Math.floor(p.baseStats.spdef * 0.15)
-                            p.baseStats.spd   -= Math.floor(p.baseStats.spd   * 0.15)
+                            hp    = 1.15
+                            atk   = 1.15
+                            def   = 1.15
+                            spatk = 1.15
+                            spdef = 1.15
+                            spd   = 1.15
 
                             if (stat == "hp") {
-                                p.baseStats.hp    += Math.floor(p.baseStats.hp    * 0.6)
+                                hp    += 0.6 - 0.15
                             }
                             if (stat == "attack") {
-                                p.baseStats.atk      += Math.floor(p.baseStats.atk    * 0.6)
-                                p.baseStats.spatk    += Math.floor(p.baseStats.spatk    * 0.6)
+                                atk   += 0.6 - 0.15
+                                spatk += 0.6 - 0.15
+                                spd   += 0.22 - 0.15
                             }
                             if (stat == "defense") {
-                                p.baseStats.def      += Math.floor(p.baseStats.def    * 0.6)
-                                p.baseStats.spdef    += Math.floor(p.baseStats.spdef    * 0.6)
+                                def   += 0.6 - 0.15
+                                spdef += 0.6 - 0.15
+                                hp    += 0.22 - 0.15
                             }
                         }
-                        p.updateStats()
+                        p.baseStats.hp    = Math.floor(p.baseStats.hp    * hp   )
+                        p.baseStats.atk   = Math.floor(p.baseStats.atk   * atk  )
+                        p.baseStats.def   = Math.floor(p.baseStats.def   * def  )
+                        p.baseStats.spatk = Math.floor(p.baseStats.spatk * spatk)
+                        p.baseStats.spdef = Math.floor(p.baseStats.spdef * spdef)
+                        p.baseStats.spd   = Math.floor(p.baseStats.spd   * spd  )
+                        p.updateStats(false)
                         var newStats = {...p.stats}
                         var dif = makeStats()
                         for (var k in dif) {
@@ -914,7 +1026,8 @@ export class Battle extends EventEmitter {
                         for (var k in dif) {
                             this.log(`${k.toUpperCase().padEnd(6, " ")} ${oldStats[k].toString().padEnd(4, " ")} + ${dif[k].toString().padStart(4, " ")}`)
                         }
-                        p.helditems = []
+                        p.helditems = p.helditems.filter(el => !el.id.startsWith("bruh_orb"))
+                        this.inflictStatus(p, "bruh", p);
                     }
                     break
                 }
@@ -976,8 +1089,8 @@ export class Battle extends EventEmitter {
         }
 
         if (this.isPve || this.type == "boss") {
-            var playersWon = this.players.filter(el => !el.user).every(el => el.hp <= 0)
-            var botsWon = this.players.filter(el => el.user).every(el => el.hp <= 0)
+            var playersWon = this.players.filter(el => el.team == 1).every(el => el.hp <= 0)
+            var botsWon = this.players.filter(el => el.team == 0).every(el => el.hp <= 0)
             if (playersWon && botsWon) {
                 this.emit("end", undefined)
             } else if (playersWon) {

@@ -1,9 +1,10 @@
-import { Collection, User } from "discord.js"
+import { Collection, TextBasedChannel, User } from "discord.js"
 import { Battle, Player, BattleType } from "./battle.js"
 import { enemies } from "./enemies.js"
 import { items } from "./helditem.js"
 import { presets } from "./stats.js"
 import { getUser, users } from "./users.js"
+import { Dictionary } from "./util.js"
 export class JoinError extends Error {
     name = "JoinError"
     intended = true
@@ -15,8 +16,13 @@ export class LeaveError extends Error {
 export type Difficulty = "easy" | "medium" | "hard" | "hell"
 export const lobbies: Collection<string, BattleLobby> = new Collection<string, BattleLobby>()
 var bruhnum = 0
+interface UserJoinData {
+    enemyPreset?: string,
+    team?: number,
+}
 export class BattleLobby {
     users: User[] = []
+    usersE: UserJoinData[] = []
     needed: number = 2
     capacity: number = 2
     ready: boolean = false
@@ -29,15 +35,31 @@ export class BattleLobby {
     type: BattleType = "ffa"
     botCount: number = 0
     bossType?: string
+    _flags: Dictionary<boolean> = { E: false, T: false, W: false }
+    get flagsString() {
+        return Object.entries(this._flags).filter(e => e[1]).map(e => e[0])
+    }
+    set flags(v: string | Dictionary<boolean>) {
+        if (typeof v == "string") {
+            for (var f in this._flags) {
+                this._flags[f] = v.includes(f);
+            }
+        } else {
+            this._flags = v;
+        }
+    }
+    get flags(): Dictionary<boolean> {
+        return this._flags;
+    }
     constructor(host: User, needed = 2, name?: string, capacity?: number) {
         this.needed = needed
         this.host = host
-        this.name = `${host.username}'s Lobby or something idfk'`
+        this.name = `${host.username}'s Lobby`
         if (name) this.name = name
         if (capacity != undefined) {
             this.capacity = capacity
         }
-        this.id = `${(bruhnum++).toString().padStart(3, "0")}`
+        this.id = `${(bruhnum = (bruhnum + 1) % 1000).toString().padStart(3, "0")}`
         lobbies.set(this.id, this)
         this.join(host)
     }
@@ -71,20 +93,32 @@ export class BattleLobby {
             l.delete()
         }))
         this.started = true
+        var i = 0;
         for (var u of this.users) {
             var play = new Player(u)
             play.level = this.level
             play.moveset = (getUser(u).moveset).slice(0, 4)
             play.helditems = (getUser(u).helditems || []).slice(0, 4).map(el => ({id: el}))
-            
+            var e = this.usersE[i]
+            if (this.flags.E) {
+                var preset = e.enemyPreset || "default"
+                if (preset != "default" && enemies.get(preset)) {
+                    //@ts-ignore
+                    play.baseStats = {...enemies.get(e).stats}
+                }
+            }
+            if (this.flags.T) {
+                play.team = e.team || 0
+            }
             play.updateStats()
             this.battle.players.push(play)
+            i++
         }
         var it = items.map((el, k) => k)
-        var levelPerPlayer = 50
-        if (this.difficulty == "easy") levelPerPlayer = 25
-        if (this.difficulty == "hard") levelPerPlayer = 65
-        if (this.difficulty == "hell") levelPerPlayer = 100
+        var levelPerPlayer = 0.125
+        if (this.difficulty == "easy") levelPerPlayer = 0.125/2
+        if (this.difficulty == "hard") levelPerPlayer = 0.17
+        if (this.difficulty == "hell") levelPerPlayer = 0.23
         var allowedPresets = [...presets.keys()]
         if (this.type == "boss") {
             var exclude = ["tonk", "extreme-tonk", "default"]
@@ -95,15 +129,17 @@ export class BattleLobby {
             var bot = new Player()
             bot.level = this.level
             if (this.type == "pve") {
-                bot.level = Math.ceil(bot.level * 0.6)
+                bot.level = Math.ceil(bot.level * 0.46)
+                bot.team = 1;
             }
             if (this.type == "boss") {
-                bot.level += levelPerPlayer * this.users.length
+                bot.level *= 1 + (levelPerPlayer * this.users.length)
                 this.battle.statBoost(bot, "atk", 1);
                 this.battle.statBoost(bot, "def", 1);
                 this.battle.statBoost(bot, "spatk", 1);
                 this.battle.statBoost(bot, "spdef", 1);
                 bot.helditems.push({id: "bruh_orb"});
+                bot.team = 1;
             } else {
                 for (var j = 0; j < 4; j++) {
                     bot.helditems.push({id: it[Math.floor(Math.random() * it.length)]})
@@ -125,12 +161,24 @@ export class BattleLobby {
         for (var p of this.battle.players) {
             p.helditems = [...new Set(p.helditems.map(el => el.id))].map(el => ({id: el}))
         }
+        if (this.flags.W) {
+            for (var p of this.battle.players) {
+                if (p.team == 0) p.team = 1;
+                else if (p.team == 1) p.team = 0;
+            }
+        }
     }
-    join(user: User) {
-        if (getUser(user).lobby) throw new JoinError(`The user ${user.username} is already in a lobby`)
+    channels: TextBasedChannel[] = []
+    join(user: User, e?: UserJoinData, channel?: TextBasedChannel) {
         if (this.users.some(el => el.id == user.id)) throw new JoinError(`The user ${user.username} (${user.id}) is already in the lobby`)
+        if (getUser(user).lobby) throw new JoinError(`The user ${user.username} is already in a lobby`)
         if (this.users.length >= this.capacity) throw new JoinError(`The lobby has reached it's maximum capacity`)
         this.users.push(user)
+        //@ts-ignore
+        this.usersE.push(e || {  })
+        if (channel) {
+            if (!this.channels.some(el => el.id == channel.id)) this.channels.push(channel)
+        }
         getUser(user).lobby = this
     }
 }

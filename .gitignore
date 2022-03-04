@@ -110,6 +110,7 @@ build/
 users.json
 global.json
 map.txt
+data/
 
 # Nor this test content folder
 content/exp_test

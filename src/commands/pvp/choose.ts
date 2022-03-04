@@ -1,10 +1,11 @@
 import { createLobby, findValidLobby, lobbies } from '../../lobby.js';
-import { Command } from '../../command-loader.js'
+import { Command, commands } from '../../command-loader.js'
 import { getUser, users } from '../../users.js';
 import { EmbedFieldData, TextChannel } from 'discord.js';
 import { moves } from '../../moves.js';
 import { getString } from '../../locale.js';
 import { Stats } from "../../stats.js";
+import { items } from '../../helditem.js';
 export var command: Command = {
     name: "choose",
     description: "ur mom",
@@ -25,9 +26,10 @@ export var command: Command = {
                 },
                 {
                     name: "target",
-                    type: "INTEGER",
+                    type: "STRING",
                     required: true,
                     description: "The target of the move",
+                    autocomplete: true,
                 }
             ]
         },
@@ -45,6 +47,20 @@ export var command: Command = {
                 },
             ]
         },
+        {
+            type: "SUB_COMMAND",
+            description: "Shows info about an item",
+            name: "item_info",
+            options: [
+                {
+                    name: "item",
+                    type: "STRING",
+                    required: true,
+                    description: "The item",
+                    choices: items.map((el, k) => ({ name: el.name, value: k }))
+                }
+            ]
+        }
     ],
     async autocomplete(i) {
         var u = getUser(i.user)
@@ -56,18 +72,32 @@ export var command: Command = {
         if (focused.name == "move") {
             var list = moves.filter((v, k) => v.selectable && play?.moveset.includes(k) || false).filter((v, k) => v.name.split(" ").some(el => el.toLowerCase().startsWith(focused.value as string)))
             await i.respond(list.map((v, k) => ({ value: k, name: v.name })))
+        } else if (focused.name == "target") {
+            var c = commands.get("info")
+            if (typeof c?.autocomplete == "function") {
+                return await c.autocomplete(i)
+            }
         }
     },
     async run(i) {
+        function findMoveID(name: string) {
+            return moves.findKey(el => el.name == name) || (moves.has(name) && name) || name
+        }
+        function findPlayerID(name: string) {
+            var split = name.split(" ")
+            var num = Number(split[0].slice(1))
+            return num || Number(name)
+        }
         if (!(i.channel instanceof TextChannel)) return await i.reply("What")
         var u = getUser(i.user)
         switch (i.options.getSubcommand()) {
             case "move": {
                 if (!u.lobby?.battle) return await i.reply("You cannot choose outside of battle")
-                var moveId = i.options.getString("move", true)
+                var moveId = findMoveID(i.options.getString("move", true))
                 var move = moves.get(moveId)
                 if (!move) return await i.reply(`Invalid move`)
-                var player = u.lobby.battle.players[i.options.getInteger("target", true)]
+                var idx = findPlayerID(i.options.getString("target", true));
+                var player = u.lobby.battle.players[idx]
                 //var player = u.lobby.battle.players.find(el => el.user?.id == target.id)
                 if (!player) return await i.reply("Invalid target")
                 var play = u.lobby.battle.players.find(el => el.user?.id == i.user.id)
@@ -84,10 +114,16 @@ export var command: Command = {
                     })
                 }
                 u.lobby.battle.moveAction(play, moveId, player)
-                await i.reply({
-                    ephemeral: true,
-                    content: "k"
-                })
+                if (u.lobby.battle.isPve && u.lobby.users.length > 1) {
+                    await i.reply({
+                        content: `${i.user.username} Has chosen the move ${move?.name} targeted at \`#${idx}\` ${player.name}`
+                    })
+                } else {
+                    await i.reply({
+                        ephemeral: true,
+                        content: "k"
+                    })
+                }
                 break;
             }
             case "help": {
@@ -140,6 +176,18 @@ export var command: Command = {
                         }]
                     })
                 } else return new Error(`Unknown move: '${moveId}'`)
+                break;
+            }
+            case "item_info": {
+                var item = items.get(i.options.getString("item", true))
+                if (!item) return await i.reply("wh")
+                await i.reply({
+                    embeds: [{
+                        title: `${item.icon || "❓"} ${item.name}`,
+                        description: `**Effect**: ${item.passiveEffect || "N/A"}\n**ID**: ${i.options.getString("item", true)}`
+                    }]
+                })
+                break;
             }
         }
     }

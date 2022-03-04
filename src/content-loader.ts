@@ -26,7 +26,7 @@ var types: Dictionary<ContentType> = {
             fuelneeded: "bigint",
             unstackable: "boolean",
             defaultdata: "json",
-            autocomplete: "string",
+            stackinfo: "string",
         },
         onLoad(obj) {
             shopItems.set(obj.contentid.toString(), new ItemType(obj.name.toString(), obj.contentid.toString(), obj.icon.toString(), BigInt(obj.price.toString()) || 0n))
@@ -56,14 +56,14 @@ var types: Dictionary<ContentType> = {
                     else it.onUse = a
                 })
             }
-            if (typeof obj.autocomplete == "string") {
-                var split = obj.autocomplete.toString().split(":")
+            if (typeof obj.stackinfo == "string") {
+                var split = obj.stackinfo.toString().split(":")
                 var path = "./" + split[0]
                 import(path).then(a => {
                     var it = shopItems.get(obj.contentid.toString())
                     if (!it) return
-                    if (split[1]) it.autocomplete = a[split[1]]
-                    else it.autocomplete = a
+                    if (split[1]) it.stackInfo = a[split[1]]
+                    else it.stackInfo = a
                 })
             }
         }
@@ -110,7 +110,6 @@ export function parseValueType(v: string, type: TypeString | ArrayTypeString): T
         throw new Error(`Invalid boolean: ${g}`)
     } else if (type == "json") {
         var g = Hjson.parse(v)
-        console.log(g)
         return g
     }
     return 0

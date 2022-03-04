@@ -3,10 +3,10 @@ import { statSync, readdirSync } from "fs"
 import { resolve, join } from "path"
 import { settings } from "./util.js"
 
-export type ChatInputCommand = ChatInputApplicationCommandData & { run(i: CommandInteraction): any, autocomplete?(i: AutocompleteInteraction): any }
+export type ChatInputCommand = ChatInputApplicationCommandData & { run(i: CommandInteraction): any}
 export type UserCommand = UserApplicationCommandData & { run(i: ContextMenuInteraction): any }
 
-export type Command = (ChatInputCommand | UserCommand) & {dev?: boolean}
+export type Command = (ChatInputCommand | UserCommand) & {dev?: boolean, autocomplete?(i: AutocompleteInteraction): any}
 
 export var commands: Collection<string, Command> = new Collection()
 
@@ -39,7 +39,9 @@ export async function loadDir(dir: string) {
 export async function addCommands(g: Guild, cmds: Command[]) {
     if (!process.argv.includes("-update")) return
     await Promise.all(cmds.map(el => {
-        
+        if ("description" in el) {
+            el.description += " (Test)"
+        }
         return g.commands.create(el)
     }))
 }

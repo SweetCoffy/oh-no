@@ -14,6 +14,7 @@ import * as users_ from "../users.js"
 import * as util from "../util.js"
 import * as fs from "fs"
 import * as discord from "discord.js"
+import * as items from "../items.js"
 import { shopItems } from "../items.js"
 
 export var command: Command = {
@@ -49,6 +50,7 @@ export var command: Command = {
                 util,
                 fs,
                 discord,
+                items,
             }
             var vm = new VM({sandbox: context, timeout: 5000})
             let out = vm.run(i.options.getString("code", true))

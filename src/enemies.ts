@@ -3,7 +3,7 @@ import { BotAIType } from "./battle.js";
 import { ItemStack } from "./items.js";
 import { Stats } from "./stats.js";
 
-export type ItemDrop = ItemStack | { chance: number }
+export type ItemDrop = ItemStack & { chance: number }
 export interface EncounterData {
     minPlayerLevel: number,
     maxPlayerLevel: number,
@@ -197,7 +197,7 @@ enemies.set("u", {
     },
     boss: true,
     xpYield: 10000,
-    helditems: ["threat_orb", "bruh_orb"],
+    helditems: ["threat_orb", ],
     encounter: {
         rate: 1,
         relativeLevel: true,

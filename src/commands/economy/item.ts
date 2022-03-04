@@ -3,7 +3,6 @@ import { getUser } from "../../users.js"
 import { Message, MessageButton, MessageActionRow } from "discord.js"
 import { addItem, getItem, recipes, shopItems, stackString, useItem } from "../../items.js"
 import { experimental, format, itemResponseReply, lexer, money } from "../../util.js"
-import { log } from "../../debugging.js"
 export var command: Command = {
     type: "CHAT_INPUT",
     name: "item",
@@ -207,9 +206,10 @@ export var command: Command = {
                 var item = i.options.getString("item", true)
                 var amount = BigInt(i.options.getInteger("amount") || 0) || getItem(i.user, item)?.amount || 1n
                 var args: string[] = lexer(i.options.getString("args") || "")
-                var res = useItem(i.user, item, amount, ...args)
-                log(args + "")
-                await itemResponseReply(res, i)
+                var resGen = useItem(i.user, item, amount, ...args)
+                for await (let res of resGen) {
+                    await itemResponseReply(res, i)
+                }
                 break;
             }
             case "sell": {

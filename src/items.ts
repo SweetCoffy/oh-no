@@ -8,12 +8,14 @@ export interface ItemStack {
     amount: bigint,
     data?: any,
 }
-export type ItemUseCallback = (user: User, stack: ItemStack, amount: bigint, ...args: string[]) => ItemResponse | void
+export type StackInfoCallback = (stack: ItemStack) => string
+export type ItemUseCallback = (user: User, stack: ItemStack, amount: bigint, ...args: string[]) => ItemResponse | AsyncGenerator<ItemResponse> | void
 export interface ItemResponse {
     type: "success" | "info" | "fail",
-    reason?: string
+    reason?: string,
+    edit?: boolean
 }
-export function useItem(user: User, item: string, amount: bigint, ...args: string[]): ItemResponse {
+export async function* useItem(user: User, item: string, amount: bigint, ...args: string[]): AsyncGenerator<ItemResponse> {
     var u = getUser(user)
     var stack = getItem(user, item)
     if (stack) {
@@ -21,21 +23,42 @@ export function useItem(user: User, item: string, amount: bigint, ...args: strin
             type: "fail",
             reason: "Tried to use more items than you have"
         }
-        return shopItems.get(stack.item)?.use(user, stack, amount, ...args) || {
-            type: "fail",
-            reason: "What"
+        var a = shopItems.get(stack.item)?.use(user, stack, amount, ...args)
+        // @ts-ignore
+        if (a?.[Symbol.toStringTag] == "AsyncGenerator") {
+            let gen = a as AsyncGenerator<ItemResponse>
+            for await (let res of gen) {
+                yield res;
+            }
+            // @ts-ignore
+        } else if (a?.[Symbol.toStringTag] == "Generator") {
+            let gen = a as unknown as Generator<ItemResponse>
+            for (let res of gen) {
+                yield res;
+            }
+        } else {
+            yield (a as ItemResponse) || {
+                type: "fail",
+                reason: "What"
+            }
+            return
         }
-    } else return {
-        type: "fail",
-        reason: "Tried to use an item you don't have"
+    } else {
+        yield {
+            type: "fail",
+            reason: "Tried to use an item you don't have"
+        }
+        return
     }
 }
 export function stackString(stack: ItemStack, icon: boolean = true) {
+    var type = shopItems.get(stack.item)
     return `${stack.amount != 1n ? `x${format(stack.amount)} ` : ""}` + 
     `${icon ? (shopItems.get(stack.item)?.icon || "🅱️") + " " : ""}` + 
     `${stack.data?.name || shopItems.get(stack.item)?.name}` + 
     `${stack.data?.name ? "*" : ""}` + 
-    `${stack.data?.type?.startsWith("tool") ? ` (${Math.floor(stack.data.durability)} / ${Math.floor(stack.data.durability_max)} Durability)` : ``}`
+    `${stack.data?.type?.startsWith("tool") ? ` (${Math.floor(stack.data.durability)} / ${Math.floor(stack.data.durability_max)} Durability)` : ``}` +
+    `${type?.stackInfo ? `${type.stackInfo(stack)} ` : ``}`
 }
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary"
 export class ItemType {
@@ -59,9 +82,14 @@ export class ItemType {
         }
         return pre + `${this.icon} ${this.name}`
     }
+    stackInfo?: StackInfoCallback
     onUse?: ItemUseCallback
-    use(user: User, stack: ItemStack, amount: bigint, ...args: string[]): ItemResponse {
-        if (this.onUse) return this.onUse(user, stack, amount, ...args) || { type: "success" }
+    use(user: User, stack: ItemStack, amount: bigint, ...args: string[]): ItemResponse | AsyncGenerator<ItemResponse> {
+        if (this.onUse) {
+            var r = this.onUse(user, stack, amount, ...args)
+            //@ts-ignore
+            return r;
+        }
         return {
             type: "fail",
             reason: "This item cannot be used"

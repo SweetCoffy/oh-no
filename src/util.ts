@@ -133,7 +133,10 @@ export async function itemResponseReply(res: ItemResponse, i: CommandInteraction
             }
         ]
     }
-    if (i.replied) return await i.followUp(funi)
+    if (i.replied) {
+        if (res.edit) return await i.editReply(funi)
+        return await i.followUp(funi)
+    }
     else return await i.reply(funi)
 }
 export function lerp(a: number, b: number, x: number) {
@@ -143,6 +146,7 @@ export var settings = {
 	ownerID: "",
   	noSave: false,
     experimental: false,
+    unloadTimeout: 2 * 60 * 1000
 }
 export class BitArray extends Uint8Array {
 	getBit(bit: number) {
@@ -237,8 +241,13 @@ export function min(...numbers: bigint[]): bigint {
 export var experimental = {
     ansi_logs: false,
     bin_save: false,
-    item_args_debug: false,
+    ohyes_stat_formula: true,
+    airquotes_efficient_data: true,
 }
 export function money(amount: bigint) {
     return `${CURRENCY_ICON}${format(amount)}`
+}
+var idCounter = 0;
+export function getID(max: number) {
+    return (idCounter++ % max).toString().padStart((max - 1).toString().length, "0");
 }

@@ -21,7 +21,7 @@ export var command: Command = {
     async run(i) {
         if (!i.channel) return await i.reply("what")
         var u = getUser(i.user)
-        if (u.lobby) await i.reply("You are already in a lobby")
+        if (u.lobby) return await i.reply("You are already in a lobby")
         var l = createLobby(i.user, `${i.user.username}'s hunt`, 1)
         await i.reply({
             ephemeral: true,
@@ -62,6 +62,7 @@ export var command: Command = {
             p.baseStats = {...enemy.stats}
             p.xpYield = enemy.xpYield
             p.ai = enemy.ai
+            p.team = 1
             if (enemy.encounter) {
                 if (enemy.encounter.relativeLevel) {
                     p.level = Math.round(randomRange(enemy.encounter.minLevel, enemy.encounter.maxLevel) * u.level)
