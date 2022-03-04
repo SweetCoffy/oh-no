@@ -114,4 +114,4 @@ data/
 
 # g
 config.json
-src/commands/testing/
+src/commands/testing
