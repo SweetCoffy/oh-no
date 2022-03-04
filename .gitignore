@@ -103,17 +103,14 @@ dist
 # TernJS port file
 .tern-port
 
-# Compiled JavaScript files shouldn't end up in the repo
+# Compiled javascript
 build/
 
-# Neither data files should
+# Saved data files
 users.json
 global.json
 map.txt
 data/
 
-# Nor this test content folder
-content/exp_test
-
-eggos-install.js
+# g
 config.json
