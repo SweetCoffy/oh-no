@@ -1,3 +1,4 @@
+import { ApplicationCommandType, ApplicationCommandOptionType } from "discord.js";
 import { Command } from "../command-loader.js";
 import Fixed from "../fixed.js";
 import { getPreset, getPresetList } from "../stats.js";

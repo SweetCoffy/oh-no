@@ -1,4 +1,4 @@
-import { Message, ActionRow, ButtonComponent, MessageSelectMenu } from "discord.js";
+import { Message, ActionRow, ButtonComponent, SelectMenuComponent, ApplicationCommandType, ButtonStyle } from "discord.js";
 import { Command } from "../../command-loader.js";
 import { moves } from "../../moves.js";
 import { getUser } from "../../users.js";
@@ -11,37 +11,29 @@ export var command: Command = {
         var msg = await i.reply({
             content: "Choose your moveset",
             components: [
-                new ActionRow({
-                    components: [
-                        new MessageSelectMenu({
-                            maxValues: 4,
-                            minValues: 4,
-                            customId: "moveset",
-                            options: moves.filter(el => el.selectable).map((v, k) => {
-                                return {
-                                    value: k,
-                                    label: v.name,
-                                    default: getUser(i.user).moveset.includes(k),
-                                    description: `PWR ${v.power || "-"} | ACC ${v.accuracy || "-"} | ${v.category}`
-                                }
-                            })
-                        }),
-                    ]
+                new ActionRow().addComponents(new SelectMenuComponent({
+                    maxValues: 4,
+                    minValues: 4,
+                    customId: "moveset",
+                    options: moves.filter(el => el.selectable).map((v, k) => {
+                        return {
+                            value: k,
+                            label: v.name,
+                            default: getUser(i.user).moveset.includes(k),
+                            description: `PWR ${v.power || "-"} | ACC ${v.accuracy || "-"} | ${v.category}`
+                        }
+                    })
+                })),
+                new ActionRow().addComponents(new ButtonComponent({
+                    label: "Confirm",
+                    style: ButtonStyle.Success,
+                    customId: "yes",
                 }),
-                new ActionRow({
-                    components: [
-                        new ButtonComponent({
-                            label: "Confirm",
-                            style: "SUCCESS",
-                            customId: "yes",
-                        }),
-                        new ButtonComponent({
-                            label: "Cancel",
-                            style: "DANGER",
-                            customId: "no",
-                        }),
-                    ]
-                })
+                new ButtonComponent({
+                    label: "Cancel",
+                    style: ButtonStyle.Danger,
+                    customId: "no",
+                }),)
             ],
             fetchReply: true
         }) as Message<boolean>

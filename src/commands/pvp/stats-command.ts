@@ -1,3 +1,4 @@
+import { ApplicationCommandType, ApplicationCommandOptionType } from "discord.js";
 import { Command } from "../../command-loader.js"
 import { items } from "../../helditem.js";
 import { getString } from "../../locale.js";

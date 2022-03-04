@@ -1,4 +1,5 @@
 // "stable" version info command
+import { ApplicationCommandType, ApplicationCommandOptionType } from "discord.js"
 import { calcMul, statusTypes } from "../../battle.js"
 import { Command } from "../../command-loader.js"
 import { getUser } from "../../users.js"

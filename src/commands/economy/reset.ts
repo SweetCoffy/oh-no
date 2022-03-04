@@ -1,3 +1,4 @@
+import { ApplicationCommandType } from "discord.js";
 import { Command } from "../../command-loader.js";
 import { data, users } from "../../users.js";
 

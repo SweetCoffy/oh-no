@@ -1,4 +1,4 @@
-import { Message, ActionRow, ButtonComponent } from "discord.js"
+import { Message, ActionRow, ButtonComponent, ApplicationCommandOptionType, ApplicationCommandType, ButtonStyle, ComponentType } from "discord.js"
 import { Command } from "../../command-loader.js"
 import { shopItems, addItem, useItem, shops, Shop } from "../../items.js"
 import { getUser } from "../../users.js"
@@ -76,8 +76,10 @@ export var command: Command = {
                 var pageCount = Math.ceil(shop.items.length / pageSize)
                 var components: ActionRow[] = [new ActionRow({
                     components: [
-                        new ButtonComponent({ emoji: "◀️", style: ButtonStyle.Primary, customId: "prev" }),
-                        new ButtonComponent({ emoji: "▶️", style: ButtonStyle.Primary, customId: "next" }),
+                        //@ts-ignore
+                        { emoji: "◀️", style: ButtonStyle.Primary, customId: "prev", type: ComponentType.Button },
+                        //@ts-ignore
+                        { emoji: "▶️", style: ButtonStyle.Primary, customId: "next", type: ComponentType.Button },
                     ]
                 })]
                 async function update(msg: Message) {

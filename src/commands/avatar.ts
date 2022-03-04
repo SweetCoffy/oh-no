@@ -1,3 +1,4 @@
+import { ApplicationCommandType, ApplicationCommandOptionType } from "discord.js"
 import { Command } from "../command-loader.js"
 export var command: Command = {
     type: ApplicationCommandType.ChatInput,

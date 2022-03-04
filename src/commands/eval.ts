@@ -16,6 +16,7 @@ import * as fs from "fs"
 import * as discord from "discord.js"
 import * as items from "../items.js"
 import { shopItems } from "../items.js"
+import { ApplicationCommandOptionType, ApplicationCommandType } from "discord.js"
 
 export var command: Command = {
     type: ApplicationCommandType.ChatInput,

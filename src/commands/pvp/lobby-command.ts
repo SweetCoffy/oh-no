@@ -1,7 +1,7 @@
 import { BattleLobby, createLobby, Difficulty, findValidLobby, lobbies } from '../../lobby.js';
 import { Command } from '../../command-loader.js'
 import { getUser, users } from '../../users.js';
-import { CommandInteraction, Message, ActionRow, ButtonComponent, TextChannel } from 'discord.js';
+import { CommandInteraction, Message, ActionRow, ButtonComponent, TextChannel, ApplicationCommandOptionType, ApplicationCommandType, ButtonStyle } from 'discord.js';
 import { BattleType, Player } from '../../battle.js';
 import { enemies } from '../../enemies.js';
 export var command: Command = {
@@ -176,7 +176,7 @@ export var command: Command = {
                     }
                 ],
                 components: [
-                    new ActionRow().addComponents(new ButtonComponent({ label: "Join", disabled: lobby.ready || lobby.users.length >= lobby.capacity, style: "SUCCESS", customId: "join" }))
+                    new ActionRow().addComponents(new ButtonComponent({ label: "Join", disabled: lobby.ready || lobby.users.length >= lobby.capacity, style: ButtonStyle.Primary, customId: "join" }))
                 ],
                 fetchReply: true,
             }) as Message

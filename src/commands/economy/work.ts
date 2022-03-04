@@ -1,3 +1,4 @@
+import { ApplicationCommandType } from "discord.js"
 import { Command } from "../../command-loader.js"
 import { addItem, shopItems } from "../../items.js"
 import { getRank, getUser } from "../../users.js"
