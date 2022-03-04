@@ -34,7 +34,7 @@ settings.noSave = process.argv.includes("-nosave") || settings.experimental
 
 
 export var client = new Discord.Client({
-    intents: ["GUILDS", "GUILD_MESSAGES"]
+    intents: ["Guilds", "GuildMessages"]
 })
 
 client.on("ready", async() => {
@@ -52,7 +52,7 @@ client.on("interactionCreate", async(i) => {
             cmd.autocomplete?.(i);
         }
     }
-    if (!i.isCommand() && !i.isContextMenu()) return
+    if (!i.isCommand() && !i.isContextMenuCommand()) return
     try {
         getUser(i.user).lastCommand = Date.now()
         console.log(`${i.user.username} /${i.commandName}`)

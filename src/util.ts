@@ -1,4 +1,4 @@
-import { Collection, CommandInteraction, ContextMenuInteraction } from "discord.js"
+import { ChatInputCommandInteraction, ContextMenuCommandInteraction } from "discord.js"
 import { formats } from "./formats.js"
 import { ItemResponse, ItemStack, shopItems } from "./items.js"
 export const CURRENCY_ICON = "$"
@@ -118,7 +118,7 @@ export function format(number: bigint) {
 	if (abs(number) > funi.min * 1000n) return `${yes(number)}`
     return `${m}.${d}${funi.suffix}`
 }
-export async function itemResponseReply(res: ItemResponse, i: CommandInteraction | ContextMenuInteraction) {
+export async function itemResponseReply(res: ItemResponse, i: ChatInputCommandInteraction | ContextMenuCommandInteraction) {
     if (!res.reason) {
         res = {
             type: "info",
