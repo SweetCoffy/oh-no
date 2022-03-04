@@ -4,23 +4,23 @@ import { Command } from "../command-loader"
 export var command: Command = {
     name: "suggest",
     description: "get real",
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     options: [
         {
             name: "title",
-            type: "STRING",
+            type: ApplicationCommandOptionType.String,
             description: "your mother",
             required: true,
         },
         {
             name: "content",
-            type: "STRING",
+            type: ApplicationCommandOptionType.String,
             description: "your mother",
             required: true,
         },
         {
             name: "type",
-            type: "STRING",
+            type: ApplicationCommandOptionType.String,
             description: "your mother",
             required: true,
             choices: [

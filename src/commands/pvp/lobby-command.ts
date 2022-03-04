@@ -1,53 +1,53 @@
 import { BattleLobby, createLobby, Difficulty, findValidLobby, lobbies } from '../../lobby.js';
 import { Command } from '../../command-loader.js'
 import { getUser, users } from '../../users.js';
-import { CommandInteraction, Message, MessageActionRow, MessageButton, TextChannel } from 'discord.js';
+import { CommandInteraction, Message, ActionRow, ButtonComponent, TextChannel } from 'discord.js';
 import { BattleType, Player } from '../../battle.js';
 import { enemies } from '../../enemies.js';
 export var command: Command = {
     name: "lobby",
     description: "ur mom",
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     options: [
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             description: "Finds a valid lobby and shows info",
             name: "find",
             options: []
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             description: "Creates a lobby",
             name: "create",
             options: [
                 {
                     name: "lobby_capacity",
                     required: true,
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     description: "The capacity",
                 },
                 {
                     name: "lobby_name",
                     required: false,
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     description: "The name of the lobby"
                 },
                 {
                     name: "lobby_bot_count",
                     required: false,
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     description: "The amount of bots",
                 },
                 {
                     name: "lobby_level",
                     required: false,
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     description: "The level to set everyone to",
                 },
                 {
                     name: "lobby_battle_type",
                     required: false,
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     description: "The type of battle",
                     choices: [
                         {
@@ -67,7 +67,7 @@ export var command: Command = {
                 {
                     name: "lobby_difficulty",
                     required: false,
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     description: "The difficulty level, only has an effect in Vs. Boss",
                     choices: [
                         {
@@ -91,65 +91,65 @@ export var command: Command = {
                 {
                     name: "lobby_boss_type",
                     required: false,
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     description: "beuhg",
                     choices: enemies.filter(el => el.boss).map((el, k) => ({name: el.name, value: k}))
                 },
                 {
                     name: "lobby_flags",
                     required: false,
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     description: "ha ha flags"
                 },
                 {
                     name: 'enemy_preset',
                     required: false,
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     description: "The enemy preset to use, only has an effect in lobbies with the E flag",
                     choices: enemies.map((v, k) => ({name: v.name, value: k}))
                 }
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             description: "Starts the battle in the current lobby",
             name: "start",
             options: []
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             description: "Shows a list of lobbies",
             name: "list",
             options: []
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             description: "Leaves the current lobby or ends it if you're the host",
             name: "leave",
             options: []
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             description: "Joins a lobby",
             name: "join",
             options: [
                 {
                     name: 'lobby_id',
                     required: true,
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     description: "The ID of the lobby to join",
                 },
                 {
                     name: 'enemy_preset',
                     required: false,
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     description: "The enemy preset to use, only has an effect in lobbies with the E flag",
                     choices: enemies.map((v, k) => ({name: v.name, value: k}))
                 },
                 {
                     name: 'team',
                     required: false,
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     description: "The team to join as, only has an effect in lobbies with the T flag",
                     choices: [
                         {
@@ -176,7 +176,7 @@ export var command: Command = {
                     }
                 ],
                 components: [
-                    new MessageActionRow().addComponents(new MessageButton({ label: "Join", disabled: lobby.ready || lobby.users.length >= lobby.capacity, style: "SUCCESS", customId: "join" }))
+                    new ActionRow().addComponents(new ButtonComponent({ label: "Join", disabled: lobby.ready || lobby.users.length >= lobby.capacity, style: "SUCCESS", customId: "join" }))
                 ],
                 fetchReply: true,
             }) as Message

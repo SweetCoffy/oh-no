@@ -9,10 +9,10 @@ import { money, randomRange, weightedDistribution, weightedRandom } from "../../
 export var command: Command = {
     name: "hunt",
     description: "a",
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     options: [
         {
-            type: "BOOLEAN",
+            type: ApplicationCommandOptionType.Boolean,
             name: "dont_start",
             required: false,
             description: "fuc",

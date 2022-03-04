@@ -1,32 +1,33 @@
 import { createLobby, findValidLobby, lobbies } from '../../lobby.js';
 import { Command, commands } from '../../command-loader.js'
 import { getUser, users } from '../../users.js';
-import { EmbedFieldData, TextChannel } from 'discord.js';
+import { ApplicationCommandOptionType, ApplicationCommandType, EmbedFieldData, TextChannel } from 'discord.js';
 import { moves } from '../../moves.js';
 import { getString } from '../../locale.js';
 import { Stats } from "../../stats.js";
 import { items } from '../../helditem.js';
+ApplicationCommandOptionType.Integer
 export var command: Command = {
     name: "choose",
     description: "ur mom",
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     options: [
 
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             description: "Choose a move",
             name: "move",
             options: [
                 {
                     name: "move",
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     required: true,
                     description: "The move to use",
                     autocomplete: true
                 },
                 {
                     name: "target",
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     required: true,
                     description: "The target of the move",
                     autocomplete: true,
@@ -34,13 +35,13 @@ export var command: Command = {
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             description: "Shows info about a move",
             name: "help",
             options: [
                 {
                     name: "move",
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     required: true,
                     description: "The move to show info about",
                     choices: moves.map((el, k) => ({name: el.name, value: k}))
@@ -48,13 +49,13 @@ export var command: Command = {
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             description: "Shows info about an item",
             name: "item_info",
             options: [
                 {
                     name: "item",
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     required: true,
                     description: "The item",
                     choices: items.map((el, k) => ({ name: el.name, value: k }))

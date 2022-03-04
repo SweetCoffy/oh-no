@@ -18,13 +18,13 @@ import * as items from "../items.js"
 import { shopItems } from "../items.js"
 
 export var command: Command = {
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     name: "eval",
     description: "Runs Javascript code. Some features are restricted to the bot owner.",
     dev: true,
     options: [
         {
-            type: "STRING",
+            type: ApplicationCommandOptionType.String,
             name: "code",
             required: true,
             description: "a"

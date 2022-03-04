@@ -1,38 +1,39 @@
 import { Command } from "../../command-loader.js"
 import { getUser } from "../../users.js"
-import { Message, MessageButton, MessageActionRow } from "discord.js"
+import { Message, ButtonComponent, ActionRow, ApplicationCommandOptionType, ApplicationCommandType, ComponentType, ButtonStyle } from "discord.js"
 import { addItem, getItem, recipes, shopItems, stackString, useItem } from "../../items.js"
+
 import { experimental, format, itemResponseReply, lexer, money } from "../../util.js"
 export var command: Command = {
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     name: "item",
     description: "Do stuff with items",
     options: [
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "list",
             description: "Shows a list of the items you have",
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "use",
             description: "Uses an item",
             options: [
                 {
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     name: "item",
                     description: "The item to use",
                     required: true,
                     autocomplete: true,
                 },
                 {
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     name: "amount",
                     description: "The amount of items to use",
                     required: false,
                 },
                 {
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     name: "args",
                     description: "what",
                     required: false,
@@ -40,19 +41,19 @@ export var command: Command = {
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "sell",
             description: "Sells an item",
             options: [
                 {
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     name: "item",
                     description: "The item to sell",
                     required: true,
                     autocomplete: true,
                 },
                 {
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     name: "amount",
                     description: "The amount of items to sell",
                     required: false,
@@ -60,19 +61,19 @@ export var command: Command = {
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "smelt",
             description: "Smelts an item",
             options: [
                 {
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     name: "item",
                     description: "The item to smelt",
                     required: true,
                     autocomplete: true,
                 },
                 {
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     name: "amount",
                     description: "The amount of items to smelt",
                     required: false,
@@ -80,19 +81,19 @@ export var command: Command = {
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "burn",
             description: "Burns an item",
             options: [
                 {
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     name: "item",
                     description: "The item to burn",
                     required: true,
                     autocomplete: true,
                 },
                 {
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     name: "amount",
                     description: "The amount of items to burn",
                     required: false,
@@ -100,19 +101,19 @@ export var command: Command = {
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "craft",
             description: "Crafts an item",
             options: [
                 {
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     name: "recipe",
                     description: "The recipe to use",
                     required: true,
                     autocomplete: true,
                 },
                 {
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     name: "amount",
                     description: "The amount of items to craft",
                     required: false,
@@ -145,11 +146,14 @@ export var command: Command = {
                 var page = 0
                 var pageSize = 10
                 var items = u.items
+                
                 var pageCount = Math.ceil(items.length / pageSize)
-                var components: MessageActionRow[] = [new MessageActionRow({
+                var components: ActionRow[] = [new ActionRow({
                     components: [
-                        new MessageButton({ emoji: "◀️", style: "PRIMARY", customId: "prev" }),
-                        new MessageButton({ emoji: "▶️", style: "PRIMARY", customId: "next" }),
+                        //@ts-ignore
+                        { emoji: "◀️", style: ButtonStyle.Primary, customId: "prev", type: ComponentType.Button },
+                        //@ts-ignore
+                        { emoji: "▶️", style: ButtonStyle.Primary, customId: "next", type: ComponentType.Button },
                     ]
                 })]
                 async function update(msg: Message) {
@@ -173,7 +177,7 @@ export var command: Command = {
                     
                 }) as Message
                 msg.createMessageComponentCollector({
-                    componentType: "BUTTON",
+                    componentType: ComponentType.Button,
                     time: 1000 * 60,
                     filter: (el) => {
                         if (el.user.id != i.user.id) {

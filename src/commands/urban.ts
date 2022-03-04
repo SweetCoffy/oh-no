@@ -1,6 +1,6 @@
 import { Command } from "../command-loader.js"
 import fetch from "node-fetch"
-import { MessageActionRow, MessageButton, MessageEmbedOptions, Message } from "discord.js"
+import { ActionRow, ButtonComponent, MessageEmbedOptions, Message } from "discord.js"
 const BASE_URL = "http://api.urbandictionary.com/v0/define"
 interface UDDefinitionData {
     permalink: string,
@@ -20,11 +20,11 @@ interface UDDefinitionData {
 }
 export var command: Command = {
     name: "urban",
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     description: "Looks up something in urban dictionary",
     options: [
         {
-            type: "STRING",
+            type: ApplicationCommandOptionType.String,
             name: "term",
             description: "brub",
             required: true,
@@ -105,13 +105,13 @@ export var command: Command = {
             var e = funi()
             for (var j = 0; j < e.length; j += 2) {
                 var embeds = e.slice(j, j + 2)
-                var components: MessageActionRow[] = []
+                var components: ActionRow[] = []
                 if (j >= e.length - 2) {
                     components = [
-                        new MessageActionRow({
+                        new ActionRow({
                             components: [
-                                new MessageButton({ emoji: "◀️", style: "PRIMARY", customId: "prev" }),
-                                new MessageButton({ emoji: "▶️", style: "PRIMARY", customId: "next" }),
+                                new ButtonComponent({ emoji: "◀️", style: ButtonStyle.Primary, customId: "prev" }),
+                                new ButtonComponent({ emoji: "▶️", style: ButtonStyle.Primary, customId: "next" }),
                             ]
                         })
                     ]
@@ -121,7 +121,7 @@ export var command: Command = {
             try {
                 var btn = await msgs[msgs.length - 1].awaitMessageComponent({
                     time: 1000 * 60,
-                    componentType: "BUTTON",
+                    componentType: ComponentType.Button,
                     filter(i) {
                         return true
                     }

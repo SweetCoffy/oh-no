@@ -1,20 +1,20 @@
-import { Message, MessageActionRow, MessageButton } from "discord.js"
+import { Message, ActionRow, ButtonComponent } from "discord.js"
 import { Command } from "../../command-loader.js"
 import { shopItems, addItem, useItem, shops, Shop } from "../../items.js"
 import { getUser } from "../../users.js"
 import { format, itemResponseReply } from "../../util.js"
 export var command: Command = {
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     name: "shop",
     description: "Shop stuff",
     options: [
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "list",
             description: 'Shows a list of the items in the shop',
             options: [
                 {
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     name: "shop",
                     description: "haha funni shop",
                     choices: shops.map((el, k) => ({
@@ -25,30 +25,30 @@ export var command: Command = {
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "buy",
             description: 'Buys an item from the shop',
             options: [
                 {
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     name: "item",
                     description: "The item to buy",
                     required: true
                 },
                 {
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     name: "amount",
                     description: "The amount of items to buy",
                     required: false
                 },
                 {
-                    type: "BOOLEAN",
+                    type: ApplicationCommandOptionType.Boolean,
                     name: "auto_use",
                     description: "Whether or not to automatically use the items bought",
                     required: false
                 },
                 {
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     name: "shop",
                     description: "haha funni shop",
                     choices: shops.map((el, k) => ({
@@ -74,10 +74,10 @@ export var command: Command = {
                 var page = 0
                 var pageSize = 10
                 var pageCount = Math.ceil(shop.items.length / pageSize)
-                var components: MessageActionRow[] = [new MessageActionRow({
+                var components: ActionRow[] = [new ActionRow({
                     components: [
-                        new MessageButton({ emoji: "◀️", style: "PRIMARY", customId: "prev" }),
-                        new MessageButton({ emoji: "▶️", style: "PRIMARY", customId: "next" }),
+                        new ButtonComponent({ emoji: "◀️", style: ButtonStyle.Primary, customId: "prev" }),
+                        new ButtonComponent({ emoji: "▶️", style: ButtonStyle.Primary, customId: "next" }),
                     ]
                 })]
                 async function update(msg: Message) {
@@ -102,7 +102,7 @@ export var command: Command = {
                     
                 }) as Message
                 msg.createMessageComponentCollector({
-                    componentType: "BUTTON",
+                    componentType: ComponentType.Button,
                     time: 1000 * 60,
                     filter: (el) => {
                         if (el.user.id != i.user.id) {

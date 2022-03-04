@@ -4,12 +4,12 @@ import { money } from "../../util.js";
 
 export var command: Command = {
     name: "rankup",
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     description: "ae",
     options: [
         {
             name: "money",
-            type: "INTEGER",
+            type: ApplicationCommandOptionType.Integer,
             description: "The amount of money to spend",
             required: true,
         }

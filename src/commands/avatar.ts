@@ -1,11 +1,11 @@
 import { Command } from "../command-loader.js"
 export var command: Command = {
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     name: "avatar",
     description: "when you",
     options: [
         {
-            type: "USER",
+            type: ApplicationCommandOptionType.User,
             name: "user",
             description: "asd",
             required: false,

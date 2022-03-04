@@ -3,7 +3,7 @@ import { data, users } from "../../users.js";
 
 export var command: Command = {
     name: "reset",
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     description: "Deletes your data",
     async run(i) {
         users.delete(i.user.id)

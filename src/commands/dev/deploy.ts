@@ -1,14 +1,15 @@
+import { ApplicationCommandType, ApplicationCommandOptionType } from "discord.js";
 import { Command, commands } from "../../command-loader.js";
 import { settings } from "../../util.js";
 
 export var command: Command = {
     name: "deploy",
     dev: true,
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     description: "Deploys commands except dev commands (dev only)",
     options: [
         {
-            type: "BOOLEAN",
+            type: ApplicationCommandOptionType.Boolean,
             required: false,
             name: "no_guild",
             description: "a"

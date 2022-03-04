@@ -3,7 +3,7 @@ import canvas from "canvas"
 const { createCanvas } = canvas
 import { drawString, drawTiles, images } from "../../imggen.js";
 import { Building, buildingTypes, map } from "../../game-map.js";
-import { MessageAttachment } from "discord.js";
+import { ApplicationCommandOptionType, ApplicationCommandType, MessageAttachment } from "discord.js";
 import { getUser } from "../../users.js"
 import { format } from "../../util.js";
 import { getItem } from "../../items.js";
@@ -11,15 +11,15 @@ import { getItem } from "../../items.js";
 export var command: Command = {
     name: "map",
     description: "asd",
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     options: [
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "show",
             description: "a",
             options: [
                 {
-                    type: "NUMBER",
+                    type: ApplicationCommandOptionType.Number,
                     name: "scale",
                     required: false,
                     description: "nbasd"
@@ -27,36 +27,36 @@ export var command: Command = {
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "select",
             description: "a",
             options: [
                 {
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     name: "start_x",
                     required: true,
                     description: "a",
                 },
                 {
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     name: "start_y",
                     required: true,
                     description: "a",
                 },
                 {
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     name: "end_x",
                     required: true,
                     description: "a",
                 },
                 {
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     name: "end_y",
                     required: true,
                     description: "a",
                 },
                 {
-                    type: "BOOLEAN",
+                    type: ApplicationCommandOptionType.Boolean,
                     name: "stack",
                     required: false,
                     description: "a",
@@ -64,47 +64,47 @@ export var command: Command = {
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "deselect",
             description: "a",
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "grid",
             description: "a",
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "build_mode",
             description: "a",
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "claim",
             description: "a",
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "unclaim",
             description: "a",
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "find_unclaimed",
             description: "a",
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "destroy",
             description: "a",
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "scroll_view",
             description: "asd",
             options: [
                 {
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     name: "direction",
                     required: true,
                     description: "y",
@@ -128,7 +128,7 @@ export var command: Command = {
                     ]
                 },
                 {
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     name: "amount",
                     required: false,
                     description: "a"
@@ -136,18 +136,18 @@ export var command: Command = {
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "set_scroll",
             description: "a",
             options: [
                 {
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     name: "x",
                     description: "a",
                     required: true,
                 },
                 {
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     name: "y",
                     description: "a",
                     required: true,
@@ -155,30 +155,30 @@ export var command: Command = {
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "build",
             description: "a",
             options: [
                 {
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     name: "building",
                     description: "a",
                     required: true
                 },
                 {
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     name: "x",
                     description: "a",
                     required: false,
                 },
                 {
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     name: "y",
                     description: "a",
                     required: false,
                 },
                 {
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     name: "facing",
                     required: false,
                     description: "y",

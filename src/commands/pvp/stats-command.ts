@@ -13,136 +13,136 @@ function getWeighted(weights: number[], total: number = 600) {
     return ar
 }
 export var command: Command = {
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     name: "stats",
     description: "Does stuff with stats",
     options: [
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "generate",
             description: "Generate stats from weight values",
             options: [
                 {
                     name: "hp",
-                    type: "NUMBER",
+                    type: ApplicationCommandOptionType.Number,
                     description: "Health",
                     required: false,
                 },
                 {
                     name: "atk",
-                    type: "NUMBER",
+                    type: ApplicationCommandOptionType.Number,
                     description: "Attack",
                     required: false,
                 },
                 {
                     name: "def",
-                    type: "NUMBER",
+                    type: ApplicationCommandOptionType.Number,
                     description: "Defense",
                     required: false,
                 },
                 {
                     name: "spatk",
-                    type: "NUMBER",
+                    type: ApplicationCommandOptionType.Number,
                     description: "Special Attack",
                     required: false,
                 },
                 {
                     name: "spdef",
-                    type: "NUMBER",
+                    type: ApplicationCommandOptionType.Number,
                     description: "Special Defense",
                     required: false,
                 },
                 {
                     name: "spd",
-                    type: "NUMBER",
+                    type: ApplicationCommandOptionType.Number,
                     description: "Speed",
                     required: false,
                 },
                 {
                     name: "total",
-                    type: "NUMBER",
+                    type: ApplicationCommandOptionType.Number,
                     description: "a",
                     required: false,
                 },
                 {
                     name: "held_items",
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     description: "A comma separated list of held items",
                     required: false
                 },
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "presets",
             description: "Shows a list of presets, including both your own and default",
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "held_items",
             description: "Sets your held items",
             options: [
                 {
                     name: "items",
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     description: "A comma separated list of held items",
                     required: false
                 },
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "preset",
             description: "Shows info about a preset",
             options: [
                 {
                     name: "preset",
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     description: "The preset",
                     required: false
                 }
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "create",
             description: "Creates a preset",
             options: [
                 {
                     name: "name",
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     description: "The name of the preset",
                     required: true
                 },
                 {
                     name: "json",
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     description: "The JSON data of the preset (use /stats generate to get it)",
                     required: true
                 },
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "use",
             description: "Uses a preset",
             options: [
                 {
                     name: "preset",
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     description: "The preset to use",
                     required: true
                 }
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "delete",
             description: "Deletes a preset",
             options: [
                 {
                     name: "preset",
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     description: "The preset to delete",
                     required: true
                 }

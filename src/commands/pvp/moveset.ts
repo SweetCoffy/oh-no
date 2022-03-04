@@ -1,4 +1,4 @@
-import { Message, MessageActionRow, MessageButton, MessageSelectMenu } from "discord.js";
+import { Message, ActionRow, ButtonComponent, MessageSelectMenu } from "discord.js";
 import { Command } from "../../command-loader.js";
 import { moves } from "../../moves.js";
 import { getUser } from "../../users.js";
@@ -6,12 +6,12 @@ import { getUser } from "../../users.js";
 export var command: Command = {
     name: "moveset",
     description: "A",
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     async run(i) {
         var msg = await i.reply({
             content: "Choose your moveset",
             components: [
-                new MessageActionRow({
+                new ActionRow({
                     components: [
                         new MessageSelectMenu({
                             maxValues: 4,
@@ -28,14 +28,14 @@ export var command: Command = {
                         }),
                     ]
                 }),
-                new MessageActionRow({
+                new ActionRow({
                     components: [
-                        new MessageButton({
+                        new ButtonComponent({
                             label: "Confirm",
                             style: "SUCCESS",
                             customId: "yes",
                         }),
-                        new MessageButton({
+                        new ButtonComponent({
                             label: "Cancel",
                             style: "DANGER",
                             customId: "no",

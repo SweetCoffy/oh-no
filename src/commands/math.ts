@@ -6,16 +6,16 @@ import { Dictionary } from "../util.js";
 export var command: Command = {
     name: "math",
     description: "mafs",
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     options: [
         {
-            type: "STRING",
+            type: ApplicationCommandOptionType.String,
             name: "op",
             required: true,
             description: "a",
         },
         {
-            type: "INTEGER",
+            type: ApplicationCommandOptionType.Integer,
             name: "precision",
             required: false,
             description: "a",

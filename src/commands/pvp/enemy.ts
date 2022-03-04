@@ -1,14 +1,15 @@
+import { ApplicationCommandOptionType, ApplicationCommandType } from "discord.js"
 import { Command } from "../../command-loader.js"
 import { enemies } from "../../enemies.js"
 import { bar } from "../../util.js"
-
+ApplicationCommandOptionType.User
 export var command: Command = {
     name: "enemy",
     description: "le bruhe",
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     options: [
         {
-            type: "STRING",
+            type: ApplicationCommandOptionType.String,
             required: false,
             name: "enemy",
             description: "a",

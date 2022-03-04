@@ -4,12 +4,12 @@ import { Command } from "../../command-loader.js"
 import { getUser } from "../../users.js"
 import { bar } from "../../util.js"
 export var command: Command = {
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     name: "info",
     description: "pingery",
     options: [
         {
-            type: "STRING",
+            type: ApplicationCommandOptionType.String,
             name: "player",
             required: false,
             description: "a",

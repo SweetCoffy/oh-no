@@ -1,12 +1,13 @@
-import { CommandInteraction, Collection, Guild, ContextMenuInteraction, ChatInputApplicationCommandData, UserApplicationCommandData, AutocompleteInteraction } from "discord.js";
+import { ChatInputCommandInteraction, Collection, Guild, UserContextMenuCommandInteraction, ChatInputApplicationCommandData, MessageContextMenuCommandInteraction, UserApplicationCommandData, MessageApplicationCommandData, AutocompleteInteraction } from "discord.js";
 import { statSync, readdirSync } from "fs"
 import { resolve, join } from "path"
 import { settings } from "./util.js"
 
-export type ChatInputCommand = ChatInputApplicationCommandData & { run(i: CommandInteraction): any}
-export type UserCommand = UserApplicationCommandData & { run(i: ContextMenuInteraction): any }
+export type ChatInputCommand = ChatInputApplicationCommandData & { run(i: ChatInputCommandInteraction): any}
+export type UserCommand = UserApplicationCommandData & { run(i: UserContextMenuCommandInteraction): any }
+export type MessageCommand = MessageApplicationCommandData & { run(i: MessageContextMenuCommandInteraction): any }
 
-export type Command = (ChatInputCommand | UserCommand) & {dev?: boolean, autocomplete?(i: AutocompleteInteraction): any}
+export type Command = (ChatInputCommand | UserCommand | MessageCommand) & {dev?: boolean, autocomplete?(i: AutocompleteInteraction): any}
 
 export var commands: Collection<string, Command> = new Collection()
 

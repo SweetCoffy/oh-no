@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from "discord.js";
 import { Command } from "../../command-loader.js";
 import { experimental, settings } from "../../util.js";
 
@@ -9,13 +10,13 @@ export var command: Command = {
         {
             name: "feature",
             description: "a",
-            type: "STRING",
+            type: ApplicationCommandOptionType.String,
             choices: Object.keys(experimental).map(el => ({ name: el, value: el }))
         },
         {
             name: "value",
             description: "a",
-            type: "BOOLEAN",
+            type: ApplicationCommandOptionType.Boolean,
         }
     ],
     async run(i) {
