@@ -22,7 +22,7 @@ if (existsSync("map.txt")) {
     map.fromString(readFileSync("map.txt", "utf8"))
 }
 
-var config = JSON.parse(readFileSync(resolve("../config.json"), "utf8"))
+var config = JSON.parse(readFileSync(resolve("./config.json"), "utf8"))
 
 const token = config.token
 

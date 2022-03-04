@@ -1,3 +1,4 @@
+import { ApplicationCommandType, ApplicationCommandOptionType } from "discord.js"
 import { Command } from "../../command-loader.js"
 import { getLevelUpXP, getUser, level, getRank } from "../../users.js"
 import { bar, format, settings, money } from "../../util.js"
@@ -23,7 +24,7 @@ export var command: Command = {
             embeds: [
                 {
                     title: `${user.username}'s Profile`,
-                    color: user.hexAccentColor || 0,
+                    color: user.accentColor || 0,
                     description: 
 `
 **Economy**
