@@ -1,0 +1,9 @@
+item
+ContentID = floppy_disk
+Icon = 💾
+Name = Floppy Disk
+DefaultData = { type: "storage", fs: {} }
+Unstackable = true
+Shop = "main"
+Description = "Who even uses these anymore?"
+Price = 54367
