@@ -113,7 +113,7 @@ export class Move {
         return this.power || 0
     }
     /**
-     * Whether or not this move hits all enemies in PvE mode
+     * Whether or not this move hits all enemies in PvE mode. Currently not implemented and probably getting removed
      */
     hitAll: boolean = false
     targetSelf: boolean = false
@@ -245,7 +245,7 @@ moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
 //}).setDesc("Heals 150% of the user's max HP, but severely lowers attack, special attack and speed"))
 
 
-moves.set("destruction_beam", new Move("Pingcheck", "attack", 200, "special", 100).set(el => {
+moves.set("pingcheck", new Move("Pingcheck", "attack", 200, "special", 100).set(el => {
     el.critMul = 0
     el.priority = -999
     el.selectable = false

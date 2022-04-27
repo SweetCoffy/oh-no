@@ -7,28 +7,15 @@ import { BitArray, BitArray2D, experimental, settings } from './util.js'
 import { map } from './game-map.js'
 import { client } from './index.js'
 import { Enemy } from './enemies.js'
-import { deserialize } from './serialize.js'
 export var data: any = {}
 
 function reviver(k: string, v: any) {
     if (typeof v == "string" && v.startsWith("BigInt(") && v.endsWith(")")) return BigInt(v.slice("BigInt(".length, -1))
     return v
 }
-/*if (false || experimental.bin_save) {
-    if (existsSync("userdata.bin")) {
-        data = deserialize(readFileSync("userdata.bin"))
-    }
-} else */
-{
-    if (experimental.airquotes_efficient_data) {
-        if (!existsSync("data/")) mkdirSync("data/")
-    } else {
-        if (!existsSync("users.json")) {
-            writeFileSync("users.json", "{}")
-        }
-        data = JSON.parse(readFileSync("users.json", "utf8"), reviver)
-    }
-}
+
+if (!existsSync("data/")) mkdirSync("data/")
+
 
 export interface PresetList {
     [key: string]: StatPreset
@@ -62,7 +49,6 @@ export interface UserInfo {
     lastCommand: number,
     level: number,
     xp: number,
-    modified?: boolean,
     fuel: bigint,
     forceEncounter: Enemy[] | null,
     lastMessage: number,
@@ -70,6 +56,7 @@ export interface UserInfo {
     msgLvl_xp: number,
     msgLvl_messages: number,
     rank_xp: number,
+    ability?: string,
 }
 export interface UserSaveData {
     baseStats: Stats,
@@ -85,6 +72,7 @@ export interface UserSaveData {
     level: number,
     xp: number,
     moveset: string[],
+    ability?: string,
     [key: string]: any,
 }
 export function getUserSaveData(info: UserInfo) {
@@ -111,6 +99,7 @@ export function getUserSaveData(info: UserInfo) {
         msgLvl_messages: info.msgLvl_messages,
         moveset: info.moveset,
         rank_xp: info.rank_xp,
+        ability: info.ability,
     }
     return obj;
 }
@@ -142,17 +131,17 @@ export function getUser(user: User | string): UserInfo {
     }
     if (!users.get(user.id)) createUser(user)
     var data = users.get(user.id) as UserInfo;
-    if (experimental.airquotes_efficient_data) {
-        if (!data.unloadTimeout) {
-            data.unloadTimeout = setTimeout(function() {
-                data.unloadTimeout = undefined;
-                writeFileSync(`data/${(user as User).id}.json`, JSON.stringify(getUserSaveData(data), replacer, 4))
-                users.delete((user as User).id);
-                console.log(`User ${(user as User).username} has been unloaded`)
-            }, settings.unloadTimeout)
-        } else {
-            data.unloadTimeout.refresh()
-        }
+    if (!data.unloadTimeout) {
+        // Don't unload users that are in a lobby as it can cause "funny" things to happen
+        data.unloadTimeout = setTimeout(function() {
+            if (data.lobby) return data.unloadTimeout?.refresh()
+            data.unloadTimeout = undefined;
+            writeFileSync(`data/${settings.saveprefix}${(user as User).id}.json`, JSON.stringify(getUserSaveData(data), replacer, 4))
+            users.delete((user as User).id);
+            console.log(`User ${(user as User).username} has been unloaded`)
+        }, settings.unloadTimeout)
+    } else {
+        data.unloadTimeout.refresh()
     }
     return data
 }
@@ -202,8 +191,8 @@ export function createUser(user: User) {
         msgLvl_messages: 0,
         msgLvl_xp: 0,
     }
-    if (experimental.airquotes_efficient_data && existsSync(`data/${user.id}.json`)) {
-        obj = {...obj, ...JSON.parse(readFileSync(`data/${user.id}.json`, "utf8"), reviver)}
+    if (existsSync(`data/${settings.saveprefix}${user.id}.json`)) {
+        obj = {...obj, ...JSON.parse(readFileSync(`data/${settings.saveprefix}${user.id}.json`, "utf8"), reviver)}
     } else obj = {...obj, ...(data[user.id] || {})}
     for (var k in obj.money) {
         //@ts-ignore
@@ -222,6 +211,9 @@ export function createUser(user: User) {
     users.set(user.id, obj)
 }
 export function addXP(user: User, amount: number) {
+    if (experimental.april_fools) {
+        amount << Math.floor(Math.cbrt(Math.random() * 50))
+    }
     var u = getUser(user)
     u.xp += amount
     var levels = 0;
@@ -234,7 +226,4 @@ export function addXP(user: User, amount: number) {
 }
 export function getRank(user: User) {
     return Math.floor(Math.cbrt(getUser(user).rank_xp/1.5) / 3.5) + 1
-}
-export function clearUser(user: User) {
-
 }

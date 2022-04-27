@@ -1,4 +1,5 @@
 import { Collection, User } from "discord.js"
+import { LOWER_FACTOR } from "./params.js"
 import { getUser, PresetList } from "./users.js"
 import { experimental } from "./util.js"
 
@@ -20,7 +21,8 @@ export interface Stats {
 export interface StatPreset {
     name: string,
     stats: Stats,
-    helditems?: string[]
+    helditems?: string[],
+    ability?: string,
 }
 export const baseStats: Stats = {
     hp   :  100,
@@ -82,7 +84,8 @@ presets.set("extreme-tonk", {
         spdef: 217,
         spd  :   1,
     },
-    helditems: []
+    helditems: [],
+    ability: "hardening",
 })
 export function makeStats(obj?: {[key: string]: number}): Stats {
     var o: Stats = {
@@ -103,7 +106,8 @@ export function makeStats(obj?: {[key: string]: number}): Stats {
 // floor(0.01 x (2 x Base + IV + floor(0.25 x EV)) x Level) + Level + 10
 // floor(0.01 x (2 x Base + IV + floor(0.25 x EV)) x Level) + 5)
 export function calcStat(base: number, level: number, ev: number = 0) {
-    if (experimental.ohyes_stat_formula) Math.floor((base / 1.5) + (base * (level / 9)))
+    if (experimental.ohyes_stat_formula) return Math.floor( 
+        ((base / 1.5) + (base/5 * level/9) + (level * base/32) + level*7.5) / (1 + level/LOWER_FACTOR))
     return Math.floor(0.01 * (2 * base + 31 + Math.floor(0.25 * ev)) * level) + 5
 }
 export function calcStats(level: number, baseStats: Stats, hpboost: number = 1): Stats {
@@ -112,7 +116,7 @@ export function calcStats(level: number, baseStats: Stats, hpboost: number = 1):
         s[k] = calcStat(baseStats[k], level, 0)
     }
     if (experimental.ohyes_stat_formula) {
-        s.hp = Math.floor(s.hp*2.5 + baseStats.hp)
+        s.hp = Math.floor(s.hp*2.5)
     } else {
         s.hp += (level + 5) * 1.1
         s.hp = Math.floor(s.hp * 1.7821676118462508 * hpboost)

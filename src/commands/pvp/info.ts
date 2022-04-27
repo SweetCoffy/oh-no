@@ -42,7 +42,7 @@ export var command: Command = {
         await i.reply({
             ephemeral: true,
             content: "```diff\n" +
-            `${player.name.padEnd(32, " ")} Lv ${player.level}\nHP [${bar(player.hp, player.stats.hp, 20)}]\n${Math.floor(player.hp)}/${Math.floor(player.stats.hp)}${player.absorption > 0 ? `\n\nT${player.absorptionTier} [${bar(player.absorption, player.stats.hp, 20)}]\n${Math.floor(player.absorption / player.stats.hp * 100)}%\n` : ``}\nCharge ${player.charge.toString().padStart(3, " ")}\nMagik  ${player.magic.toString().padStart(3, " ")}\n${player.status.map(el => {
+            `${player.name.padEnd(32, " ")} Lv ${player.level}\nHP [${bar(player.hp, player.maxhp, 20)}]\n${Math.floor(player.hp)}/${Math.floor(player.maxhp)}${player.absorption > 0 ? `\n\nT${player.absorptionTier} [${bar(player.absorption, player.maxhp, 20)}]\n${Math.floor(player.absorption / player.maxhp * 100)}%\n` : ``}\nCharge ${player.charge.toString().padStart(3, " ")}\nMagik  ${player.magic.toString().padStart(3, " ")}\n${player.status.map(el => {
                 return `${statusTypes.get(el.type)?.name.padEnd(16, " ")} | ${el.duration.toString().padEnd(2, " ")} Turns left`
             }).join("\n") || "---------------- | -- Turns left"}\n` + 
             `Stats:\n${Object.keys(player.modifiers).map(el => {

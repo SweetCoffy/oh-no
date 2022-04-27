@@ -1,4 +1,4 @@
-import { settings, experimental } from "./util.js"
+import { settings, experimental, loadRecursive } from "./util.js"
 for (var a of process.argv.slice(2)) {
     if (a.startsWith("-")) {
         //@ts-ignore
@@ -8,7 +8,7 @@ for (var a of process.argv.slice(2)) {
 import Discord from "discord.js"
 import { BattleLobby, lobbies, createLobby } from "./lobby.js"
 import { commands, loadDir, addCommands } from "./command-loader.js"
-import { users, createUser, getUser, UserSaveData, data, globalData, clearUser, getUserSaveData, replacer } from "./users.js"
+import { users, getUser, UserSaveData, data, globalData, getUserSaveData, replacer } from "./users.js"
 import { writeFileSync, readFileSync, readdirSync, existsSync, statSync } from "fs"
 import { shopItems } from "./items.js"
 import canvas from "canvas"
@@ -16,7 +16,8 @@ import canvas from "canvas"
 import { resolve } from "path"
 import { map } from "./game-map.js"
 import { load } from "./content-loader.js"
-import { serialize } from "./serialize.js"
+import { calcStat } from "./stats.js"
+import { calcDamage } from "./battle.js"
 
 if (existsSync("map.txt")) {
     map.fromString(readFileSync("map.txt", "utf8"))
@@ -86,7 +87,7 @@ client.on("interactionCreate", async(i) => {
 process.on("unhandledRejection", (er) => {
     console.error(er)
 })
-client.login(token);
+if (!process.argv.includes("-nobot")) client.login(token);
 function saveOther() {
     for (let [k, v] of shopItems) {
         if (v.stock != Infinity) {
@@ -99,7 +100,7 @@ function saveOther() {
     }, 4))
     writeFileSync("map.txt", map.toString())
 }
-function saveJSON_experimental() {
+function saveJSON() {
     //@ts-ignore
     var obj: { [key: string]: UserSaveData } = { ...data }
     for (var [k, v] of users) {
@@ -107,47 +108,8 @@ function saveJSON_experimental() {
     }
     users.clear()
     for (var k in obj) {
-        writeFileSync(`data/${k}.json`, JSON.stringify(obj[k], replacer, 4))
+        writeFileSync(`data/${settings.saveprefix}${k}.json`, JSON.stringify(obj[k], replacer, 4))
     }
-    saveOther()
-}
-function saveJSON() {
-    //@ts-ignore
-    var obj: { [key: string]: UserSaveData } = data
-    var tilesOwned: any = {}
-    for (var t of map.iterateRect(0, 0, map.width, map.height)) {
-        if (!t.tile) continue
-        if (t.tile.owner) {
-            if (!tilesOwned[t.tile.owner]) tilesOwned[t.tile.owner] = []
-            tilesOwned[t.tile.owner].push(`${t.x},${t.y}`)
-        }
-    }
-    for (var [k, v] of users) {
-        obj[k] = getUserSaveData(v)
-    }
-    
-    writeFileSync(`users.json`, JSON.stringify(obj, function(k, v) {
-        if (typeof v == "bigint") return `BigInt(${v})`
-        return v
-    }, 4))
-    saveOther()
-}
-function saveBin() {
-    //@ts-ignore
-    var obj: { [key: string]: any } = data
-    var tilesOwned: any = {}
-    for (var t of map.iterateRect(0, 0, map.width, map.height)) {
-        if (!t.tile) continue
-        if (t.tile.owner) {
-            if (!tilesOwned[t.tile.owner]) tilesOwned[t.tile.owner] = []
-            tilesOwned[t.tile.owner].push(`${t.x},${t.y}`)
-        }
-    }
-    for (var [k, v] of users) {
-        obj[k] = getUserSaveData(v)
-    }
-    var buf = serialize(obj)
-    writeFileSync("userdata.bin", buf)
     saveOther()
 }
 process.on("SIGINT", () => {
@@ -155,12 +117,7 @@ process.on("SIGINT", () => {
         process.exit(0)
         return
     }
-    if (experimental.bin_save) {
-        saveBin()
-    } else {
-        if (experimental.airquotes_efficient_data) saveJSON_experimental()
-        else saveJSON()
-    }
+    saveJSON()
     process.exit(0)
 })
 client.on("messageCreate", async(m) => {
@@ -176,15 +133,6 @@ setInterval(async() => {
     for (let [k, v] of users) {
         v.money.points += (BigInt(v.banks) * (v.multiplier/4n))*15n*5n*3n
     }
-    //for (let k in data) {
-    //    var u = await client.users.fetch(k);
-    //    if (u) {
-    //        var usr = getUser(u)
-    //        if (Date.now() - usr.lastMessage + 24*60*60*1000) {
-    //            usr.msgLvl_xp = Math.max(usr.msgLvl_xp - (2 + Math.floor(Math.cbrt(usr.msgLvl_xp))), 0)
-    //        }
-    //    }
-    //}
 }, 15000)
 setInterval(() => {
     for (var t of map.iterateRect(0, 0, map.width, map.height)) {
@@ -199,18 +147,28 @@ setInterval(() => {
         tile.building.update(t.x, t.y)
     }
 }, 1000)
-function loadRecursive(path: string) {
-    var files = readdirSync(path)
-    for (var f of files) {
-        if (f.startsWith("exp_") && !settings.experimental) continue
-        if (statSync(`${path}/${f}`).isDirectory()) {
-            loadRecursive(`${path}/${f}`)
-            continue
-        }
-        if (f.endsWith(".balls") || f.endsWith(".owo")) {
-            
-            load(`${path}/${f}`)
-        }
-    }
-}
 loadRecursive("content")
+
+var base = 100
+var maxlevel = 100
+var step = maxlevel/50
+var highest = calcStat(base, maxlevel)
+var chars = process.stdout.columns - 30
+for (var i = 0; i <= maxlevel; i += step) {
+    var v = calcStat(base, i || 1)
+    console.log(`STAT ${v.toString().padStart(6, " ")} | Level ${(i || 1).toString().padStart(maxlevel.toString().length, " ")}: ${"#".repeat(Math.floor(v / highest * chars))}`)
+}
+
+var power = 100
+var baseatk = 100
+var basedef = 100
+var highest = calcDamage(power, calcStat(baseatk, maxlevel), calcStat(basedef, maxlevel), maxlevel)
+for (var i = 0; i <= maxlevel; i += step) {
+    var atk = calcStat(baseatk, i || 1)
+    var def = calcStat(basedef, i || 1)
+    var v = calcDamage(power, atk, def, i || 1)
+    console.log(`DMG  ${v.toString().padStart(6, " ")} | Level ${(i || 1).toString().padStart(maxlevel.toString().length, " ")}: ${"#".repeat(Math.floor(v / highest * chars))}`)
+}
+
+// get real
+if (experimental.april_fools) import("./april-fools.js")

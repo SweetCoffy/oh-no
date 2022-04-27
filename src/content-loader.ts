@@ -1,10 +1,12 @@
 import { ItemStack, ItemType, Recipe, recipes, shopItems, shops } from "./items.js";
+import { Move, moves } from "./moves.js"
 import { Dictionary } from "./util.js";
 import { readFileSync } from "fs";
-import { resolve, join } from "path";
+import { resolve, join, dirname, basename } from "path";
 import Hjson from "hjson"
-type TypeString = "string" | "number" | "bigint" | "itemstack" | "boolean" | "json"
-type ArrayTypeString = "array<string>" | "array<number>" | "array<bigint>" | "array<itemstack>" | "array<boolean>"
+import { locales } from "./locale.js";
+type TypeString = "string" | "number" | "bigint" | "itemstack" | "boolean" | "json" | "chance"
+type ArrayTypeString = `array<${TypeString}>`
 type Types = string | number | bigint | ItemStack | boolean | Dictionary<any>
 var defaultProperties: Dictionary<TypeString> = {
     contentid: "string",
@@ -13,6 +15,7 @@ interface ContentType {
     properties: Dictionary<TypeString | ArrayTypeString>,
     onLoad: (obj: Dictionary<Types | Types[]>) => any
 }
+type Test = `${number}h`
 export var loaded: Dictionary<Dictionary<Types | Types[]>> = {}
 var types: Dictionary<ContentType> = {
     item: {
@@ -79,6 +82,53 @@ var types: Dictionary<ContentType> = {
             var r = new Recipe(obj.name.toString(), obj.output, ...obj.input)
             recipes.set(obj.contentid.toString(), r)
         }
+    },
+    locale: {
+        properties: {
+            "*": "string",
+        },
+        onLoad(obj) {
+            //@ts-ignore
+            if (!locales[obj.localeid]) locales[obj.localeid] = {}
+            //@ts-ignore
+            var o = locales[obj.localeid]
+            for (var k in obj) {
+                o[k] = obj[k]
+            }
+        }
+    },
+    move: {
+        properties: {
+            contentid: "string",
+            name: "string",
+            description: "string",
+            requirescharge: "number",
+            requiresmagic: "number",
+            setdamage: "string",
+            critmul: "number",
+            category: "string",
+            power: "number",
+            accuracy: "number",
+            type: "string",
+            priority: "number",
+            recoil: "number",
+            // userstatchance: "number",
+            // targetstatchance: "number",
+            breakshield: "boolean",
+            // inflictstatus: "array<chance>",
+            selectable: "boolean",
+            targetself: "boolean",
+        },
+        onLoad(obj) {
+            if (typeof(obj.contentid) != "string") return;
+            var m = moves.get(obj.contentid) || new Move("", "attack", 0)
+            for (var k in m) {
+                var lower = k.toLowerCase()
+                //@ts-ignore
+                if (lower in obj) m[k] = obj[lower];
+            }
+            moves.set(obj.contentid, m)
+        }
     }
 }
 export function parseValueType(v: string, type: TypeString | ArrayTypeString): Types | Types[] {
@@ -111,25 +161,45 @@ export function parseValueType(v: string, type: TypeString | ArrayTypeString): T
     } else if (type == "json") {
         var g = Hjson.parse(v)
         return g
+    } else if (type == "chance") {
+        var h = v.trim().split("%")
+        var chance = Number(h[0]) / 100
+        var thing = h[1]
+        return {
+            id: thing,
+            chance: chance,
+        }
     }
     return 0
 }
-export function parse(str: string) {
+export function parse(str: string, basepath: string = ".") {
     var h = str.split("\n")
     var type = h.shift() + ""
+    if (type == "include_only") return undefined;
     var props = {...defaultProperties, ...types[type].properties}
     var o: Dictionary<Types | Types[]> = {}
-    for (var s of h) {
+    for (var i = 0; i < h.length; i++) {
+        var s = h[i]
+        if (s.startsWith("#")) {
+            var r = s.slice(1)
+            if (r[0] == " ") r = r.slice(1)
+            var arg = r.split(" ")
+            if (arg[0] == "include") {
+                var path = arg.slice(1).join(" ")
+                h.push(...readFileSync(join(basepath, path), "utf8").split("\n"))
+            }
+            continue;
+        }
         var g = s.split("=")
         var kstr = g[0].trim().toLowerCase().replace(/[ \t\n]/g, "")
         var v = g.slice(1).toString()
         var keys = kstr.split(",")
         for (var k of keys) {
-            if (k in props) {
+            if (k in props || "*" in props) {
                 var spl = k.split(":")
                 var realk = spl[0].trim()
                 var forceType = spl[1]?.trim() as TypeString | ArrayTypeString
-                o[realk] = parseValueType(v, forceType || props[k])
+                o[realk] = parseValueType(v, forceType || props[k] || props["*"])
             }
         }
     }
@@ -137,8 +207,11 @@ export function parse(str: string) {
     return o
 }
 export function load(file: string) {
+    console.log(file)
     file = resolve(join("./", file))
-    var a = parse(readFileSync(file, "utf8"))
+    
+    var a = parse(readFileSync(file, "utf8"), dirname(file))
+    if (!a) return;
     types[a._contentType.toString()].onLoad(a);
     loaded[file] = a;
 }

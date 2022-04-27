@@ -99,6 +99,7 @@ export class BattleLobby {
             play.level = this.level
             play.moveset = (getUser(u).moveset).slice(0, 4)
             play.helditems = (getUser(u).helditems || []).slice(0, 4).map(el => ({id: el}))
+            play.ability = getUser(u).ability
             var e = this.usersE[i]
             if (this.flags.E) {
                 var preset = e.enemyPreset || "default"

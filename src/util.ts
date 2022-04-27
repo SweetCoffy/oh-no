@@ -1,6 +1,10 @@
 import { Collection, CommandInteraction, ContextMenuInteraction } from "discord.js"
+import { abilities } from "./abilities.js"
 import { formats } from "./formats.js"
 import { ItemResponse, ItemStack, shopItems } from "./items.js"
+import { BASE_STAT_TOTAL } from "./params.js"
+import { statSync, readdirSync } from "fs"
+import { load } from "./content-loader.js"
 export const CURRENCY_ICON = "$"
 export function lexer(str: string) {
     var ar: string[] = []
@@ -75,19 +79,29 @@ export function bar(num: number, max: number, width: number = 25) {
     var c = 0
     var fill = "█"
     var bg = " "
+
+    var things = ["▉","▊","▋","▌","▍", "▎","▏"]
+
+    if (experimental.april_fools) {
+        fill = " "
+        bg = "█"
+        things.reverse()
+    }
+
     var str = ""
+    str += "+".repeat(Math.min(Math.max(Math.floor((num - 0.01) / max), 0), width - 1))
+    width -= str.length;
     var chars = Math.ceil((((num - 0.01) / max) * width) % (width))
-    str += "+".repeat(Math.max(Math.floor((num - 0.01) / max), 0))
     while (c < chars) {
         var f = fill
         var epicVal = Math.min(chars - c, 1)
-        if (epicVal < 1)   f = "▉"
-        if (epicVal < 7/8) f = "▊"
-        if (epicVal < 3/4) f = "▋"
-        if (epicVal < 5/8) f = "▌"
-        if (epicVal < 1/2) f = "▍"
-        if (epicVal < 3/8) f = "▎"
-        if (epicVal < 1/4) f = "▏"
+        if (epicVal < 1)   f = things[0]
+        if (epicVal < 7/8) f = things[1]
+        if (epicVal < 3/4) f = things[2]
+        if (epicVal < 5/8) f = things[3]
+        if (epicVal < 1/2) f = things[4]
+        if (epicVal < 3/8) f = things[5]
+        if (epicVal < 1/4) f = things[6]
         c++
         str += f
     }
@@ -146,7 +160,8 @@ export var settings = {
 	ownerID: "",
   	noSave: false,
     experimental: false,
-    unloadTimeout: 2 * 60 * 1000
+    unloadTimeout: 2 * 60 * 1000,
+    saveprefix: "",
 }
 export class BitArray extends Uint8Array {
 	getBit(bit: number) {
@@ -197,8 +212,8 @@ export class BitArray2D extends BitArray {
 		}
 	}
 }
+// https://blobfolio.com/2019/randomizing-weighted-choices-in-javascript/
 export function weightedRandom<T>(data: [T, number][]) {
-    // https://blobfolio.com/2019/randomizing-weighted-choices-in-javascript/
     let total = 0;
     for (let i = 0; i < data.length; ++i) {
         total += data[i][1];
@@ -238,11 +253,11 @@ export function min(...numbers: bigint[]): bigint {
     }
     return m || 0n
 }
+
 export var experimental = {
     ansi_logs: false,
-    bin_save: false,
     ohyes_stat_formula: true,
-    airquotes_efficient_data: true,
+    april_fools: false,
 }
 export function money(amount: bigint) {
     return `${CURRENCY_ICON}${format(amount)}`
@@ -250,4 +265,26 @@ export function money(amount: bigint) {
 var idCounter = 0;
 export function getID(max: number) {
     return (idCounter++ % max).toString().padStart((max - 1).toString().length, "0");
+}
+export function getMaxTotal({ ability }: { ability?: string }) {
+    if (!ability) return BASE_STAT_TOTAL;
+    return BASE_STAT_TOTAL - (abilities.get(ability)?.cost ?? 0)
+}
+export function subscriptNum(num: number | string) {
+    var str = num + ""
+    return [...str].map(el => String.fromCharCode(el.charCodeAt(0) + 8272)).join("")
+}
+export function loadRecursive(path: string) {
+    var files = readdirSync(path)
+    for (var f of files) {
+        if (f.startsWith("exp_") && !settings.experimental) continue
+        if (statSync(`${path}/${f}`).isDirectory()) {
+            loadRecursive(`${path}/${f}`)
+            continue
+        }
+        if (f.endsWith(".balls") || f.endsWith(".owo")) {
+            
+            load(`${path}/${f}`)
+        }
+    }
 }

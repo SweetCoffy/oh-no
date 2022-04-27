@@ -10,7 +10,7 @@ export interface HeldItem {
 type HeldItemCallback = (battle: Battle, player: Player, item: HeldItem) => any
 function healEffect(percent: number, silent: boolean = false, message: LocaleString = "heal.generic"): HeldItemCallback {
     return function(b, p, it) {
-        var amt = p.stats.hp * percent
+        var amt = p.maxhp * percent
         b.heal(p, amt, silent, message)
     }
 }
@@ -96,7 +96,7 @@ new HeldItemType("Shield", function(b, p, i) {
         p.addModifier("atk", { value: 0.25, label: "Shield Item" })
         p.addModifier("spatk", { value: 0.25, label: "Shield Item" })
         p.addModifier("spd", { value: 0.25, label: "Shield Item" })
-        p.absorption += p.stats.hp / 4;
+        p.absorption += p.maxhp / 4;
         p.absorptionTier = 3;
         
         d.used = true;
