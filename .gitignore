@@ -110,9 +110,12 @@ build/
 users.json
 global.json
 map.txt
+userdata.bin
 data/
 
 # Nor this test content folder
 content/exp_test
 eggos-install.js
 unused
+log.txt
+thing.txt

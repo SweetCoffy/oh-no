@@ -282,7 +282,7 @@ export function loadRecursive(path: string) {
             loadRecursive(`${path}/${f}`)
             continue
         }
-        if (f.endsWith(".balls") || f.endsWith(".owo")) {
+        if (f.endsWith(".balls") || f.endsWith(".owo") || f.endsWith(".yml")) {
             
             load(`${path}/${f}`)
         }

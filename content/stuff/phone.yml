@@ -1,0 +1,13 @@
+ContentType: item
+ContentID: phone
+Name: Phone
+Price: 14725
+Shop: main
+Icon: 📱
+OnUse: "item-uses.js:phone"
+DefaultData: 
+  type: "box-phone"
+  capacity: 64
+  items: []
+  powered: false
+Unstackable: true

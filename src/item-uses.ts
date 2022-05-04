@@ -2,9 +2,10 @@ import { AutocompleteInteraction, User } from "discord.js";
 import { enemies, Enemy } from "./enemies.js";
 import { addItem, addMultiplierItem, getItem, ItemResponse, ItemStack, ItemUseCallback, shopItems, stackString, summonBoss } from "./items.js";
 import { getRank, getUser } from "./users.js";
-import { lexer, max, min, weightedRandom } from "./util.js";
+import { Dictionary, lexer, max, min, weightedRandom } from "./util.js";
 import { Worker } from "worker_threads"
 import { readFileSync, existsSync } from "fs"
+import { load } from "js-yaml";
 
 export var sandwich: ItemUseCallback = (user, stack, amount) => {
     return addMultiplierItem(user, stack, amount, 1n);
@@ -194,6 +195,18 @@ function setPath(obj: any, path: string | undefined, value: any): any {
         else prev[cur] = value
     }, obj)
 }
+function deletePath(obj: any, path: string | undefined): any {
+    (path || "/").split("/").filter(el => el).reduce((prev, cur, i, ar) => {
+        if (i < ar.length - 1) {
+            if (!prev[cur]) return {}
+            return prev[cur]
+        } else delete prev[cur]
+    }, obj)
+}
+interface Pkg {
+    files: Dictionary<string>,
+    depends: string[]
+}
 export async function* phone(user: User, stack: ItemStack, amount: bigint, ...args: string[]): AsyncGenerator<ItemResponse> {
     var data = stack.data as PhoneItemData
     if (data?.type != "box-phone") return {
@@ -269,21 +282,45 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
         },
         
     })
-    if (cmd == "pkg") {
+    if (cmd == "eggman") {
         if(args.length < 2) return yield { type: "fail", reason: "Not enough arguments", edit: true }
         var sub = args.shift() as string
         var arg = args.shift() as string
-        if (!arg.endsWith(".js")) arg += ".js"
+        var installpath = "main"
+        function query(name: string): Pkg | undefined {
+            var path = `eggos_pkg/${name}`
+            console.log(`Querying '${name}' (${path})`)
+            if (!existsSync(`${path}/pkg.yml`)) return
+            return load(readFileSync(`${path}/pkg.yml`, "utf8")) as Pkg
+        }
+        function add(name: string): Pkg | undefined {
+            var path = `eggos_pkg/${name}`
+            var p = query(name)
+            console.log(`Adding '${name}'`)
+            if (!p) return
+            for (var k in p.files) {
+                setPath(fs, `${installpath}/${p.files[k]}`, readFileSync(`${path}/${k}`, "utf8"))
+            }
+            return p
+        }
+        function rm(name: string): Pkg | undefined {
+            var path = `eggos_pkg/${name}`
+            var p = query(name)
+            if (!p) return
+            for (var k in p.files) {
+                deletePath(fs, `${installpath}/${p.files[k]}`)
+            }
+            return p
+        }
         if (sub == "rm") {
-            if (delete fs?.main?.[arg]) {
+            if (rm(arg)) {
                 return yield { type: "success", reason: `Removed '${arg}'`, edit: true }
             } else return yield { type: "fail", reason: `br`, edit: true }
         } else if (sub == "add") {
-            var path = `eggos_pkg/${arg}`
-            if (!existsSync(path)) return yield { type: "fail", reason: `br`, edit: true }
-            var f = readFileSync(path, "utf8")
-            setPath(fs, `main/pkg/${arg}`, f)
-            return yield { type: "success", reason: `'${arg}' Added`, edit: true }
+            var pk = add(arg)
+            if (pk) {
+                return yield { type: "success", reason: `Added '${arg}'`, edit: true }
+            } else return yield { type: "fail", reason: `br`, edit: true }
         } else return yield { type: "fail", reason: "burh", edit: true }
     }
     

@@ -5,6 +5,7 @@ import { readFileSync } from "fs";
 import { resolve, join, dirname, basename } from "path";
 import Hjson from "hjson"
 import { locales } from "./locale.js";
+import yaml from "js-yaml"
 type TypeString = "string" | "number" | "bigint" | "itemstack" | "boolean" | "json" | "chance"
 type ArrayTypeString = `array<${TypeString}>`
 type Types = string | number | bigint | ItemStack | boolean | Dictionary<any>
@@ -45,7 +46,7 @@ var types: Dictionary<ContentType> = {
             var it = shopItems.get(obj.contentid.toString())
             if (it) {
                 if ("smeltinto" in obj) it.smeltInto = obj.smeltinto as string
-                if ("fuelneeded" in obj) it.fuelNeeded = obj.fuelneeded as bigint
+                if ("fuelneeded" in obj) it.fuelNeeded = BigInt(obj.fuelneeded as string)
                 if ("unstackable" in obj) it.unstackable = obj.unstackable as boolean
                 if ("defaultdata" in obj) it.defaultData = obj.defaultdata as Dictionary<any>;
             }
@@ -112,10 +113,10 @@ var types: Dictionary<ContentType> = {
             type: "string",
             priority: "number",
             recoil: "number",
-            // userstatchance: "number",
-            // targetstatchance: "number",
+            userstatchance: "number",
+            targetstatchance: "number",
             breakshield: "boolean",
-            // inflictstatus: "array<chance>",
+            //inflictstatus: "array<chance>",
             selectable: "boolean",
             targetself: "boolean",
         },
@@ -207,10 +208,19 @@ export function parse(str: string, basepath: string = ".") {
     return o
 }
 export function load(file: string) {
-    console.log(file)
+    console.log(`Loading file: ${file}`)
     file = resolve(join("./", file))
     
-    var a = parse(readFileSync(file, "utf8"), dirname(file))
+    if (file.endsWith(".owo") || file.endsWith(".balls")) var a: any = parse(readFileSync(file, "utf8"), dirname(file))
+    if (file.endsWith(".yml")) {
+        var obj: any = yaml.load(readFileSync(file, "utf8"))
+        var a: any = {}
+        for (var k in obj) {
+            a[k.toLowerCase()] = obj[k]
+        }
+        a._contentType = a.contenttype
+        console.log(a)
+    }
     if (!a) return;
     types[a._contentType.toString()].onLoad(a);
     loaded[file] = a;

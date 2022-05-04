@@ -1,8 +1,0 @@
-item
-ContentID = battery
-Name = Battery
-Price = 1100
-Shop = main
-Icon = 🔋
-DefaultData = { capacity: 164, left: 164 }
-Unstackable = true

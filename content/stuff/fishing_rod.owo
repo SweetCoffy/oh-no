@@ -1,9 +1,0 @@
-item
-ContentID = fishing_rod
-Name = Fishing Rod
-Icon = 🎣
-Price = 250
-Shop = main
-Unstackable = True
-DefaultData = { type: "tool", durability: 24, durability_max: 24 }
-OnUse = "item-uses.js:fishing_rod"

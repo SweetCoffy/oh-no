@@ -1,0 +1,33 @@
+ContentType: item
+ContentID: cd
+Name: CD
+Icon: 💿
+DefaultData:
+    type: "storage"
+    fs: { 
+        install.js: '
+        (async() => { 
+        var files = await readDir("dev2/eggos"); 
+        var installpath = "dev1/eggos";
+        console.log("installing eggos to " + installpath);
+        for (var f of files) { 
+        console.log("copying dev2/eggos/" + f);  
+        await writeFile(installpath + "/" + f, await readFile("dev2/" + f)); 
+        } 
+        })()
+        ',
+        eggos: {
+            js: {
+                ls.js: '
+                (async function() {
+                var path = joinpath(argv[0] || "/")
+                var files = await readDir(path)
+                console.log(`**${path}**\n${files.join("\n")}`)
+                })() '
+            }
+        }
+    }
+name: "Eggos 3"
+Unstackable: true
+Shop: main
+Price: 1235

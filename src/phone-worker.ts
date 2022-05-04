@@ -48,7 +48,7 @@ function joinpath(...segs: string[]) {
     return segs.join("/").split("/").filter(el => el).join("/") || "/"
 }
 var cwd = "main"
-var path = new Set([cwd, "main", "main/eggos", "main/pkg", ...((await readFile("main/cfg/path.cfg") + "") || "").split(";")])
+var path = new Set(["", cwd, "main", "main/eggos", "main/js", ...((await readFile("main/cfg/path.cfg") + "") || "").split(";")])
 var filename = workerData.args[0]
 if (!filename.includes(".")) filename = filename + ".js"
 var file = undefined
@@ -61,9 +61,21 @@ if (!file) {
     process.exit(1)
 }
 var vm = new VM({
-    eval: false,
+    eval: true,
     wasm: false,
-    sandbox: { readFile, writeFile, readDir, console, argv: workerData.args.slice(1), joinpath },
+    sandbox: {
+        async load(lib: string): Promise<any> {
+            var str = (await readFile(joinpath("main", "libs", "lib" + lib + ".js")))?.toString()
+            if (!str) return undefined;
+            return vm.run(str)
+        },
+        readFile,
+        writeFile,
+        readDir,
+        console,
+        argv: workerData.args.slice(1),
+        joinpath
+    },
 })
 
 vm.run(file + "")
