@@ -6,15 +6,12 @@ for (var a of process.argv.slice(2)) {
     }
 }
 import Discord from "discord.js"
-import { BattleLobby, lobbies, createLobby } from "./lobby.js"
 import { commands, loadDir, addCommands } from "./command-loader.js"
 import { users, getUser, UserSaveData, data, globalData, getUserSaveData, replacer } from "./users.js"
-import { writeFileSync, readFileSync, readdirSync, existsSync, statSync } from "fs"
+import { writeFileSync, readFileSync } from "fs"
 import { shopItems } from "./items.js"
-import canvas from "canvas"
 
 import { resolve } from "path"
-import { load } from "./content-loader.js"
 import { calcStat } from "./stats.js"
 import { calcDamage } from "./battle.js"
 
