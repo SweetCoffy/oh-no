@@ -14,14 +14,9 @@ import { shopItems } from "./items.js"
 import canvas from "canvas"
 
 import { resolve } from "path"
-import { map } from "./game-map.js"
 import { load } from "./content-loader.js"
 import { calcStat } from "./stats.js"
 import { calcDamage } from "./battle.js"
-
-if (existsSync("map.txt")) {
-    map.fromString(readFileSync("map.txt", "utf8"))
-}
 
 var config = JSON.parse(readFileSync(resolve("../config.json"), "utf8"))
 
@@ -98,7 +93,6 @@ function saveOther() {
         if (typeof v == "bigint") return `BigInt:${v}`
         return v
     }, 4))
-    writeFileSync("map.txt", map.toString())
 }
 function saveJSON() {
     //@ts-ignore
@@ -134,19 +128,6 @@ setInterval(async() => {
         v.money.points += (BigInt(v.banks) * (v.multiplier/4n))*15n*5n*3n
     }
 }, 15000)
-setInterval(() => {
-    for (var t of map.iterateRect(0, 0, map.width, map.height)) {
-        if (!t.tile) continue
-        if (!t.tile.owner) continue
-        var u = client.users.cache.get(t.tile.owner)
-        if (!u) continue
-        var inf = getUser(u)
-        if ((Date.now() - inf.lastCommand) > 15 * 60 * 1000) continue
-        var tile = t.tile
-        if (!tile.building) continue
-        tile.building.update(t.x, t.y)
-    }
-}, 1000)
 loadRecursive("content")
 
 var base = 100

@@ -4,7 +4,6 @@ import { baseStats, Stats, getPreset, getPresetList, StatPreset } from './stats.
 import { ItemStack, ItemType } from "./items.js"
 import { writeFileSync, existsSync, readFileSync, mkdirSync } from "fs"
 import { BitArray, BitArray2D, experimental, settings } from './util.js'
-import { map } from './game-map.js'
 import { client } from './index.js'
 import { Enemy } from './enemies.js'
 export var data: any = {}
@@ -41,7 +40,6 @@ export interface UserInfo {
     banks: bigint,
     bankLimit: bigint,
     lastShop: string,
-    selection: BitArray2D,
     showGrid: boolean,
     buildMode: boolean,
     viewx: number,
@@ -176,7 +174,6 @@ export function createUser(user: User) {
         lastShop: "main",
         bankLimit: 100n,
         rank_xp: 0,
-        selection: new BitArray2D(map.width, map.height),
         showGrid: false,
         buildMode: false,
         viewx: 0,
