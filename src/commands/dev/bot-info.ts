@@ -2,6 +2,7 @@ import { Command } from "../../command-loader";
 import { uptime, arch, platform, version, release } from "os"
 import { readFile } from "fs/promises"
 import { existsSync } from "fs"
+import { timeFormat } from "../../util.js"
 
 export var command: Command = {
     name: "bot-info",
@@ -18,9 +19,9 @@ export var command: Command = {
             embeds: [{
                 title: "Bot info",
                 description:
-                `Platform: ${arch()} ${platform()} (${version()})\n` + 
-                `System uptime: ${Math.floor(uptime() / 60 / 60)} hours\n` +
-                `Bot uptime: ${Math.floor((i.client.uptime||0) / 1000 / 60)} minutes\n` + (gitinfo ? gitinfo : "")
+                `Platform: ${platform()} ${release()}\n` + 
+                `System uptime: ${timeFormat(uptime())}\n` +
+                `Bot uptime: ${timeFormat(Math.floor((i.client.uptime||0) / 1000))}\n` + (gitinfo ? gitinfo : "")
             }]
         })
     }

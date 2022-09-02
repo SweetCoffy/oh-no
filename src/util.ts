@@ -288,3 +288,9 @@ export function loadRecursive(path: string) {
         }
     }
 }
+export function timeFormat(seconds: number) {
+	let secs = Math.floor(seconds % 60)
+	let minutes = Math.floor(seconds / 60) % 60
+	let hours = Math.floor(seconds / 60 / 60)
+	return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
+}
