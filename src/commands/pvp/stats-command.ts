@@ -247,7 +247,7 @@ export var command: Command = {
                 if (Object.keys(getPresetList(i.user)).length >= presets.size + 25) return await i.reply(`You can't create more than 25 presets`);
                 var name = i.options.getString("name", true)
                 var json = i.options.getString("json", true)
-                var id = name.toLowerCase().replace(/[^A-Za-z_\-0-9]/g, "-")
+                var id = name.toLowerCase().replace(/[^A-Za-z_\-0-9 ]/g, "-")
                 let existing = getUser(i.user).presets[id]
                 if (existing) {
                     if (!await confirmation(i, `You are about to overwrite your existing '${existing.name}' preset. Are you sure you want to do that?`))
