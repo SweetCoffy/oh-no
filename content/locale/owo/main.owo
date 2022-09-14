@@ -1,0 +1,4 @@
+locale
+LocaleID = "owo"
+move.fail = "i-it faiwed"
+move.miss = "b-but it missed..."
