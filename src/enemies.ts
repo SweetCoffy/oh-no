@@ -53,7 +53,7 @@ enemies.set("egg_hater", {
 enemies.set("otsid", {
     name: "Otsid",
     ai: "egg_lord",
-    description: "This thing has a lot of HP and decent defense so prepare to fight this thing for a while...",
+    description: "What is even this thing",
     stats: {
         hp: 420,
         atk: 0,
@@ -130,7 +130,7 @@ enemies.set("the_skeleton", {
 enemies.set("egg_lord", {
     name: "Egg Lord",
     ai: "egg_lord",
-    description: "It's the Egg Lord. Unlike eggs, it actually takes hit pretty well",
+    description: "Spooky egg",
     stats: {
         hp   :  122,
         atk  :    0,
@@ -154,7 +154,7 @@ enemies.set("egg_lord", {
 enemies.set("the_cat", {
     name: "The Cat",
     ai: "the_cat",
-    description: "An angry cat. It's pretty aggressive and hits really hard",
+    description: "Please do not the cat",
     stats: {
         hp   :  100,
         atk  :  256,
@@ -210,7 +210,7 @@ enemies.set("u", {
 enemies.set("o", {
     name: "ö",
     ai: 'egg_lord',
-    description: [..."Literal God"].reverse().join(""),
+    description: [..."Literal god"].reverse().join(""),
     stats: {
         hp   :  364,
         atk  :   71,

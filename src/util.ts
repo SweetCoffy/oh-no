@@ -1,10 +1,12 @@
-import { Collection, CommandInteraction, ContextMenuInteraction } from "discord.js"
+import { ButtonInteraction, Collection, CommandInteraction, ContextMenuInteraction, Interaction, Message, MessageActionRow, MessageButton } from "discord.js"
 import { abilities } from "./abilities.js"
 import { formats } from "./formats.js"
 import { ItemResponse, ItemStack, shopItems } from "./items.js"
 import { BASE_STAT_TOTAL } from "./params.js"
 import { statSync, readdirSync } from "fs"
 import { load } from "./content-loader.js"
+import { items } from "./helditem.js"
+import { setupOwO } from "./locale.js"
 export const CURRENCY_ICON = "$"
 export function lexer(str: string) {
     var ar: string[] = []
@@ -80,13 +82,7 @@ export function bar(num: number, max: number, width: number = 25) {
     var fill = "█"
     var bg = " "
 
-    var things = ["▉","▊","▋","▌","▍", "▎","▏"]
-
-    if (experimental.april_fools) {
-        fill = " "
-        bg = "█"
-        things.reverse()
-    }
+    var things = ["▉", "▊", "▋", "▌", "▍", "▎", "▏"]
 
     var str = ""
     str += "+".repeat(Math.min(Math.max(Math.floor((num - 0.01) / max), 0), width - 1))
@@ -94,14 +90,15 @@ export function bar(num: number, max: number, width: number = 25) {
     var chars = Math.ceil((((num - 0.01) / max) * width) % (width))
     while (c < chars) {
         var f = fill
-        var epicVal = Math.min(chars - c, 1)
-        if (epicVal < 1)   f = things[0]
-        if (epicVal < 7/8) f = things[1]
-        if (epicVal < 3/4) f = things[2]
-        if (epicVal < 5/8) f = things[3]
-        if (epicVal < 1/2) f = things[4]
-        if (epicVal < 3/8) f = things[5]
-        if (epicVal < 1/4) f = things[6]
+        var epicVal = 1
+        if (c + 1 >= chars && num % max != 0) epicVal = num / max * width % 1
+        if (epicVal < 1) f = things[0]
+        if (epicVal < 7 / 8) f = things[1]
+        if (epicVal < 3 / 4) f = things[2]
+        if (epicVal < 5 / 8) f = things[3]
+        if (epicVal < 1 / 2) f = things[4]
+        if (epicVal < 3 / 8) f = things[5]
+        if (epicVal < 1 / 4) f = things[6]
         c++
         str += f
     }
@@ -255,7 +252,7 @@ export function min(...numbers: bigint[]): bigint {
 }
 
 export var experimental = {
-    ansi_logs: false,
+    ansi_logs: true,
     ohyes_stat_formula: true,
     april_fools: false,
 }
@@ -272,7 +269,11 @@ export function getMaxTotal({ ability }: { ability?: string }) {
 }
 export function subscriptNum(num: number | string) {
     var str = num + ""
-    return [...str].map(el => String.fromCharCode(el.charCodeAt(0) + 8272)).join("")
+    return [...str].map(el => String.fromCharCode((el.charCodeAt(0) - 32) + 0x2070)).join("")
+}
+export function xOutOfY(x: number, y: number) {
+    let longest = Math.max(x.toString().length, y.toString().length)
+    return `${x.toString().padStart(longest, " ")}/${y.toString().padEnd(longest, " ")}`
 }
 export function loadRecursive(path: string) {
     var files = readdirSync(path)
@@ -293,4 +294,38 @@ export function timeFormat(seconds: number) {
 	let minutes = Math.floor(seconds / 60) % 60
 	let hours = Math.floor(seconds / 60 / 60)
 	return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
+}
+export async function confirmation(i: CommandInteraction | ButtonInteraction, str: string) {
+    let components = [new MessageActionRow().addComponents(
+        new MessageButton().setLabel("YES").setCustomId("yes").setStyle("SUCCESS"),
+        new MessageButton().setLabel("NO").setCustomId("no").setStyle("DANGER"),
+    )]
+    var reply: Message
+    if (i.replied) reply = await i.followUp({
+        content: str,
+        components,
+        fetchReply: true,
+    }) as Message
+    else reply = await i.reply({
+        content: str,
+        components,
+        fetchReply: true,
+    }) as Message
+    let int = await reply.awaitMessageComponent({
+        componentType: "BUTTON",
+        filter: (interaction) => {
+            if (interaction.user.id != i.user.id) {
+                interaction.reply({ content: "This isn't for you", ephemeral: true })
+                return false
+            }
+            return true
+        },
+        time: 1000 * 60
+    })
+    if (int) await int.deferUpdate()
+    return int?.customId == "yes"
+}
+export function helditemString(id: string) {
+    let type = items.get(id)
+    return `${type?.icon ? type.icon + " ": ""}${type?.name || "???"}`
 }

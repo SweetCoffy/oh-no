@@ -3,7 +3,7 @@ import { Battle, calcMul, Player } from "./battle.js"
 import { makeStats, Stats } from "./stats.js"
 import { rng, lerp } from "./util.js"
 
-export type MoveType = "attack" | "status" | "protect" | "heal" | "noop"
+export type MoveType = "attack" | "status" | "protect" | "heal" | "absorption" | "noop"
 export type Category = "physical" | "special" | "status"
 export type DamageType = "regular" | "set" | "set-atkdef" | "percent"
 export interface InflictStatus {
@@ -44,6 +44,8 @@ export class Move {
      * for move type `attack`: Determines how much damage the move does
      * 
      * for move type `heal`: Determines the health % to heal
+     * 
+     * for move type `absorption`: Determines the health % absorption gained
      */
     power: number | null = null
     accuracy: number = 100
@@ -57,8 +59,18 @@ export class Move {
      * `protect` Sets the user's protect flag and increments their protect turns counter
      * 
      * `heal` Heals the user by the move's power %
+     * 
+     * `absorption` Increases the user's absorption by power %
      */
     type: MoveType = "attack"
+    /**
+     * Whether or not to allow overhealing when `type` is set to `heal`
+     */
+    overheal: boolean = false
+    /**
+     * The tier of absorption to use when `type` is set to `absorption`
+     */
+    absorptionTier: number = 1
     /**
      * The priority of the move when added to the action list
      * 
@@ -141,17 +153,14 @@ moves.set("bonk", new Move("Bonk", "attack", 60))
 moves.set("nerf_gun", new Move("Nerf Gun", "attack", 60, "special"))
 
 // Physical/Special recoil attacks
-moves.set("ping", new Move("Ping Attack", "attack", 225, "special").set(move => {
-    move.userStat.spatk = -1
-    move.requiresMagic = 20
+moves.set("ping", new Move("Ping Attack", "attack", 190, "special").set(move => {
+    move.requiresMagic = 30
     move.targetStatChance = 0.5
-    move.targetStat.spdef = -1
 }).setDesc("A quite powerful move, the user's Special Attack is lowered due to the recoil"))
-moves.set("slap", new Move("Slap", "attack", 225).set(move => {
+moves.set("slap", new Move("Slap", "attack", 190).set(move => {
     move.userStat.atk = -1
-    move.requiresCharge = 10
+    move.requiresCharge = 15
     move.targetStatChance = 0.5
-    move.targetStat.def = -1
 }).setDesc("A quite powerful move, the user takes an eight of their Max HP due to the recoil"))
 
 // Status inflicting moves
@@ -220,7 +229,7 @@ moves.set("counter", new Move("Counter", "attack", 0).set(move => {
     move.getPower = function(b, p, t) {
         return p.damageBlockedInTurn * 2
     }
-}).setDesc("This move does 150% of the damage blocked by Protect in the previous turn"))
+}).setDesc("This move does double the damage blocked by Protect in the previous turn"))
 
 moves.set("regen", new Move("Regeneration", "status", 0, "status", 100).set(move => {
     move.requiresMagic = 20

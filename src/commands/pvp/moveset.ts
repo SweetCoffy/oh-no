@@ -22,7 +22,7 @@ export var command: Command = {
                                     value: k,
                                     label: v.name,
                                     default: getUser(i.user).moveset.includes(k),
-                                    description: `PWR ${v.power || "-"} | ACC ${v.accuracy || "-"} | ${v.category}`
+                                    description: `POW: ${v.power || "-"} ACC: ${v.accuracy || "-"} | ${v.description || "N/A"}`.slice(0, 100)
                                 }
                             })
                         }),
@@ -31,12 +31,12 @@ export var command: Command = {
                 new MessageActionRow({
                     components: [
                         new MessageButton({
-                            label: "Confirm",
+                            label: "CONFIRM",
                             style: "SUCCESS",
                             customId: "yes",
                         }),
                         new MessageButton({
-                            label: "Cancel",
+                            label: "CANCEL",
                             style: "DANGER",
                             customId: "no",
                         }),

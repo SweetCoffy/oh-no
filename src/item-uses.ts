@@ -128,7 +128,7 @@ export var box: ItemUseCallback = (user, stack, amount, command, item, amt) => {
             }
             if (item.length > 16) return {
                 type: "fail",
-                reason: "The name must be 16 characters or less"
+                reason: "The name must not exceed 16 characters"
             }
             var oldname = data.name
             data.name = item;

@@ -26,6 +26,9 @@ export var command: Command = {
                     color: user.hexAccentColor || 0,
                     description: 
 `
+**Account**
+> Created: <t:${Math.floor(user.createdTimestamp / 1000)}:R>
+
 **Economy**
 > Money: ${money(u.money.points)}
 > Multiplier: ${format(u.multiplier)}

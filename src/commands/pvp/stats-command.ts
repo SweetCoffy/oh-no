@@ -4,7 +4,7 @@ import { items } from "../../helditem.js";
 import { getString } from "../../locale.js";
 import { getPresetList, makeStats, getPreset, presets } from "../../stats.js";
 import { getUser } from "../../users.js";
-import { bar, getMaxTotal } from "../../util.js"
+import { bar, confirmation, getMaxTotal, helditemString } from "../../util.js"
 function getWeighted(weights: number[], total: number = 600) {
     var totalW = weights.reduce((prev, cur) => prev + cur, 0)
     var ar = []
@@ -209,31 +209,35 @@ export var command: Command = {
                 var total = stats.reduce((prev, cur) => prev + cur, 0)
                 var missing = maxTotal - total
                 stats[highestI] += missing
-                await i.reply(`${Object.keys(makeStats()).map((el, i) => `\`${el.padEnd(6, " ")} ${stats[i].toString().padStart(3, " ")} ${bar(stats[i], 300)}\``).join("\n")}\nJSON: ${JSON.stringify(
+                await i.reply(`${Object.keys(makeStats()).map((el, i) => `\`${el.padEnd(6, " ")} ${stats[i].toString().padStart(3, " ")} ${bar(stats[i], 300)}\``).join("\n")}\nJSON: \`${JSON.stringify(
                     {
                         weights: weights,
                         helditems: (i.options.getString("held_items", false) || "").split(",").map(el => el.trim()), 
                         ability: i.options.getString("ability", false)
-                    })}`)
+                    })}\``)
                 break;
             }
             case "presets": {
+                let defaultPresets = presets;
+                let userPresets = getUser(i.user).presets;
                 var list = getPresetList(i.user)
-                await i.reply(`Presets:\n${Object.keys(list).map(el => `${list[el].name} (\`${el}\`)`).join("\n")}`)
+                let presetInfo = (el: string) => `${list[el].name} (\`${el}\`)`
+                await i.reply(`**Default Presets**:\n${defaultPresets.map((_, el) => presetInfo(el)).join("\n")}\n\n**Custom Presets**:\n${Object.keys(userPresets).map(el => presetInfo(el)).join("\n") || "None"}`)
                 break;
             }
             case "preset": {
-                var p = getPreset(i.options.getString("preset", false) || getUser(i.user).preset, i.user)
+                let p = getPreset(i.options.getString("preset", false) || getUser(i.user).preset, i.user)
                 if (!p) return await i.reply(`Preset not found`)
                 let stats = p.stats
+                let json = JSON.stringify({weights: Object.values(p.stats), helditems: p.helditems, ability: p.ability})
                 // @ts-ignore
-                await i.reply(`Preset: **${p.name}**\n${Object.keys(stats).map((el) => `\`${el.padEnd(6, " ")} ${stats[el].toString().padStart(3, " ")} ${bar(stats[el], 300)}\``).join("\n")}\nItems: ${(p.helditems || []).join(", ") || "None"}\nAbility: ${abilities.get(p.ability)?.name || "None"}`)
+                await i.reply(`Preset: **${p.name}**\n${Object.keys(stats).map((el) => `\`${el.padEnd(6, " ")} ${stats[el].toString().padStart(3, " ")} ${bar(stats[el], 300)}\``).join("\n")}\nItems: ${(p.helditems || []).map(helditemString).join(", ") || "None"}\nAbility: ${abilities.get(p.ability)?.name || "None"}\nJSON: \`${json}\``)
                 break;
             }
             case "delete": {
                 var list = getPresetList(i.user);
                 var preset = i.options.getString("preset", true)
-                if (preset in list) return await i.reply(`Invalid preset`);
+                if (!(preset in list)) return await i.reply(`Invalid preset`);
                 if (presets.has(preset)) return await i.reply(`Can't delete a default preset`);
                 delete getUser(i.user).presets[preset];
                 await i.reply(`Deleted the preset`);
@@ -244,6 +248,11 @@ export var command: Command = {
                 var name = i.options.getString("name", true)
                 var json = i.options.getString("json", true)
                 var id = name.toLowerCase().replace(/[^A-Za-z_\-0-9]/g, "-")
+                let existing = getUser(i.user).presets[id]
+                if (existing) {
+                    if (!await confirmation(i, `You are about to overwrite your existing '${existing.name}' preset. Are you sure you want to do that?`))
+                        return await i.followUp(`Cancelled preset creation`)
+                }
                 var ar = [1, 1, 1, 1, 1, 1]
                 var o = JSON.parse(json)
                 for (var j = 0; j < o.weights.length; j++) {
@@ -272,7 +281,8 @@ export var command: Command = {
                     helditems: (o.helditems || []).filter((el: string) => items.has(el)).slice(0, 4),
                     ability: abilities.has(o.ability) ? o.ability : undefined,
                 }
-                await i.reply(`Created preset ${name} (\`${id}\`)\n${Object.keys(stats).map(el => `${el}: ${stats[el]}`).join("\n")}`)
+                if (existing) await i.followUp(`Overwrote preset '${existing.name}' with '${name}' (\`${id}\`)`)
+                else await i.reply(`Created preset ${name} (\`${id}\`)`)
                 break
             }
             case "use": {

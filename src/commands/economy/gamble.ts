@@ -17,7 +17,7 @@ export var command: Command = {
         var m = BigInt(i.options.getInteger("money", true))
         var u = getUser(i.user)
         if (getRank(i.user) < 10) return await i.reply(`You must be at least Rank 10 to gamble`)
-        if (u.money.points < m) return await i.reply(`You can't gamble more money than you own!`)
+        if (u.money.points < m) return await i.reply(`You can't gamble more money than you have!`)
         var req = 10000n + (u.multiplier - 1n) * 5000n
         if (m < req) return await i.reply(`You must bet at least ${money(req)}`)
         var chance = 0.4

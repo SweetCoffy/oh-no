@@ -3,7 +3,7 @@ import { Command, commands } from '../../command-loader.js'
 import { getUser, users } from '../../users.js';
 import { EmbedFieldData, TextChannel } from 'discord.js';
 import { moves } from '../../moves.js';
-import { getString } from '../../locale.js';
+import { getString, LocaleString } from '../../locale.js';
 import { Stats } from "../../stats.js";
 import { items } from '../../helditem.js';
 export var command: Command = {
@@ -150,7 +150,7 @@ export var command: Command = {
                         fields.push({
                             name: `User stat changes`,
                             value: `**Chance**: ${Math.floor(move.userStatChance * 100)}%\n` + userStat.map(el => {
-                                return `**${getString("stat." + el.stat)}**: ${thing(el.boost)}`
+                                return `**${getString("stat." + el.stat as LocaleString)}**: ${thing(el.boost)}`
                             }).join("\n")
                         })
                     }
@@ -158,7 +158,7 @@ export var command: Command = {
                         fields.push({
                             name: `Target stat changes`,
                             value: `**Chance**: ${Math.floor(move.targetStatChance * 100)}%\n` + targetStat.map(el => {
-                                return `**${getString("stat." + el.stat)}**: ${thing(el.boost)}`
+                                return `**${getString("stat." + el.stat as LocaleString)}**: ${thing(el.boost)}`
                             }).join("\n")
                         })
                     }

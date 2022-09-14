@@ -38,9 +38,8 @@ Ability.add("hardening", new Ability("Bone Hardening", 50)).onTurn = function(b,
 }
 var plot_armor = Ability.add("plot_armor", new Ability("Plot Armor", 200))
 plot_armor.onTurn = function(b, p) {
-    var chance = 0.2 + Math.log10(b.turn)/2;
-    if (Math.random() < chance && p.plotArmor < p.maxhp / 2) {
-        p.plotArmor += Math.ceil(p.maxhp/16)
+    if (p.plotArmor < p.maxhp / 2) {
+        p.plotArmor += Math.ceil(p.maxhp/24)
     }
 }
 var beserker_soul = Ability.add("beserker_soul", new Ability("Beserker Soul", 55))
@@ -54,7 +53,7 @@ beserker_soul.onTurn = function(b, p) {
         }
     }
 }
-var training_arc = Ability.add("training_arc", new Ability("Training Arc", -1000))
+var training_arc = Ability.add("training_arc", new Ability("Training Arc", -325))
 training_arc.onTurn = function(b, p) {
     var data = p.abilityData as { modifiers?: StatModifierID[] }
     if (!data.modifiers) data.modifiers = [

@@ -2,6 +2,7 @@ import { Player } from "../../battle.js";
 import { Command } from "../../command-loader.js";
 import { enemies, Enemy } from "../../enemies.js";
 import { createLobby } from "../../lobby.js";
+import { getString } from "../../locale.js";
 import { calcStats } from "../../stats.js";
 import { addXP, getUser, users } from "../../users.js";
 import { money, randomRange, weightedDistribution, weightedRandom } from "../../util.js";
@@ -55,6 +56,7 @@ export var command: Command = {
         }
         l.start()
         u.lobby = l;
+        let threateningBonus = 1
         for (var enemy of e) {
             if (!enemy) continue
             var p = new Player()
@@ -73,10 +75,10 @@ export var command: Command = {
                 p.level = Math.ceil(randomRange(0.9, 1) * u.level)
             }
             if (enemy.name == "The Skeleton") {
-                l.battle?.log(`${p.name} Appears`, "yellow")
+                l.battle?.logL("enemy.appears", {name: enemy.name}, "yellow")
             }
-            if (Math.random() < 1/32) {
-                l.battle?.log(`${p.name}'s Threatening Aura`, "red")
+            if (Math.random() < 1/16 * threateningBonus) {
+                l.battle?.logL("hunt.threatening", {name: enemy.name}, "red")
                 p.level = Math.floor(p.level * 1.5)
                 p.xpYield *= 2
             }
@@ -112,7 +114,7 @@ export var command: Command = {
                 var oldStats = calcStats(u.level, u.baseStats)
                 var m = BigInt(Math.floor(xp * (xp * 0.075)))/100n*15n
                 getUser(i.user).money.points += m
-                await i.followUp(`You won, got ${xp} XP and ${money(m)}`)
+                await i.followUp(`You won, gained ${xp} XP and ${money(m)}`)
                 var levels = addXP(i.user, xp)
                 var newStats = calcStats(u.level, u.baseStats)
                 if (levels > 0) {

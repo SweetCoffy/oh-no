@@ -14,6 +14,7 @@ import { shopItems } from "./items.js"
 import { resolve } from "path"
 import { calcStat } from "./stats.js"
 import { calcDamage } from "./battle.js"
+import { setupOwO } from "./locale.js"
 
 var config = JSON.parse(readFileSync(resolve("../config.json"), "utf8"))
 
@@ -27,7 +28,7 @@ settings.noSave = process.argv.includes("-nosave") || settings.experimental
 
 
 export var client = new Discord.Client({
-    intents: ["GUILDS", "GUILD_MESSAGES"]
+    intents: ["GUILDS"]
 })
 
 client.on("ready", async() => {
@@ -150,3 +151,4 @@ for (var i = 0; i <= maxlevel; i += step) {
 
 // get real
 if (experimental.april_fools) import("./april-fools.js")
+setupOwO()

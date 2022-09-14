@@ -85,7 +85,7 @@ export class HeldItemType {
 export var items: Collection<string, HeldItemType> = new Collection()
 items.set("eggs", 
 new HeldItemType("Eggs", healEffect(0.05), multiEffect(healEffect(1), statEffect("def", 1), statEffect("spdef", 1)))
-.setEffect("Heals the user by 5% of their max HP", "Fully heals the user and increases Defense and Special Defense").setIcon("<:EggItem:943340432690118698>"))
+.setEffect("Heals the user by 5% of their max HP", "Fully heals the user and increases Defense and Special Defense").setIcon("🥚"))
 
 items.set("shield", 
 new HeldItemType("Shield", function(b, p, i) {
@@ -101,7 +101,7 @@ new HeldItemType("Shield", function(b, p, i) {
         
         d.used = true;
     }
-}, multiEffect(statEffect("def", 6), statEffect("spdef", 6)))
+}, multiEffect(statEffect("def", 6), statEffect("spdef", 6))).setIcon("🛡️")
 .setEffect("Increases Defense and Special Defense drastically and grants 25% T2 absorption, lowers Attack, Special Attack and Speed severely", "Sharply raises Defense and Special Defense and protects the user"))
 items.set("threat_orb", 
 new HeldItemType("Threatening Orb", function(b, p, it) {
@@ -124,21 +124,21 @@ new HeldItemType("Threatening Orb", function(b, p, it) {
         }
     }
 }).setEffect("Every 3 turns, everyone else's Attack and Special Attack stats will be lowered", "Everyone else's Attack and Special Attack is lowered to oblivion")
-)
+.setIcon("🟣"))
 items.set("category_swap",
-new HeldItemType("Category Swap").setEffect("Swaps the category of all moves used"))
+new HeldItemType("Category Swap").setEffect("Swaps the category of all moves used").setIcon("🔄"))
 
 items.set("bruh_orb",
-new HeldItemType("Bruh Orb").setEffect("ae").setIcon("<:BruhOrb:943339300056072212>"))
+new HeldItemType("Bruh Orb").setEffect("Increases all base stats, takes away all held items after a few turns").setIcon("🔴"))
 
 items.set("bruh_orb_attack",
-new HeldItemType("Bruh Orb (Attack)").setEffect("ae").setIcon("<:BruhOrbAttack:943339299598893057>"))
+new HeldItemType("Bruh Orb (Attack)").setEffect("(Refer to base Bruh Orb) Increases Attack and Special attack more than other stats").setIcon("🗡️"))
 
 items.set("bruh_orb_defense",
-new HeldItemType("Bruh Orb (Defense)").setEffect("ae").setIcon("<:BruhOrbDefense:943339299892514867>"))
+new HeldItemType("Bruh Orb (Defense)").setEffect("(Refer to base Bruh Orb) Increases Defense and Special Defense more than other stats").setIcon("🛡️"))
 
 items.set("bruh_orb_hp",
-new HeldItemType("Bruh Orb (HP)").setEffect("ae").setIcon("<:BruhOrbHP:943339299661807637>"))
+new HeldItemType("Bruh Orb (HP)").setEffect("(Refer to base Bruh Orb) Increases HP more than other stats").setIcon("❤️"))
 
 items.set("mirror", 
-new HeldItemType("Mirror").setEffect("Reflects damage inflicted by other players, will break if it takes too much damage"))
+new HeldItemType("Mirror").setEffect("Reflects damage inflicted by other players, will break if it takes too much damage").setIcon("🪞"))

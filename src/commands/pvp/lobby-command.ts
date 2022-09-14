@@ -176,7 +176,7 @@ export var command: Command = {
                     }
                 ],
                 components: [
-                    new MessageActionRow().addComponents(new MessageButton({ label: "Join", disabled: lobby.ready || lobby.users.length >= lobby.capacity, style: "SUCCESS", customId: "join" }))
+                    new MessageActionRow().addComponents(new MessageButton({ label: "JOIN", disabled: lobby.ready || lobby.users.length >= lobby.capacity, style: "SUCCESS", customId: "join" }))
                 ],
                 fetchReply: true,
             }) as Message
