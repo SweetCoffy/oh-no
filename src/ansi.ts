@@ -1,6 +1,6 @@
-export const R = "\u001b[0m"
-export const P = "\u001b["
-export const S = "m"
+export const Reset = "\u001b[0m"
+export const Start = "\u001b["
+export const End = "m"
 
 
 export const FG_Gray   = 30
@@ -23,6 +23,6 @@ export const BG_Indigo      = 45
 export const BG_White       = 47 
 
 
-export const NORMAL = 0
-export const BOLD = 1
-export const UNDERLINE = 4
+export const Normal = 0
+export const Bold = 1
+export const Underline = 4

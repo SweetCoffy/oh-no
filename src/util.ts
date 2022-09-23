@@ -7,6 +7,7 @@ import { statSync, readdirSync } from "fs"
 import { load } from "./content-loader.js"
 import { items } from "./helditem.js"
 import { setupOwO } from "./locale.js"
+import { FG_Cyan, FG_Green, FG_Red, FG_Yellow, FG_Gray, FG_Blue, FG_Pink, Start, Reset } from "./ansi.js"
 export const CURRENCY_ICON = "$"
 export function lexer(str: string) {
     var ar: string[] = []
@@ -159,6 +160,7 @@ export var settings = {
     experimental: false,
     unloadTimeout: 2 * 60 * 1000,
     saveprefix: "",
+    maxMoves: 5,
 }
 export class BitArray extends Uint8Array {
 	getBit(bit: number) {
@@ -252,8 +254,9 @@ export function min(...numbers: bigint[]): bigint {
 }
 
 export var experimental = {
-    ansi_logs: true,
-    ohyes_stat_formula: true,
+    // ansi_logs now works well enough and doesn't break on mobile, so it's now 
+    // enabled by default and can't be turned off
+    // ohyes_stat_formula shouldn't have even been an option in the first place
     april_fools: false,
 }
 export function money(amount: bigint) {
@@ -274,6 +277,9 @@ export function subscriptNum(num: number | string) {
 export function xOutOfY(x: number, y: number) {
     let longest = Math.max(x.toString().length, y.toString().length)
     return `${x.toString().padStart(longest, " ")}/${y.toString().padEnd(longest, " ")}`
+}
+export function name(name: string) {
+    return `[a]${name}[r]`
 }
 export function loadRecursive(path: string) {
     var files = readdirSync(path)
@@ -328,4 +334,43 @@ export async function confirmation(i: CommandInteraction | ButtonInteraction, st
 export function helditemString(id: string) {
     let type = items.get(id)
     return `${type?.icon ? type.icon + " ": ""}${type?.name || "???"}`
+}
+
+export type LogColor = "red" | "green" | "white" | "gray" | "blue" | "yellow" | "pink" | "cyan"
+export type LogColorWAccent = LogColor | "accent" | "success" | "failure" | "danger" | "unimportant"
+const color2ANSITable: { [x in LogColorWAccent]: number } = {
+    accent: FG_Cyan,
+    success: FG_Green,
+    failure: FG_Red,
+    danger: FG_Yellow,
+    unimportant: FG_Gray,
+
+    red: FG_Red,
+    green: FG_Green,
+    white: 0,
+    gray: FG_Gray,
+    blue: FG_Blue,
+    yellow: FG_Yellow,
+    pink: FG_Pink,
+    cyan: FG_Cyan,
+}
+const color2ANSIAlias: { [x: string]: LogColorWAccent } = {
+    a: "accent",
+    s: "success",
+    f: "failure",
+    d: "danger",
+    u: "unimportant"
+}
+export function colorToANSI(color: string) {
+    if (color in color2ANSIAlias) color = color2ANSIAlias[color]
+    return color2ANSITable[color as LogColorWAccent] ?? 0
+}
+export function formatString(str: string, color: LogColorWAccent = "white") {
+    return `${Start}0;${colorToANSI(color)}m` + str.replace(/(\w):(.+?);/g, function (substr, macro: string, arg: string) {
+        if (macro == "n") return name(arg)
+        return arg
+    }).replace(/\[(.+?)\]/g, function(substr, format: string) {
+        if (format == "reset" || format == "r") return `${Start}0;${colorToANSI(color)}m`;
+        return `${Start}0;${colorToANSI(format as LogColor)}m`
+    }) + Reset
 }

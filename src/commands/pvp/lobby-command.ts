@@ -4,6 +4,7 @@ import { getUser, users } from '../../users.js';
 import { CommandInteraction, Message, MessageActionRow, MessageButton, TextChannel } from 'discord.js';
 import { BattleType, Player } from '../../battle.js';
 import { enemies } from '../../enemies.js';
+import { getString } from '../../locale.js';
 export var command: Command = {
     name: "lobby",
     description: "ur mom",
@@ -172,7 +173,7 @@ export var command: Command = {
                 embeds: [
                     {
                         title: `${lobby.name}`,
-                        description: `ID: ${lobby.id}\nHas started: ${lobby.started ? "Yes" : "No"}\nPlayers: ${lobby.users.length}/${lobby.capacity}\nBot count: ${lobby.botCount}\nLevel: ${lobby.level}\nFlags: ${lobby.flagsString}`
+                        description: `ID: ${lobby.id}\nHas started: ${lobby.started ? "Yes" : "No"}\nPlayers: ${lobby.users.length}/${lobby.capacity}\nBot count: ${lobby.botCount}\nLevel: ${lobby.level}\nType: ${getString(`battle.${lobby.type}`)}\nFlags: ${lobby.flagsString}`
                     }
                 ],
                 components: [

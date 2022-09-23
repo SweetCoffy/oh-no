@@ -25,16 +25,22 @@ export class Ability {
 
 export const abilities: Collection<string, Ability> = new Collection();
 
-Ability.add("hardening", new Ability("Bone Hardening", 50)).onTurn = function(b, p) {
-    if (p.statStages.def < 6) {
-        b.log(`${p.name}'s uhhhh... bone strength rose!`, "green")
-        b.multiStatBoost(p, {
-            def: 1,
-            atk: 0.5,
-            spd: -2,
-            spdef: -0.25,
-        }, true)
+Ability.add("hardening", new Ability("Bone Hardening", 300)).onTurn = function(b, p) {
+    if (p.absorption < p.maxhp) b.addAbsorption(p, Math.ceil(p.maxhp / 10), 1)
+}
+Ability.add("massive_health_bar", new Ability("Massive Health Bar", 300)).onDamage = function (b, p, dmg, inf) {
+    if (!p.abilityData.activated) {
+        b.logL("ability.massive_health_bar", { name: p.name })
+        //p.abilityData.activated = p.addModifier("hp", {
+        //    type: "multiply",
+        //    value: 2,
+        //})
+        p.abilityData.activated = true
+        p.overheal++
+        b.heal(p, p.maxhp, true, "heal.generic", true)
+        return Math.min(p.hp + p.plotArmor + 1, dmg)
     }
+    return undefined
 }
 var plot_armor = Ability.add("plot_armor", new Ability("Plot Armor", 200))
 plot_armor.onTurn = function(b, p) {

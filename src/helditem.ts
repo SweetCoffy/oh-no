@@ -49,7 +49,7 @@ function statEffect(stat: string, stages: number, silent = false): HeldItemCallb
 }
 function messageEffect(message: LocaleString): HeldItemCallback {
     return function (b, p, it) {
-        b.log(getString(message, {USER: p.name}))
+        b.log(getString(message, {player: p.name}))
     }
 }
 export class HeldItemType {
@@ -84,47 +84,27 @@ export class HeldItemType {
 }
 export var items: Collection<string, HeldItemType> = new Collection()
 items.set("eggs", 
-new HeldItemType("Eggs", healEffect(0.05), multiEffect(healEffect(1), statEffect("def", 1), statEffect("spdef", 1)))
-.setEffect("Heals the user by 5% of their max HP", "Fully heals the user and increases Defense and Special Defense").setIcon("🥚"))
+    new HeldItemType("Eggs", (b, p, item) => {
+        if (p.dead) return
+        b.heal(p, Math.floor(p.maxhp * 0.05 / (1 + b.turn/8)), false, "heal.eggs")
+}, multiEffect(healEffect(1), statEffect("def", 1), statEffect("spdef", 1)))
+.setEffect("Slowly regenerates the user's HP. Regeneration slows down over time", "Fully heals the user and increases Defense and Special Defense").setIcon("🥚"))
 
 items.set("shield", 
 new HeldItemType("Shield", function(b, p, i) {
     var d = i as HeldItem & { used: boolean }
     if (!d.used) {
-        p.addModifier("def", { value: 4, label: "Shield Item" })
-        p.addModifier("spdef", { value: 4, label: "Shield Item" })
+        p.addModifier("def", { value: 2, label: "Shield Item" })
+        p.addModifier("spdef", { value: 2, label: "Shield Item" })
         p.addModifier("atk", { value: 0.25, label: "Shield Item" })
         p.addModifier("spatk", { value: 0.25, label: "Shield Item" })
-        p.addModifier("spd", { value: 0.25, label: "Shield Item" })
-        p.absorption += p.maxhp / 4;
-        p.absorptionTier = 3;
+        p.addModifier("spd", { value: 0.5, label: "Shield Item" })
+        b.addAbsorption(p, p.maxhp / 3, 1)
         
         d.used = true;
     }
 }, multiEffect(statEffect("def", 6), statEffect("spdef", 6))).setIcon("🛡️")
-.setEffect("Increases Defense and Special Defense drastically and grants 25% T2 absorption, lowers Attack, Special Attack and Speed severely", "Sharply raises Defense and Special Defense and protects the user"))
-items.set("threat_orb", 
-new HeldItemType("Threatening Orb", function(b, p, it) {
-    if ((b.turn - 1) % 5 == 0) {
-        b.log(`${p.name}'s Threatening Orb moment`, "red")
-        if (b.type == "pve") return b.log(`It had no effect!`)
-        for (var player of b.players) {
-            if (player != p) {
-                b.statBoost(player, "atk", -1)
-                b.statBoost(player, "spatk", -1)
-            }
-        }
-    }
-}, function(b, p, it) {
-    b.log(`${p.name}'s Threatening Orb moment`, "red")
-    for (var player of b.players) {
-        if (player != p) {
-            b.statBoost(player, "atk", -6 - player.statStages.atk)
-            b.statBoost(player, "spatk", -6 - player.statStages.spatk)
-        }
-    }
-}).setEffect("Every 3 turns, everyone else's Attack and Special Attack stats will be lowered", "Everyone else's Attack and Special Attack is lowered to oblivion")
-.setIcon("🟣"))
+.setEffect("Increases Defense and Special Defense drastically and grants absorption, lowers Attack, Special Attack and Speed severely", "Sharply raises Defense and Special Defense and protects the user"))
 items.set("category_swap",
 new HeldItemType("Category Swap").setEffect("Swaps the category of all moves used").setIcon("🔄"))
 
@@ -141,4 +121,4 @@ items.set("bruh_orb_hp",
 new HeldItemType("Bruh Orb (HP)").setEffect("(Refer to base Bruh Orb) Increases HP more than other stats").setIcon("❤️"))
 
 items.set("mirror", 
-new HeldItemType("Mirror").setEffect("Reflects damage inflicted by other players, will break if it takes too much damage").setIcon("🪞"))
+new HeldItemType("Mirror").setEffect("Reflects damage inflicted by other players. If it takes too much damage, it will shatter and make both the user and the attacker bleed").setIcon("🪞"))

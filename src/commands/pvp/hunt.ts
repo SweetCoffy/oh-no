@@ -36,7 +36,7 @@ export var command: Command = {
         
         var h = chances.map((el, i) => [possibleEnemies.at(i), el])
         
-        var enemyCount = 1 + Math.max(Math.floor(Math.cbrt(u.level / 10)) - 1, 0)
+        var enemyCount = 1 + Math.max(Math.floor(Math.sqrt(u.level))/3 - 1, 0)
         
         if (Math.random() < 0.25) enemyCount++
         for (var j = 0; j < enemyCount; j++) {
@@ -81,6 +81,7 @@ export var command: Command = {
                 l.battle?.logL("hunt.threatening", {name: enemy.name}, "red")
                 p.level = Math.floor(p.level * 1.5)
                 p.xpYield *= 2
+                threateningBonus *= 2
             }
             p.updateStats()
             if (enemy.boss) {

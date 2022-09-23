@@ -4,7 +4,7 @@ import { enemies } from "./enemies.js"
 import { items } from "./helditem.js"
 import { presets } from "./stats.js"
 import { getUser, users } from "./users.js"
-import { Dictionary } from "./util.js"
+import { Dictionary, settings } from "./util.js"
 export class JoinError extends Error {
     name = "JoinError"
     intended = true
@@ -35,6 +35,7 @@ export class BattleLobby {
     type: BattleType = "ffa"
     botCount: number = 0
     bossType?: string
+    startedAt: number
     _flags: Dictionary<boolean> = { E: false, T: false, W: false }
     get flagsString() {
         return Object.entries(this._flags).filter(e => e[1]).map(e => e[0])
@@ -62,6 +63,7 @@ export class BattleLobby {
         this.id = `${(bruhnum = (bruhnum + 1) % 1000).toString().padStart(3, "0")}`
         lobbies.set(this.id, this)
         this.join(host)
+        this.startedAt = Date.now()
     }
     delete() {
         lobbies.delete(this.id)
@@ -97,8 +99,8 @@ export class BattleLobby {
         for (var u of this.users) {
             var play = new Player(u)
             play.level = this.level
-            play.moveset = (getUser(u).moveset).slice(0, 4)
-            play.helditems = (getUser(u).helditems || []).slice(0, 4).map(el => ({id: el}))
+            play.moveset = (getUser(u).moveset).slice(0, settings.maxMoves)
+            play.helditems = (getUser(u).helditems || []).slice(0, settings.maxMoves).map(el => ({id: el}))
             play.ability = getUser(u).ability
             var e = this.usersE[i]
             if (this.flags.E) {

@@ -1,4 +1,4 @@
-import { settings, experimental, loadRecursive } from "./util.js"
+import { settings, experimental, loadRecursive, colorToANSI, formatString } from "./util.js"
 for (var a of process.argv.slice(2)) {
     if (a.startsWith("-")) {
         //@ts-ignore
@@ -37,6 +37,8 @@ client.on("ready", async() => {
     var cmds = await loadDir("commands")
     await addCommands(g, cmds)
     console.log(`Actually ready`)
+    console.log(formatString(`Let's see...\nWill n:this; work?`))
+    console.log(formatString(`It does, that's [s]great[r]!`))
 })
 
 client.on("interactionCreate", async(i) => {

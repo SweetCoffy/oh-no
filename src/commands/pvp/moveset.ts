@@ -2,6 +2,7 @@ import { Message, MessageActionRow, MessageButton, MessageSelectMenu } from "dis
 import { Command } from "../../command-loader.js";
 import { moves } from "../../moves.js";
 import { getUser } from "../../users.js";
+import { settings } from "../../util.js";
 
 export var command: Command = {
     name: "moveset",
@@ -14,8 +15,8 @@ export var command: Command = {
                 new MessageActionRow({
                     components: [
                         new MessageSelectMenu({
-                            maxValues: 4,
-                            minValues: 4,
+                            maxValues: settings.maxMoves,
+                            minValues: settings.maxMoves,
                             customId: "moveset",
                             options: moves.filter(el => el.selectable).map((v, k) => {
                                 return {

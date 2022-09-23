@@ -184,7 +184,7 @@ export function createUser(user: User) {
         xp: 0,
         fuel: 0n,
         lastMessage: Date.now(),
-        moveset: ["bonk", "nerf_gun", "stronk", "spstronk"],
+        moveset: ["bonk", "nerf_gun", "stronk", "spstronk", "protect"],
         msgLvl_messages: 0,
         msgLvl_xp: 0,
     }

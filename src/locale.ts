@@ -1,19 +1,23 @@
+import { BattleType, StatID } from "./battle"
 import { Category, MoveType } from "./moves"
 
-type LocaleStringDamage = "dmg.generic" | "dmg.recoil" | "dmg.death" | "dmg.block" | "dmg.breakthrough" | "dmg.poison"
+type LocaleStringDamage = "dmg.generic" | "dmg.recoil" | "dmg.death" | "dmg.block" | "dmg.breakthrough" | "dmg.poison" | "dmg.overkill"
 type LocaleStringMove = "move.use" | "move.miss" | "move.power" | "move.accuracy" | "move.category" | "move.type" | "move.recoil" | "move.userstat" | "move.targetstat" | "move.fail"
-type LocaleStringStat = "stat.hp" | "stat.atk" | "stat.def" | "stat.spatk" | "stat.spdef" | "stat.spd"
+type LocaleStringStat = `stat.${StatID}`
 type LocaleStringStatChange = "stat.change.rose" | "stat.change.fell" | "stat.change.rose.sharply" | "stat.change.fell.harshly"
 | "stat.change.rose.drastically" | "stat.change.fell.severely"
-type LocaleStringStatus = "status.poison.start" | "status.toxic.start"
-type LocaleStringHeal = "heal.generic"
+type LocaleStringStatus = "status.poison.start" | "status.toxic.start" | "status.california.start" | "status.bleed.start"
+type LocaleStringHeal = "heal.generic" | "heal.eggs" | "heal.regeneration"
 type LocaleStringItem = "item.shield.boost" | "item.shield.unboost"
 type LocaleStringHunt = "hunt.threatening"
 type LocaleStringOther = "enemy.appears"
+type LocaleStringAbility = "ability.massive_health_bar"
+type LocaleStringBattleType = `battle.${BattleType}`
 export type LocaleString = LocaleStringDamage | LocaleStringMove | 
-LocaleStringStat | LocaleStringStatChange | LocaleStringStatus | 
-LocaleStringHeal | LocaleStringItem | Category | MoveType |
-LocaleStringHunt | LocaleStringOther
+    LocaleStringStat | LocaleStringStatChange | LocaleStringStatus | 
+    LocaleStringHeal | LocaleStringItem | Category | MoveType |
+    LocaleStringHunt | LocaleStringOther | LocaleStringAbility |
+    LocaleStringBattleType
 type LocaleStrings = {
     [key in LocaleString]?: string
 }
@@ -33,8 +37,9 @@ export function getString(key: LocaleString, obj: {[key: string]: any} | string[
     if (!str) return key
     if (!Array.isArray(obj)) {
         for (let k in obj) {
-            obj[k.toLowerCase()] = obj[k]
+            let v = obj[k]
             delete obj[k]
+            obj[k.toLowerCase()] = v
         }
     }
     return str.replace(/\$\.(\w+)/g, function (sub, k) {

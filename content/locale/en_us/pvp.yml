@@ -1,0 +1,92 @@
+ContentType: locale
+LocaleID: en_US
+# [a] = Accent
+# [s] = Success
+# [f] = Failure
+# [d] = Danger
+# [u] = Unimportant
+# [r] = Reset
+# macroname:<something>; = Macro
+#   n = Highlight name
+
+# Damage messages
+dmg.generic: "n:$.player; took n:$.damage; damage!"
+dmg.recoil: "n:$.player; took n:$.damage; damage from the recoil!"
+dmg.death: "n:$.player; died."
+dmg.death.player: "n:$.player[r] has been killed by [a]$.Inf;"
+dmg.overkill: "n:$.player; has been erased from existence."
+dmg.overkill.player: "n:$.player[r] has been erased from existence by [a]$.Inf;"
+dmg.block: "n:$.player[r] blocked n:$.damage; damage!"
+dmg.breakthrough: "It broke through n:$.player;'s protection!"
+dmg.poison: "n:$.player; takes n:$.damage; damage from the poison!"
+
+# Healing messages
+heal.generic: "n:$.player; restored $.amount HP!"
+heal.eggs: "n:$.player; regenerated $.amount HP from Eggs!"
+heal.regeneration: "n:$.player; regenerated $.amount HP!"
+
+# Move messages
+move.use: "n:$.player; used $.move!"
+move.miss: "But it missed..."
+move.fail: "It failed"
+move.power: "Power: $.value"
+move.accuracy: "Accuracy: $.value"
+move.category: "Category: $.value"
+move.type: "Type: $.value"
+move.recoil: "Recoil: $.value%"
+move.userstat: "User stat changes:"
+move.targetstat: "Target stat changes:"
+
+# Move category names
+physical: "Physical"
+special: "Special"
+status: "Status"
+attack: "Attack"
+noop: 'No-Op'
+protect: "Protect"
+heal: "Heal"
+
+# Full stat names
+stat.atk: "Attack"
+stat.def: "Defense"
+stat.spatk: "Special Attack"
+stat.spdef: "Special Defense"
+stat.hp: "HP"
+stat.spd: "Speed"
+
+# Stat changes
+stat.change.rose: "n:$.player[r]'s [a]$.stat; rose!"
+stat.change.rose.sharply: "n:$.player[r]'s [a]$.stat; rose sharply!"
+stat.change.rose.drastically: "n:$.player[r]'s [a]$.stat; rose drastically!"
+stat.change.fell: "n:$.player[r]'s [a]$.stat; fell!"
+stat.change.fell.harshly: "n:$.player[r]'s [a]$.stat; fell harshly!"
+stat.change.fell.severely: "n:$.player[r]'s [a]$.stat; fell severely!"
+
+# Status effect messages
+status.poison.start: "n:$.player; has been poisoned."
+status.toxic.start: "n:$.player; has been badly poisoned."
+status.california.start: "n:$.player; now lives in California!"
+status.bleed.start: "n:$.player; is now bleeding."
+
+# Item messages
+item.shield.boost: "n:$.player;'s Shield is now active."
+item.shield.unboost: "n:$.player;'s Shield is no longer active."
+
+item.mirror.perfect: "> n:$.player;'s Perfect Mirror"
+item.mirror.reflect: "n:$.player;'s Mirror reflected the attack!"
+item.mirror.shatter: "n:$.player;'s Mirror shattered!"
+item.mirror.shards : "Glass shards hit n:$.player1; and n:$.player2;!"
+
+# Hunt
+hunt.threatening: "[u]>[r] n:$.name;'s Threatening Aura"
+
+# Abilities
+ability.massive_health_bar: "[u]>[r] n:$.name;'s Massive Health Bar"
+
+# Battle
+battle.ffa: "Free for All"
+battle.pve: "Players vs Enemies"
+battle.boss: "Vs. Boss"
+
+# Other
+enemy.appears: "n:$.name; appears."

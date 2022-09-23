@@ -1,5 +1,5 @@
 import { Collection, User } from "discord.js"
-import { LOWER_FACTOR } from "./params.js"
+import { LOWER_FACTOR, STAT_MUL } from "./params.js"
 import { getUser, PresetList } from "./users.js"
 import { experimental } from "./util.js"
 
@@ -106,21 +106,15 @@ export function makeStats(obj?: {[key: string]: number}): Stats {
 // floor(0.01 x (2 x Base + IV + floor(0.25 x EV)) x Level) + Level + 10
 // floor(0.01 x (2 x Base + IV + floor(0.25 x EV)) x Level) + 5)
 export function calcStat(base: number, level: number, ev: number = 0) {
-    if (experimental.ohyes_stat_formula) return Math.floor( 
-        ((base / 1.5) + (base/5 * level/9) + (level * base/32) + level*7.5) / (1 + level/LOWER_FACTOR))
-    return Math.floor(0.01 * (2 * base + 31 + Math.floor(0.25 * ev)) * level) + 5
+    return Math.floor( 
+        ((base / 1.5) + (base/5 * level/9) + (level * base/32) + level*7.5) * (1 + level/LOWER_FACTOR) * STAT_MUL)
 }
 export function calcStats(level: number, baseStats: Stats, hpboost: number = 1): Stats {
     var s = makeStats()
     for (var k in baseStats) {
         s[k] = calcStat(baseStats[k], level, 0)
     }
-    if (experimental.ohyes_stat_formula) {
-        s.hp = Math.floor(s.hp*2.5)
-    } else {
-        s.hp += (level + 5) * 1.1
-        s.hp = Math.floor(s.hp * 1.7821676118462508 * hpboost)
-    }
+    s.hp = Math.floor(s.hp*2.5*hpboost)
     return s
 }
 export function getPreset(name: string, user?: User) {

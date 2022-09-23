@@ -1,6 +1,6 @@
 import { User, Collection, TextChannel, Message, TextBasedChannel, EmbedFieldData } from "discord.js"
 import { EventEmitter } from "events"
-import { setKeys, rng, randomRange, bar, experimental, Dictionary, getID, subscriptNum, xOutOfY } from "./util.js"
+import { setKeys, rng, randomRange, bar, experimental, Dictionary, getID, subscriptNum, xOutOfY, name, colorToANSI, LogColor, formatString } from "./util.js"
 import { makeStats, calcStats, Stats, baseStats } from "./stats.js"
 import { moves, Category, DamageType } from "./moves.js"
 import { lobbies, BattleLobby } from "./lobby.js"
@@ -8,14 +8,13 @@ import { getString, LocaleID, Locales, LocaleString } from "./locale.js"
 import { getUser } from "./users.js"
 import { HeldItem, items } from "./helditem.js"
 import { enemies } from "./enemies.js"
-import { FG_Blue, FG_Gray, FG_Green, FG_Red, FG_White, FG_Yellow, P, R, S } from "./ansi.js"
+import { FG_Blue, FG_Gray, FG_Green, FG_Red, FG_White, FG_Yellow, Start, Reset, End, FG_Pink, FG_Cyan } from "./ansi.js"
 import { abilities } from "./abilities.js"
 import { DAMAGE_MUL, LOWER_FACTOR } from "./params.js"
 
 export type BattleType = "ffa" | "pve" | "boss"
 export function calcDamage(pow: number, atk: number, def: number, level: number) {
-    if (experimental.ohyes_stat_formula) return Math.ceil(((atk / def) * (pow / 15)) * (level / 2.1) / (1 + level / LOWER_FACTOR) * DAMAGE_MUL)
-    else return Math.floor((((2 * level) / 5 + 2) * pow * atk/def) / 50 + 2);
+    return Math.ceil(((atk / def) * (pow / 15)) * (level / 2.1) * (1 + level / LOWER_FACTOR) * DAMAGE_MUL)
 }
 export interface CategoryStats {
     atk: string,
@@ -63,71 +62,58 @@ function statusDamageEffect(percent: number, silent = false, message: LocaleStri
 }
 function statusMessageEffect(message: LocaleString): StatusCallback {
     return function(b, p, s) {
-        b.log(getString(message, {USER: p.name, INFLICTOR: s.inflictor?.name}))
+        b.log(getString(message, {player: p.name, inf: s.inflictor?.name}))
     }
 }
 export var statusTypes: Collection<string, StatusType> = new Collection()
-statusTypes.set("poison", new StatusType("Poison", "POISN", statusMessageEffect("status.poison.start"), 
+statusTypes.set("poison", new StatusType("Poison", "Poisn", statusMessageEffect("status.poison.start"), 
 function (b, p, s) {
-    var tox = p.status.find(el => el.type == "toxic")
-    if (tox) {
-        
-        return
-    }
-    var base = 1/16
+    var base = 1/64
     if (b.type == "pve" && p.team == 0) {
-        base = 1/24
+        base /= 2
     }
-    
     b.takeDamage(p, p.maxhp * base, false, "dmg.poison")
 }, undefined, "toxic"))
-statusTypes.set("toxic", new StatusType("Toxic", "TOXIC", statusMessageEffect("status.toxic.start"), 
+statusTypes.set("toxic", new StatusType("Toxic", "Toxic", statusMessageEffect("status.toxic.start"), 
 function (b, p, s) {
-    var base = 1/16
+    var base = 1/32
     if (b.type == "pve" && p.team == 0) {
-        base = 1/24
+        base /= 2
     }
     if (p.status.some(el => el.type == "poison")) {
-        base += 1/64
+        base += 1/96
     }
-    var percent = base * (1 + (s.turns/3))
+    var percent = base * (1 + (s.turns/5))
     b.takeDamage(p, p.maxhp * percent, false, "dmg.poison")
 }, undefined, "california"))
-statusTypes.set("california", new StatusType("California", "CALIF", statusMessageEffect("status.toxic.start"), 
+statusTypes.set("california", new StatusType("California", "Calif", statusMessageEffect("status.california.start"), 
 function (b, p, s) {
-    var base = 1/8
+    var base = 1/24
     if (b.type == "pve" && p.team == 0) {
-        base = 1/12
+        base /= 2
     }
     if (p.status.some(el => el.type == "poison")) {
-        base += 1/32
+        base += 1/48
     }
     if (p.status.some(el => el.type == "toxic")) {
-        base += 1/16
+        base += 1/48
     }
     var percent = base * (1 + (s.turns/5))
     b.takeDamage(p, p.maxhp * percent, false, "dmg.poison")
 }, undefined))
-statusTypes.set("regen", new StatusType("Regeneration", "REGEN", undefined, function(b, p, s) {
+statusTypes.set("regen", new StatusType("Regeneration", "Regen", undefined, function(b, p, s) {
     if (p.status.some(el => el.type == "strong_regen")) {
         return
     }
-    var base = 1/8
-    b.heal(p, Math.ceil(p.maxhp * base))
+    var base = 1/12
+    b.heal(p, Math.ceil(p.maxhp * base), false, "heal.regeneration")
 }, undefined, "strong_regen"))
-statusTypes.set("strong_regen", new StatusType("Strong Regeneration", "SRGEN", undefined, function(b, p, s) {
-    var base = 1/8 * (1 + s.turns / 5)
+statusTypes.set("strong_regen", new StatusType("Strong Regeneration", "Regen+", undefined, function(b, p, s) {
+    var base = 1/10 * (1 + s.turns / 10)
     if (p.status.some(el => el.type == "regen")) {
-        base += 1/16
+        base += 1/32
     }
-    b.heal(p, Math.ceil(p.maxhp * base))
-}, undefined, "stronger_regen"))
-statusTypes.set("stronger_regen", new StatusType("Stronger Regeneration", "SRRGN", undefined, function(b, p, s) {
-    var base = 1/8 * (1 + s.turns / 5)
-    if (p.status.some(el => el.type == "regen")) {
-        base += 1/16
-    }
-    b.heal(p, Math.ceil(p.maxhp * base))
+    b.heal(p, Math.ceil(p.maxhp * base), false, "heal.regeneration")
 }, undefined))
 statusTypes.set("bruh", new StatusType("Bruh", "Bruh", function(b, p, s) {
     s.duration = 3
@@ -151,6 +137,9 @@ statusTypes.set("bruh", new StatusType("Bruh", "Bruh", function(b, p, s) {
     p.statStages.spdef += 2/3
     p.statStages.spd   += 2/3
     b.heal(p, p.maxhp - p.hp)
+}))
+statusTypes.set("bleed", new StatusType("Bleeding", "Bleed", (b, p) => b.logL("status.bleed.start", { player: p.name }), (b, p) => {
+
 }))
 var categories: {[key: string]: CategoryStats} = {
     "physical": {
@@ -180,16 +169,6 @@ export interface Status {
     turns: number,
     type: string,
 }
-type LogColor = "red" | "green" | "white" | "gray" | "blue" | "yellow"
-function colorToANSI(color: LogColor) {
-    if (color == "red")    return FG_Red
-    if (color == "green")  return FG_Green
-    //if (color == "white")  return FG_White
-    if (color == "gray")   return FG_Gray
-    if (color == "blue")   return FG_Blue
-    if (color == "yellow") return FG_Yellow
-    return 0
-}
 export interface StatModifier {
     type?: "add" | "multiply",
     value: number,
@@ -197,7 +176,8 @@ export interface StatModifier {
     label?: string,
 }
 export type StatModifierID = StatModifier & { id: string }
-type StatID = "hp" | "atk" | "def" | "spatk" | "spdef" | "spd"
+export type StatID = "hp" | "atk" | "def" | "spatk" | "spdef" | "spd"
+enum Team { Players, Enemies }
 /**
  * Represents an in-battle player
  */
@@ -206,8 +186,10 @@ export class Player {
     hp: number = 0
     /** The player's Max HP */
     get maxhp() {
-        return this.getModifierValue(this.stats.hp, this.modifiers.hp);
+        return this.getModifierValue(this.stats.hp, this.modifiers.hp) * calcMul(this.statStages.hp);
     }
+    /** HP can reach up to`overheal` × `maxhp` */
+    overheal: number = 1
     /** The total damage taken in the battle */
     damageTaken: number = 0
     /** The total damage blocked by Protect in battle */
@@ -223,10 +205,10 @@ export class Player {
     /** The type of bruh orb the player has activated */
     bruh?: string = undefined
     /** The team the player belongs to */
-    team: number = 0
+    team: Team = Team.Players
     /** The amount of absorption health the player has */
     absorption: number = 0
-    /** The tier of absorption, each one reduces 40%, 60% and 80% respectively */
+    /** The tier of absorption, each tier granting +10% damage reduction over the previous one */
     absorptionTier: number = 0
     private _charge: number = 0
     private _magic: number = 0
@@ -234,7 +216,7 @@ export class Player {
     maxMagic: number = 100
     /** How far into the negatives the player's health can go before dying, used by the Plot Armor ability */
     plotArmor: number = 0
-    /** The list of usable moves for the player, only matters for user-controlled players */
+    /** The list of usable moves for the player, only used for user-controlled players */
     moveset: string[] = ["bonk", "nerf_gun", "stronk", "spstronk"]
     modifiers: Dictionary<(StatModifier & {id: string})[]> = {
         hp   : [],
@@ -390,6 +372,7 @@ class BotAI {
         var target = targets[Math.floor(targets.length * Math.random())]
 
         var bestboost = player.atk > player.spatk ? "stronk" : "spstronk"
+        var bestriskboost= player.atk > player.spatk ? "reckless_rush" : "mind_overwork"
         var beststat = player.atk > player.spatk ? "atk" : "spatk"
         var bestmove = player.atk > player.spatk ? "bonk" : "nerf_gun"
         var bestrecoilmove = player.atk > player.spatk ? "slap" : "ping"
@@ -440,6 +423,12 @@ class BotAI {
             }
             case "the_cat": {
                 var attackChance = 1 - (1 / calcMul(getBestStages()))
+                if (player.damageBlockedInTurn) return {
+                    type: "move",
+                    move: "counter",
+                    target: target,
+                    player,
+                }
                 if (Math.random() < attackChance) {
                     if (Math.random() < 0.25) {
                         return {
@@ -456,9 +445,15 @@ class BotAI {
                         player,
                     }
                 }
+                if (getBestStages() < 6) return {
+                    type: "move",
+                    move: bestriskboost,
+                    target: player,
+                    player,
+                }
                 return {
                     type: "move",
-                    move: bestboost,
+                    move: "protect",
                     target: player,
                     player,
                 }
@@ -502,12 +497,6 @@ class BotAI {
             }
             default: {
                 if (target) {
-                    if (Math.random() < 0.5 && !target.status.some(el => el.type == "poison")) return {
-                        type: "move",
-                        move: "twitter",
-                        target: target,
-                        player,
-                    }
                     if (player.damageBlockedInTurn > player.maxhp / 6) {
                         return {
                             type: "move",
@@ -515,6 +504,12 @@ class BotAI {
                             target: target,
                             player,
                         }
+                    }
+                    if (Math.random() < 0.5 && !target.status.some(el => el.type == "poison")) return {
+                        type: "move",
+                        move: "twitter",
+                        target: target,
+                        player,
                     }
                     if (Math.random() < 0.75 && getBestStages() < 3) {
                         return {
@@ -563,6 +558,12 @@ class BotAI {
                         target: target,
                     }
                 }
+                if (getBestStages() < 6) return {
+                    type: "move",
+                    move: bestriskboost,
+                    target: player,
+                    player: player,
+                }
                 return {
                     type: "move",
                     move: bestboost,
@@ -578,7 +579,7 @@ class BotAI {
         this.battle = battle
     }
 }
-type TakeDamageType = "default" | "physical" | "special"
+type TakeDamageType = "none" | Category
 interface TakeDamageOptions {
     silent?: boolean,
     message?: LocaleString,
@@ -669,7 +670,7 @@ export class Battle extends EventEmitter {
                 fields.push({
                     name: "Bots",
                     value: bots.map((el, i) => {
-                        let str = `${getIcons(el)}\`${el.name.padEnd(8, " ")} ${bar(el.hp, el.maxhp, 6)} ${el.status.map(el => `${statusTypes.get(el.type)?.short}`).join(" ") || ""}\``
+                        let str = `${getIcons(el)}\`${el.name.padEnd(8, " ")} ${xOutOfY(el.hp, el.maxhp)} (${Math.ceil(el.hp / el.maxhp * 100).toString().padEnd(3)}%) ${el.status.map(el => `${statusTypes.get(el.type)?.short}`).join(" ") || ""}\``
                         return str
                     }).join("\n") || "what",
                     inline: true
@@ -685,11 +686,11 @@ export class Battle extends EventEmitter {
                     description: (this.isPve) ? `${bots.filter(el => el.hp > 0).length} Bots left` : str,
                     fields: [
                         ...fields,
-                        {
-                            name: "Logs",
-                            value: "```" + (experimental.ansi_logs ? "ansi" : "diff") + "\n" + b.logs.slice(-20).join("\n") + "\n```"
-                        }
                     ]
+                },
+                {
+                    title: `Log`,
+                    description: "```ansi" + "\n" + b.logs.slice(-25).join("\n") + "\n```"
                 }
             ]
         })
@@ -707,10 +708,6 @@ export class Battle extends EventEmitter {
      */
     statBoost(player: Player, stat: string, stages: number, silent = false) {
         if (stages == 0) return
-        if (stat == "hp") {
-            this.heal(player, stages / 6 * player.maxhp, false, "heal.generic", true)
-            return
-        }
         if (!silent && stat == "attack" && stages > 0) {
             player.charge += 5 + Math.floor(stages*5)
         }
@@ -718,19 +715,19 @@ export class Battle extends EventEmitter {
         if (silent) return
         if (stages > 0) {
             if (stages > 2) {
-                this.log(getString("stat.change.rose.drastically", { USER: player.name, STAT: getString(("stat." + stat) as LocaleString) }), "green")
+                this.log(getString("stat.change.rose.drastically", {player: player.name, stat: getString(("stat." + stat) as LocaleString) }), "green")
             } else if (stages > 1) {
-                this.log(getString("stat.change.rose.sharply", { USER: player.name, STAT: getString(("stat." + stat) as LocaleString) }), "green")
+                this.log(getString("stat.change.rose.sharply", {player: player.name, stat: getString(("stat." + stat) as LocaleString) }), "green")
             } else {
-                this.log(getString("stat.change.rose", { USER: player.name, STAT: getString(("stat." + stat) as LocaleString) }))
+                this.log(getString("stat.change.rose", {player: player.name, stat: getString(("stat." + stat) as LocaleString) }))
             }
         } else if (stages < 0) {
             if (stages < -2) {
-                this.log(getString("stat.change.fell.severely", { USER: player.name, STAT: getString(("stat." + stat) as LocaleString) }), "red")
+                this.log(getString("stat.change.fell.severely", {player: player.name, stat: getString(("stat." + stat) as LocaleString) }), "red")
             } else if (stages < -1) {
-                this.log(getString("stat.change.fell.harshly", { USER: player.name, STAT: getString(("stat." + stat) as LocaleString) }), "red")
+                this.log(getString("stat.change.fell.harshly", {player: player.name, stat: getString(("stat." + stat) as LocaleString) }), "red")
             } else {
-                this.log(getString("stat.change.fell", { USER: player.name, STAT: getString(("stat." + stat) as LocaleString) }))
+                this.log(getString("stat.change.fell", {player: player.name, stat: getString(("stat." + stat) as LocaleString) }))
             }
         }
     }
@@ -746,23 +743,8 @@ export class Battle extends EventEmitter {
     log(str: string, color: LogColor = "white") {
         var prefix = " "
         this.fullLog.push(str)
-        if (experimental.ansi_logs) {
-            prefix = `${P}0;`
-            prefix += colorToANSI(color)
-            prefix += "m"
-            str = str.replace(/\[(\w+)\]/g, function(substr, format: string) {
-                if (format == "reset") return R;
-                return `${P}0;${colorToANSI(format as LogColor)}m`
-            })
-            this.logs.push(prefix + str + R)
-            this.emit("log", str)
-        } else {
-            if (color == "red" || color == "yellow") prefix = "-"
-            if (color == "green" || color == "blue") prefix = "+"
-            str = str.replace(/\[(\w+)\]/g, "")
-            this.logs.push(prefix + str)
-            this.emit("log", str)
-        }
+        this.logs.push(formatString(str, color))
+        this.emit("log", str)
     }
     logL(str: LocaleString, vars: Dictionary<any> | any[], color: LogColor = "white") {
         this.log(getString(str, vars), color)
@@ -790,11 +772,11 @@ export class Battle extends EventEmitter {
         if (breakshield && user.protect) {
             damage /= 4
             user.protect = false
-            this.log(getString("dmg.breakthrough", {USER: user.name}))
+            this.log(getString("dmg.breakthrough", {player: user.name}))
         } else if (user.protect) {
             user.damageBlocked += damage
             user.damageBlockedInTurn += damage
-            this.log(getString("dmg.block", {USER: user.name, DAMAGE: Math.floor(damage)}))
+            this.log(getString("dmg.block", {player: user.name, damage: Math.floor(damage)}))
             return false
         }
         var mirror = user.helditems.find(el => el.id == "mirror")
@@ -804,8 +786,8 @@ export class Battle extends EventEmitter {
                 var stats = Object.keys(user.statStages).slice(1)
                 var stat = stats[Math.floor(Math.random() * stats.length)]
                 if (mirror.durability >= 100) {
-                    this.log(`${user.name}'s Perfect Mirror`)
-                    reflect = 0.69
+                    this.log(`${name(user.name)}'s Perfect Mirror`)
+                    reflect = 0.869420
                     this.statBoost(user, stat, 1)
                 } else {
                     if (Math.random() < 0.25) {
@@ -813,23 +795,28 @@ export class Battle extends EventEmitter {
                     }
                 }
                 var dmg = Math.floor(Math.min(damage, user.maxhp * 0.75) * reflect)
-                mirror.durability -= (damage/user.maxhp) * 200
-                this.log(`${inflictor.name} Took ${dmg} damage from ${user.name}'s Mirror! [${bar(mirror.durability, 100, 5)}]`, "red")
-                this.takeDamage(inflictor, dmg, true, "dmg.generic", false)
+                mirror.durability -= (damage / user.maxhp) * 200
+                var mirrorMax = Math.floor(user.maxhp/2)
+                var mirrorCur = Math.floor(mirror.durability / 100 * user.maxhp / 2)
+                this.log(`${name(user.name)}'s Mirror reflected the attack! [${xOutOfY(mirrorCur, mirrorMax)}]`, "red")
+                this.takeDamage(inflictor, dmg, false, "dmg.generic", false)
                 damage = Math.floor(damage * (1 - reflect))
             } else mirror.durability = 0;
             //@ts-ignore
             if (mirror?.durability <= 0) {
-                this.log(`${user.name}'s Mirror broke!`)
+                this.log(`${name(user.name)}'s Mirror shattered!`)
                 this.statBoost(user, "def", -1)
                 this.statBoost(user, "spdef", -1)
                 mirror.remove = true
-                this.takeDamage(user, user.maxhp/16)
+                this.takeDamage(user, user.maxhp / 8)
+                this.log(`Glass shards hit ${name(user.name)} and ${name(inflictor.name)}`, "red")
+                this.inflictStatus(user, "bleed")
+                this.inflictStatus(inflictor, "bleed")
             }
         }
-        if (damage == 0 && !silent) return this.log(`${user.name} Took no damage!`)
+        if (damage == 0 && !silent) return this.log(`${name(user.name)} took no damage!`)
         if (user.absorption > 0) {
-            var reduction = (Math.min(user.absorptionTier + 1, 4))/5
+            var reduction = Math.min(user.absorptionTier, 9)*0.1
             user.absorption -= damage * reduction;
             damage *= 1 - reduction;
             if (user.absorption <= 0) {
@@ -846,16 +833,17 @@ export class Battle extends EventEmitter {
         if (isNaN(user.hp)) user.hp = 0;
 
         user.damageTaken += damage
-        if (!silent) this.log(getString(message, {USER: user.name, DAMAGE: Math.floor(damage) + ""}), "red")
+        if (!silent) this.log(getString(message, {player: user.name, damage: Math.floor(damage) + ""}), "red")
         var death = 0 - user.plotArmor
         if (user.hp <= death) {
-            user.hp = death
             if (Math.random() < 0.05) {
                 user.hp = death + 1
-                this.log(`${user.name} Endured the hit thanks to shitty rng mechanics!`)
+                this.log(`${name(user.name)} endured the hit thanks to shitty RNG mechanics!`)
                 return true
             }
-            this.log(getString("dmg.death", {USER: user.name}), "red")
+            if (user.hp < -user.maxhp + death) this.logL("dmg.overkill", {player: user.name}, "red")
+            else this.log(getString("dmg.death", {player: user.name}), "red")
+            user.hp = death
         }
 
         return true
@@ -864,15 +852,23 @@ export class Battle extends EventEmitter {
         return this.takeDamage(user, damage, options.silent, (options.message || "dmg.generic") as LocaleString, options.breakshield, options.inflictor)
     }
     heal(user: Player, amount: number, silent: boolean = false, message: LocaleString = "heal.generic", overheal: boolean = false) {
-        if (user.hp >= user.maxhp && !overheal) return false
-        var hp = Math.max(Math.min(user.maxhp - user.hp, amount), 0)
+        if (user.hp >= user.maxhp * user.overheal && !overheal) return false
+        if (user.status.some((s) => s.type == "bleed")) amount /= 10
+        let max = user.maxhp * user.overheal
+        // Healing becomes less effective the higher above max HP the player is
+        amount /= Math.max(Math.ceil(user.hp / user.maxhp), 1)
+        var hp = Math.max(Math.min(max - user.hp, amount), 0)
         if (overheal) hp = amount;
         user.hp += hp
-        if (!silent) this.log(getString(message, {USER: user.name, AMOUNT: Math.floor(amount) + ""}), "green")
+        if (!silent) this.log(getString(message, {player: user.name, AMOUNT: Math.floor(amount) + ""}), "green")
     }
     addAbsorption(user: Player, amount: number, tier: number = 1) {
-        var a = Math.max(Math.min(user.absorption - user.maxhp, amount), 0)
-        user.absorption += a
+        if (user.absorptionTier > tier) amount /= (user.absorptionTier - tier)/3 + 1
+        user.absorption += Math.floor(amount)
+        if (user.absorption > user.maxhp) {
+            user.absorption = user.maxhp/3
+            if (user.absorptionTier < 9) user.absorptionTier++
+        }
         if (user.absorptionTier < tier) user.absorptionTier = tier
     }
     get isPve() {
@@ -886,7 +882,7 @@ export class Battle extends EventEmitter {
                 if (move.type != "protect") {
                     action.player.protectTurns = 0
                 }
-                this.log(getString("move.use", {USER: action.player.name, MOVE: move.name}))
+                this.log(getString("move.use", {player: action.player.name, MOVE: move.name}))
                 if (rng.get01() > move.accuracy / 100) return this.log(getString("move.miss"))
                 if (!move.checkFail(this, action.player, action.target) || action.player.magic < move.requiresMagic || action.player.charge < move.requiresCharge) return this.log(getString("move.fail"))
                 action.player.magic -= move.requiresMagic
@@ -927,9 +923,10 @@ export class Battle extends EventEmitter {
                     this.takeDamageO(action.target, dmg, { 
                         breakshield: move.breakshield,
                         inflictor: action.player,
+                        type: cat,
                     })
                 } else if (move.type == "protect") {
-                    if (rng.get01() > (1 / (action.player.protectTurns + 1))) return this.log(getString("move.miss"))
+                    if (rng.get01() > (1 / (action.player.protectTurns/3 + 1))) return this.log(getString("move.miss"))
                     action.player.protectTurns++
                     supportTarget.protect = true
                 } else if (move.type == "heal") {
@@ -1007,15 +1004,6 @@ export class Battle extends EventEmitter {
         this.logs = []
         this.log(`Turn ${this.turn}`)
         for (var u of this.players) {
-            for (var s of u.status) {
-                this.doStatusUpdate(u, s)
-            }
-            u.status = u.status.filter(el => {
-                if (el.duration <= 0) {
-                    statusTypes.get(el.type)?.end(this, u, el)
-                }
-                return el.duration > 0
-            })
             u.protect = false
         }
         for (var p of this.players) {
@@ -1102,7 +1090,17 @@ export class Battle extends EventEmitter {
         while (this.actions.length > 0) {
             this.actions.pop()
         }
-
+        for (let u of this.players) {
+            for (var s of u.status) {
+                this.doStatusUpdate(u, s)
+            }
+            u.status = u.status.filter(el => {
+                if (el.duration <= 0) {
+                    statusTypes.get(el.type)?.end(this, u, el)
+                }
+                return el.duration > 0
+            })
+        }
         // Discourage stalling until the heat death of the universe by doing some stuff
         if (this.lengthPunishmentsStart > 0) {
             var start = this.lengthPunishmentsStart

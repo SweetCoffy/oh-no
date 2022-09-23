@@ -150,6 +150,9 @@ export var moves: Collection<string, Move> = new Collection()
 
 // Physical/Special basic attacks
 moves.set("bonk", new Move("Bonk", "attack", 60))
+moves.set("needle", new Move("Needle", "attack", 10, "physical", 80).set(move => {
+    move.inflictStatus.push({ status: "bleed", chance: 1 })
+}).setDesc("A very weak attack involving a needle, will make the target bleed"))
 moves.set("nerf_gun", new Move("Nerf Gun", "attack", 60, "special"))
 
 // Physical/Special recoil attacks
@@ -268,4 +271,5 @@ moves.set("pingcheck", new Move("Pingcheck", "attack", 200, "special", 100).set(
         spdef: -1,
         spd: -1,
     }
+    el.inflictStatus.push({ status: "bleed", chance: 1 })
 }).setDesc("ú's exclusive move. This move is guaranteed to 1-hit KO anything"))
