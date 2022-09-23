@@ -215,7 +215,7 @@ export var command: Command = {
                 let lobby = findValidLobby(i.user)
                 if (lobby) {
                     await lobbyInfo(lobby, i)
-                } else return await i.reply("Could't find a valid lobby")
+                } else return await i.reply("Couldn't find a valid lobby")
                 break;
             }
             case "join": {
