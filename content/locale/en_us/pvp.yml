@@ -10,15 +10,16 @@ LocaleID: en_US
 #   n = Highlight name
 
 # Damage messages
-dmg.generic: "n:$.player; took n:$.damage; damage!"
-dmg.recoil: "n:$.player; took n:$.damage; damage from the recoil!"
+dmg.generic: "n:$.player; took n:$.damage; damage."
+dmg.recoil: "n:$.player; took n:$.damage; damage from the recoil."
 dmg.death: "n:$.player; died."
-dmg.death.player: "n:$.player[r] has been killed by [a]$.Inf;"
+dmg.death.player: "n:$.player; has been killed by n:$.Inf;"
 dmg.overkill: "n:$.player; has been erased from existence."
-dmg.overkill.player: "n:$.player[r] has been erased from existence by [a]$.Inf;"
-dmg.block: "n:$.player[r] blocked n:$.damage; damage!"
+dmg.overkill.player: "n:$.player; has been erased from existence by n:$.Inf;"
+dmg.block: "n:$.player; blocked n:$.damage; damage!"
 dmg.breakthrough: "It broke through n:$.player;'s protection!"
-dmg.poison: "n:$.player; takes n:$.damage; damage from the poison!"
+dmg.poison: "n:$.player; took n:$.damage; damage from the poison."
+dmg.bleed: "n:$.player; took n:$.damage; damage from bleeding."
 
 # Healing messages
 heal.generic: "n:$.player; restored $.amount HP!"
