@@ -1,6 +1,6 @@
 import { User, Collection, TextChannel, Message, TextBasedChannel, EmbedFieldData } from "discord.js"
 import { EventEmitter } from "events"
-import { setKeys, rng, randomRange, bar, experimental, Dictionary, getID, subscriptNum, xOutOfY, name, colorToANSI, LogColor, formatString } from "./util.js"
+import { setKeys, rng, randomRange, bar, experimental, Dictionary, getID, subscriptNum, xOutOfY, name, colorToANSI, LogColor, formatString, LogColorWAccent } from "./util.js"
 import { makeStats, calcStats, Stats, baseStats } from "./stats.js"
 import { moves, Category, DamageType } from "./moves.js"
 import { lobbies, BattleLobby } from "./lobby.js"
@@ -740,13 +740,13 @@ export class Battle extends EventEmitter {
         }
     }
     fullLog: string[] = []
-    log(str: string, color: LogColor = "white") {
+    log(str: string, color: LogColorWAccent = "white") {
         var prefix = " "
         this.fullLog.push(str)
         this.logs.push(formatString(str, color))
         this.emit("log", str)
     }
-    logL(str: LocaleString, vars: Dictionary<any> | any[], color: LogColor = "white") {
+    logL(str: LocaleString, vars: Dictionary<any> | any[], color: LogColorWAccent = "white") {
         this.log(getString(str, vars), color)
     }
     sortActions() {
@@ -786,8 +786,8 @@ export class Battle extends EventEmitter {
                 var stats = Object.keys(user.statStages).slice(1)
                 var stat = stats[Math.floor(Math.random() * stats.length)]
                 if (mirror.durability >= 100) {
-                    this.log(`${name(user.name)}'s Perfect Mirror`)
-                    reflect = 0.869420
+                    this.logL("item.mirror.perfect", { player: user.name })
+                    reflect = 1
                     this.statBoost(user, stat, 1)
                 } else {
                     if (Math.random() < 0.25) {
@@ -798,23 +798,23 @@ export class Battle extends EventEmitter {
                 mirror.durability -= (damage / user.maxhp) * 200
                 var mirrorMax = Math.floor(user.maxhp/2)
                 var mirrorCur = Math.floor(mirror.durability / 100 * user.maxhp / 2)
-                this.log(`${name(user.name)}'s Mirror reflected the attack! [${xOutOfY(mirrorCur, mirrorMax)}]`, "red")
+                this.logL("item.mirror.reflect", { player: user.name, bar: `[${xOutOfY(mirrorCur, mirrorMax)}]` })
                 this.takeDamage(inflictor, dmg, false, "dmg.generic", false)
                 damage = Math.floor(damage * (1 - reflect))
             } else mirror.durability = 0;
             //@ts-ignore
             if (mirror?.durability <= 0) {
-                this.log(`${name(user.name)}'s Mirror shattered!`)
+                this.logL("item.mirror.shatter", { player: user.name })
                 this.statBoost(user, "def", -1)
                 this.statBoost(user, "spdef", -1)
                 mirror.remove = true
                 this.takeDamage(user, user.maxhp / 8)
-                this.log(`Glass shards hit ${name(user.name)} and ${name(inflictor.name)}`, "red")
+                this.logL("item.mirror.shards", { player1: user.name, player2: inflictor.name }, "red")
                 this.inflictStatus(user, "bleed")
                 this.inflictStatus(inflictor, "bleed")
             }
         }
-        if (damage == 0 && !silent) return this.log(`${name(user.name)} took no damage!`)
+        if (damage == 0 && !silent) return this.logL("dmg.none", { player: user.name }, "unimportant")
         if (user.absorption > 0) {
             var reduction = Math.min(user.absorptionTier, 9)*0.1
             user.absorption -= damage * reduction;
@@ -838,7 +838,7 @@ export class Battle extends EventEmitter {
         if (user.hp <= death) {
             if (Math.random() < 0.05) {
                 user.hp = death + 1
-                this.log(`${name(user.name)} endured the hit thanks to shitty RNG mechanics!`)
+                this.logL(`dmg.rng`, { player: user.name })
                 return true
             }
             if (user.hp < -user.maxhp + death) this.logL("dmg.overkill", {player: user.name}, "red")

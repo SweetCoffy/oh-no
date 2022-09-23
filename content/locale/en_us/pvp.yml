@@ -12,6 +12,8 @@ LocaleID: en_US
 # Damage messages
 dmg.generic: "n:$.player; took n:$.damage; damage."
 dmg.recoil: "n:$.player; took n:$.damage; damage from the recoil."
+dmg.rng: "n:$.player; endured the hit thanks to shitty RNG mechanics!"
+dmg.none: "n:$.player; took no damage."
 dmg.death: "n:$.player; died."
 dmg.death.player: "n:$.player; has been killed by n:$.Inf;"
 dmg.overkill: "n:$.player; has been erased from existence."
