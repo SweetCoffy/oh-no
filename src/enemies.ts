@@ -1,7 +1,7 @@
 import { Collection } from "discord.js";
 import { BotAIType } from "./battle.js";
 import { ItemStack } from "./items.js";
-import { Stats } from "./stats.js";
+import { StatID, Stats } from "./stats.js";
 
 export type ItemDrop = ItemStack & { chance: number }
 export interface EncounterData {
@@ -20,9 +20,10 @@ export interface Enemy {
     boss: boolean,
     xpYield: number,
     the?: boolean,
-    boost?: Stats,
+    boost?: {[x in StatID]?: number},
     encounter?: EncounterData,
     helditems?: string[],
+    ability?: string,
     drops?: ItemDrop[],
 }
 
@@ -85,6 +86,9 @@ enemies.set("egg", {
         spdef:    1,
         spd  :    1,
     },
+    boost: {
+        atk: -6
+    },
     encounter: {
         minPlayerLevel: 10,
         maxPlayerLevel: Infinity,
@@ -117,12 +121,8 @@ enemies.set("the_skeleton", {
         relativeLevel: true,
     },
     boost: {
-        hp: 0,
         atk: 6,
         def: 6,
-        spatk: 0,
-        spdef: 0,
-        spd: 0,
     },
     boss: true,
     xpYield: 2000,
@@ -140,12 +140,8 @@ enemies.set("egg_lord", {
         spd  :   83,
     },
     boost: {
-        hp: 0,
-        atk: 0,
         def: 2,
-        spatk: 0,
         spdef: 2,
-        spd: 0,
     },
     boss: true,
     the: true,
@@ -188,7 +184,6 @@ enemies.set("u", {
         spd  :  232,
     },
     boost: {
-        hp: 0,
         atk: 3,
         def: 3,
         spatk: 3,
@@ -220,7 +215,6 @@ enemies.set("o", {
         spd  :    0,
     },
     boost: {
-        hp: 0,
         atk: 3,
         def: 3,
         spatk: 3,
@@ -252,7 +246,6 @@ enemies.set("y", {
         spd  :  232,
     },
     boost: {
-        hp: 0,
         atk: 3,
         def: 3,
         spatk: 3,

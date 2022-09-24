@@ -262,9 +262,11 @@ export var experimental = {
 export function money(amount: bigint) {
     return `${CURRENCY_ICON}${format(amount)}`
 }
-var idCounter = 0;
-export function getID(max: number) {
-    return (idCounter++ % max).toString().padStart((max - 1).toString().length, "0");
+var start = 9999
+var idCounter = start
+export function getID(max: number = 10000) {
+    if (idCounter < 0) idCounter = start
+    return (idCounter-- % max).toString().padStart((max - 1).toString().length, "0")
 }
 export function getMaxTotal({ ability }: { ability?: string }) {
     if (!ability) return BASE_STAT_TOTAL;

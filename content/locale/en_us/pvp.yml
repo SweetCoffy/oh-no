@@ -22,16 +22,18 @@ dmg.block: "n:$.player; blocked n:$.damage; damage!"
 dmg.breakthrough: "It broke through n:$.player;'s protection!"
 dmg.poison: "n:$.player; took n:$.damage; damage from the poison."
 dmg.bleed: "n:$.player; took n:$.damage; damage from bleeding."
+dmg.release: "Dealt a total of n:$.damage; damage."
 
 # Healing messages
 heal.generic: "n:$.player; restored $.amount HP!"
 heal.eggs: "n:$.player; regenerated $.amount HP from Eggs!"
 heal.regeneration: "n:$.player; regenerated $.amount HP!"
+heal.revive: "n:$.player; went back to life!"
 
 # Move messages
 move.use: "n:$.player; used $.move!"
-move.miss: "But it missed..."
-move.fail: "It failed"
+move.miss: "...But it missed"
+move.fail: "...It failed"
 move.power: "Power: $.value"
 move.accuracy: "Accuracy: $.value"
 move.category: "Category: $.value"
@@ -70,6 +72,7 @@ status.poison.start: "n:$.player; has been poisoned."
 status.toxic.start: "n:$.player; has been badly poisoned."
 status.california.start: "n:$.player; now lives in California!"
 status.bleed.start: "n:$.player; is now bleeding."
+status.opposite_day.start: "n:$.player; now lives in Australia!"
 
 # Item messages
 item.shield.boost: "n:$.player;'s Shield is now active."

@@ -5,6 +5,7 @@ import { CommandInteraction, Message, MessageActionRow, MessageButton, TextChann
 import { BattleType, Player } from '../../battle.js';
 import { enemies } from '../../enemies.js';
 import { getString } from '../../locale.js';
+import { confirmation } from '../../util.js';
 export var command: Command = {
     name: "lobby",
     description: "ur mom",
@@ -222,20 +223,21 @@ export var command: Command = {
                 if (getUser(i.user).lobby) return await i.reply("eriughergieuhgr")
                 let lobby = lobbies.get(i.options.getString("lobby_id", true))
                 if (!lobby) return await i.reply("uaishfuiersnvgeiurgrgerg")
-                lobby.join(i.user, { enemyPreset: i.options.getString("enemy_preset") || undefined, team: i.options.getInteger("team") || 0 }, i.channel)
+                lobby.join(i.user, { nickname: (await i.guild?.members.fetch(i.user.id))?.nickname || undefined, enemyPreset: i.options.getString("enemy_preset") || undefined, team: i.options.getInteger("team") || 0 }, i.channel)
                 await i.reply(`Joined the lobby`)
                 break;
             }
             case "create": {
                 var botCount = i.options.getInteger("lobby_bot_count", false) || 0
                 let lobby = createLobby(i.user, i.options.getString("lobby_name", false) || undefined, i.options.getInteger("lobby_capacity", false) ?? 2)
-                lobby.level = i.options.getInteger("lobby_level", false) || 1
+                lobby.level = i.options.getInteger("lobby_level", false) || 50
                 lobby.botCount = botCount
                 lobby.type = (i.options.getString("lobby_battle_type", false) || "ffa") as BattleType
                 lobby.difficulty = (i.options.getString("lobby_difficulty", false) || "medium") as Difficulty
                 lobby.bossType = i.options.getString("lobby_boss_type") || undefined
                 lobby.flags = i.options.getString("lobby_flags") || ""
                 lobby.usersE[0].enemyPreset = i.options.getString("enemy_preset") || "default"
+                lobby.usersE[0].nickname = (await i.guild?.members.fetch(i.user.id))?.nickname || undefined
                 lobby.channels.push(i.channel)
                 await lobbyInfo(lobby, i)
                 if (i.options.getBoolean("lobby_bot_join")) {
@@ -292,11 +294,19 @@ export var command: Command = {
                 let lobby = getUser(i.user)?.lobby
                 if (lobby) {
                     if (lobby.host.id != i.user.id) {
+                        if (lobby.battle && !await confirmation(i, `If you leave a lobby that has already started, you will not be able to get back in. Are you sure you want to leave?`)) {
+                            await i.followUp(`Cancelled`)
+                            return
+                        }
                         lobby.leave(i.user)
                         await i.reply("Left the lobby")
                     } else {
+                        if (!await confirmation(i, `Leaving the lobby as the host will end it entirely. Are you sure you want to leave?`)) {
+                            await i.followUp(`Cancelled`)
+                            return
+                        }
                         lobby.delete()
-                        await i.reply("Ended the lobby")
+                        await i.followUp("Ended the lobby")
                     }
                 } else return i.reply("You are not in a lobby")
             }

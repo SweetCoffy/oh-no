@@ -1,7 +1,7 @@
 import { User, Collection, TextChannel, Message, TextBasedChannel, EmbedFieldData } from "discord.js"
 import { EventEmitter } from "events"
 import { setKeys, rng, randomRange, bar, experimental, Dictionary, getID, subscriptNum, xOutOfY, name, colorToANSI, LogColor, formatString, LogColorWAccent } from "./util.js"
-import { makeStats, calcStats, Stats, baseStats } from "./stats.js"
+import { makeStats, calcStats, Stats, baseStats, StatID } from "./stats.js"
 import { moves, Category, DamageType } from "./moves.js"
 import { lobbies, BattleLobby } from "./lobby.js"
 import { getString, LocaleID, Locales, LocaleString } from "./locale.js"
@@ -139,8 +139,10 @@ statusTypes.set("bruh", new StatusType("Bruh", "Bruh", function(b, p, s) {
     b.heal(p, p.maxhp - p.hp)
 }))
 statusTypes.set("bleed", new StatusType("Bleeding", "Bleed", (b, p) => b.logL("status.bleed.start", { player: p.name }), (b, p) => {
-
+    
 }))
+
+statusTypes.set("opposite_day", new StatusType("Opposite Day", "Australia", statusMessageEffect("status.opposite_day.start")))
 var categories: {[key: string]: CategoryStats} = {
     "physical": {
         atk: "atk",
@@ -176,7 +178,6 @@ export interface StatModifier {
     label?: string,
 }
 export type StatModifierID = StatModifier & { id: string }
-export type StatID = "hp" | "atk" | "def" | "spatk" | "spdef" | "spd"
 enum Team { Players, Enemies }
 /**
  * Represents an in-battle player
@@ -237,7 +238,7 @@ export class Player {
         return value
     }
     addModifier(stat: StatID, mod: StatModifier) {
-        var id = getID(1000);
+        var id = getID();
         var e = {
             ...mod,
             id: id,
@@ -291,12 +292,12 @@ export class Player {
     get spd()   { return this.getModifierValue(this.stats.spd   * calcMul(this.statStages.spd)  , this.modifiers.spd)   }
     
     /**
-     * The display name of the player, going from `_nickname`, `user.username` and `#${id}`
+     * The display name of the player
      */
     get name() {
         if (this._nickname) return this._nickname
         if (this.user) return this.user.username
-        return `#${this.id}`
+        return `Unkn#${this.id}`
     }
     set name(v: string) {
         this._nickname = v
@@ -307,7 +308,7 @@ export class Player {
     _nickname = ""
     /**
      * Updates the player's current stats to match what they should be according to level and base stats
-     * @param changeHp Whether or not to increase/decrease current HP if Max HP is different
+     * @param changeHp Whether or not to increase or decrease current HP if Max HP is different
      */
     updateStats(changeHp: boolean = true) {
         var lastmax = this.maxhp
@@ -322,7 +323,7 @@ export class Player {
             this.user = user
             this.baseStats = {...getUser(user).baseStats}
         }
-        this.id = getID(1000)
+        this.id = getID()
         this.stats = makeStats()
         this.updateStats()
         this.hp = this.maxhp
@@ -601,6 +602,11 @@ export class Battle extends EventEmitter {
     }
     ended: boolean = false
     botAI: BotAI
+    isEnemy(player: Player, target: Player) {
+        if (player == target) return false
+        if (!this.isPve) return true
+        return player.team != target.team
+    }
     async infoMessage(channel: TextBasedChannel) {
         var b = this
         var humans = this.players.filter(el => el.team == 0)
@@ -690,7 +696,7 @@ export class Battle extends EventEmitter {
                 },
                 {
                     title: `Log`,
-                    description: "```ansi" + "\n" + b.logs.slice(-25).join("\n") + "\n```"
+                    description: "```ansi" + "\n" + b.logs.slice(-30).join("\n").slice(-1900) + "\n```"
                 }
             ]
         })
@@ -706,9 +712,9 @@ export class Battle extends EventEmitter {
     /**
      * Increases `player`'s `stat` stages by `stages` and shows the respective message if `silent` is false
      */
-    statBoost(player: Player, stat: string, stages: number, silent = false) {
+    statBoost(player: Player, stat: StatID, stages: number, silent = false) {
         if (stages == 0) return
-        if (!silent && stat == "attack" && stages > 0) {
+        if (!silent && stat == "atk" && stages > 0) {
             player.charge += 5 + Math.floor(stages*5)
         }
         player.statStages[stat] += stages;
@@ -734,9 +740,9 @@ export class Battle extends EventEmitter {
     /**
      * Increases `player`'s statStages by the stages set in `stats` and shows the respective messages if `silent` is false
      */
-    multiStatBoost(player: Player, stats: { [x: string]: number }, silent: boolean = false) {
+    multiStatBoost(player: Player, stats: { [x in StatID]: number }, silent: boolean = false) {
         for (var k in stats) {
-            this.statBoost(player, k, stats[k], silent)
+            this.statBoost(player, k as StatID, stats[k as StatID], silent)
         }
     }
     fullLog: string[] = []
@@ -788,10 +794,10 @@ export class Battle extends EventEmitter {
                 if (mirror.durability >= 100) {
                     this.logL("item.mirror.perfect", { player: user.name })
                     reflect = 1
-                    this.statBoost(user, stat, 1)
+                    this.statBoost(user, stat as StatID, 1)
                 } else {
                     if (Math.random() < 0.25) {
-                        this.statBoost(user, stat, 1)
+                        this.statBoost(user, stat as StatID, 1)
                     }
                 }
                 var dmg = Math.floor(Math.min(damage, user.maxhp * 0.75) * reflect)
@@ -860,7 +866,8 @@ export class Battle extends EventEmitter {
         var hp = Math.max(Math.min(max - user.hp, amount), 0)
         if (overheal) hp = amount;
         user.hp += hp
-        if (!silent) this.log(getString(message, {player: user.name, AMOUNT: Math.floor(amount) + ""}), "green")
+        if (!silent) this.log(getString(message, { player: user.name, AMOUNT: Math.floor(amount) + "" }), "green")
+        if (user.hp - hp <= -user.plotArmor) this.logL("heal.revive", { player: user.name }, "green")
     }
     addAbsorption(user: Player, amount: number, tier: number = 1) {
         if (user.absorptionTier > tier) amount /= (user.absorptionTier - tier)/3 + 1
@@ -889,10 +896,13 @@ export class Battle extends EventEmitter {
                 action.player.charge -= move.requiresCharge
                 var supportTarget = action.player
                 if (this.isPve) supportTarget = action.target
-                if (move.targetSelf && !this.isPve) {
+                if (move.targetSelf && (!this.isPve || action.target.team != action.player.team)) {
                     action.target = action.player
                 }
-                if (move.type == "attack") {
+                let onUse = move.onUse
+                if (onUse) {
+                    onUse(this, action.player, action.target)
+                } else if (move.type == "attack") {
                     var cat = move.category
                     var pow = move.getPower(this, action.player, action.target)
                     if(action.player.helditems.some(el => el.id == "category_swap")) {
@@ -926,7 +936,7 @@ export class Battle extends EventEmitter {
                         type: cat,
                     })
                 } else if (move.type == "protect") {
-                    if (rng.get01() > (1 / (action.player.protectTurns/3 + 1))) return this.log(getString("move.miss"))
+                    if (rng.get01() > (1 / (action.player.protectTurns/3 + 1))) return this.log(getString("move.fail"))
                     action.player.protectTurns++
                     supportTarget.protect = true
                 } else if (move.type == "heal") {
@@ -935,21 +945,20 @@ export class Battle extends EventEmitter {
                 } else if (move.type == "absorption") {
                     var pow = move.getPower(this, action.player, supportTarget) / 100
                     this.addAbsorption(supportTarget, Math.floor(supportTarget.maxhp * pow), move.absorptionTier)
-                } else {
-                    action.player.magic += 10
                 }
+                if (move.requiresMagic <= 0 && move.type != "attack") action.player.magic += 10
                 if (move.recoil) {
                     var recoilDmg = Math.ceil(action.player.maxhp * move.recoil)
                     this.takeDamage(action.player, recoilDmg, false, "dmg.recoil")
                 }
                 if (rng.get01() < move.userStatChance) {
                     for (var k in move.userStat) {
-                        this.statBoost(action.player, k, move.userStat[k])
+                        this.statBoost(action.player, k as StatID, move.userStat[k as StatID])
                     }
                 }
                 if (rng.get01() < move.targetStatChance) {
                     for (var k in move.targetStat) {
-                        this.statBoost(action.target, k, move.targetStat[k])
+                        this.statBoost(action.target, k as StatID, move.targetStat[k as StatID])
                     }
                 }
                 for (var i of move.inflictStatus) {
@@ -1057,10 +1066,6 @@ export class Battle extends EventEmitter {
                         p.baseStats.spd   = Math.floor(p.baseStats.spd   * spd  )
                         p.updateStats(false)
                         var newStats = {...p.stats}
-                        var dif = makeStats()
-                        for (var k in dif) {
-                            dif[k] = newStats[k] - oldStats[k]
-                        }
                         this.log(`${p.name}'s Bruh Orb is now active`, "red")
                         // for (var k in dif) {
                         //     this.log(`${k.toUpperCase().padEnd(6, " ")} ${oldStats[k].toString().padEnd(4, " ")} + ${dif[k].toString().padStart(4, " ")}`)

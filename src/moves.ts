@@ -1,7 +1,7 @@
 import Collection from "@discordjs/collection"
 import { Battle, calcMul, Player } from "./battle.js"
 import { makeStats, Stats } from "./stats.js"
-import { rng, lerp } from "./util.js"
+import { rng, lerp, weightedDistribution } from "./util.js"
 
 export type MoveType = "attack" | "status" | "protect" | "heal" | "absorption" | "noop"
 export type Category = "physical" | "special" | "status"
@@ -125,6 +125,10 @@ export class Move {
         return this.power || 0
     }
     /**
+     * Function to run when the move is used. If present, it will override default behaviour
+     */
+    onUse?: (b: Battle, user: Player, target: Player) => void
+    /**
      * Whether or not this move hits all enemies in PvE mode. Currently not implemented and probably getting removed
      */
     hitAll: boolean = false
@@ -150,9 +154,10 @@ export var moves: Collection<string, Move> = new Collection()
 
 // Physical/Special basic attacks
 moves.set("bonk", new Move("Bonk", "attack", 60))
-moves.set("needle", new Move("Needle", "attack", 10, "physical", 80).set(move => {
+moves.set("needle", new Move("Needle", "attack", 100/16, "physical", 80).set(move => {
     move.inflictStatus.push({ status: "bleed", chance: 1 })
-}).setDesc("A very weak attack involving a needle, will make the target bleed"))
+    move.setDamage = "percent"
+}).setDesc("A weak move that will always do the same amount of damage. Can also make the target Bleed"))
 moves.set("nerf_gun", new Move("Nerf Gun", "attack", 60, "special"))
 
 // Physical/Special recoil attacks
@@ -232,7 +237,26 @@ moves.set("counter", new Move("Counter", "attack", 0).set(move => {
     move.getPower = function(b, p, t) {
         return p.damageBlockedInTurn * 2
     }
-}).setDesc("This move does double the damage blocked by Protect in the previous turn"))
+}).setDesc("This move deals double the damage blocked by Protect in the previous turn"))
+moves.set("release", new Move("Release", "attack", 0).set(move => {
+    move.accuracy = 100
+    move.priority = 1
+    move.setDamage = "set"
+    move.checkFail = function (b, p, t) {
+        return p.damageBlockedInTurn > 0
+    }
+    move.onUse = function(b, p, t) {
+        let damage = Math.ceil(p.damageBlockedInTurn * 1.75)
+        let enemies = b.players.filter(e => e.hp > -e.plotArmor && b.isEnemy(p, e))
+        let dist = weightedDistribution(enemies.map(e => e.hp), damage)
+        let total = 0
+        for (let i = 0; i < dist.length; i++) {
+            b.takeDamage(enemies[i], Math.ceil(dist[i]))
+            total += Math.ceil(dist[i])
+        }
+        b.logL(`dmg.release`, { damage: total })
+    }
+}).setDesc("A different version of Counter, which deals less damage overall and is unable to do critical hits, but distributes the damage across all enemies"))
 
 moves.set("regen", new Move("Regeneration", "status", 0, "status", 100).set(move => {
     move.requiresMagic = 20
@@ -244,7 +268,7 @@ moves.set("regen", new Move("Regeneration", "status", 0, "status", 100).set(move
         chance: 0.1,
         status: "strong_regen"
     })
-}))
+}).setDesc("Grants the user Regeneration, slowly healing them over time"))
 moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
     move.requiresMagic = 30
 }).setDesc("A basic healing move, restores 40% of the user's max hp"))

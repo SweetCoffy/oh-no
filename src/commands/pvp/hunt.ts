@@ -3,7 +3,7 @@ import { Command } from "../../command-loader.js";
 import { enemies, Enemy } from "../../enemies.js";
 import { createLobby } from "../../lobby.js";
 import { getString } from "../../locale.js";
-import { calcStats } from "../../stats.js";
+import { calcStats, StatID } from "../../stats.js";
 import { addXP, getUser, users } from "../../users.js";
 import { money, randomRange, weightedDistribution, weightedRandom } from "../../util.js";
 
@@ -54,6 +54,7 @@ export var command: Command = {
             l.type = "boss"
             e = e.filter(el => el?.boss)
         }
+        l.usersE[0].nickname = (await i.guild?.members.fetch(i.user.id))?.nickname || undefined
         l.start()
         u.lobby = l;
         let threateningBonus = 1
@@ -65,6 +66,8 @@ export var command: Command = {
             p.xpYield = enemy.xpYield
             p.ai = enemy.ai
             p.team = 1
+            p.helditems = [...enemy.helditems || []].map((el) => ({ id: el }))
+            p.ability = enemy.ability
             if (enemy.encounter) {
                 if (enemy.encounter.relativeLevel) {
                     p.level = Math.round(randomRange(enemy.encounter.minLevel, enemy.encounter.maxLevel) * u.level)
@@ -80,14 +83,15 @@ export var command: Command = {
             if (Math.random() < 1/16 * threateningBonus) {
                 l.battle?.logL("hunt.threatening", {name: enemy.name}, "red")
                 p.level = Math.floor(p.level * 1.5)
-                p.xpYield *= 2
-                threateningBonus *= 2
+                p.xpYield *= 3
+                threateningBonus *= 1.1
             }
             p.updateStats()
             if (enemy.boss) {
                 if (enemy.boost) {
                     for (var k in enemy.boost) {
-                        l.battle?.statBoost(p, k, enemy.boost[k])
+                        //@ts-ignore
+                        l.battle?.statBoost(p, k, enemy.boost[k] || 0)
                     }
                 }
             }
@@ -121,7 +125,8 @@ export var command: Command = {
                 if (levels > 0) {
                     await i.followUp(`+${levels} levels\n${
                         Object.keys(oldStats)
-                        .map(el => `\`${el.padEnd(6, " ")} ${oldStats[el].toString().padStart(6, " ")} + ${(newStats[el] - oldStats[el]).toString().padEnd(6, " ")}\``)
+                        //@ts-ignore
+                        .map((el: StatID) => `\`${el.padEnd(6, " ")} ${oldStats[el].toString().padStart(6, " ")} + ${(newStats[el] - oldStats[el]).toString().padEnd(6, " ")}\``)
                         .join("\n")
                     }`)
                 }

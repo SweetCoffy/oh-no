@@ -4,7 +4,7 @@ import { enemies } from "./enemies.js"
 import { items } from "./helditem.js"
 import { presets } from "./stats.js"
 import { getUser, users } from "./users.js"
-import { Dictionary, settings } from "./util.js"
+import { Dictionary, getID, settings } from "./util.js"
 export class JoinError extends Error {
     name = "JoinError"
     intended = true
@@ -15,10 +15,10 @@ export class LeaveError extends Error {
 }
 export type Difficulty = "easy" | "medium" | "hard" | "hell"
 export const lobbies: Collection<string, BattleLobby> = new Collection<string, BattleLobby>()
-var bruhnum = 0
 interface UserJoinData {
     enemyPreset?: string,
     team?: number,
+    nickname?: string,
 }
 export class BattleLobby {
     users: User[] = []
@@ -60,7 +60,7 @@ export class BattleLobby {
         if (capacity != undefined) {
             this.capacity = capacity
         }
-        this.id = `${(bruhnum = (bruhnum + 1) % 1000).toString().padStart(3, "0")}`
+        this.id = getID()
         lobbies.set(this.id, this)
         this.join(host)
         this.startedAt = Date.now()
@@ -114,14 +114,15 @@ export class BattleLobby {
                 play.team = e.team || 0
             }
             play.updateStats()
+            if (e.nickname) play._nickname = e.nickname;
             this.battle.players.push(play)
             i++
         }
         var it = items.map((el, k) => k)
-        var levelPerPlayer = 0.125
-        if (this.difficulty == "easy") levelPerPlayer = 0.125/2
-        if (this.difficulty == "hard") levelPerPlayer = 0.17
-        if (this.difficulty == "hell") levelPerPlayer = 0.23
+        var levelPerPlayer = 0.1
+        if (this.difficulty == "easy") levelPerPlayer = 0
+        if (this.difficulty == "hard") levelPerPlayer = 0.2
+        if (this.difficulty == "hell") levelPerPlayer = 0.35
         var allowedPresets = [...presets.keys()]
         if (this.type == "boss") {
             var exclude = ["tonk", "extreme-tonk", "default"]
@@ -135,6 +136,19 @@ export class BattleLobby {
                 bot.level = Math.ceil(bot.level * 0.46)
                 bot.team = 1;
             }
+            //@ts-ignore
+            bot.baseStats = {...b[Math.floor(Math.random() * b.length)]}
+            if (this.bossType) {
+                var enemy = enemies.get(this.bossType);
+                if (enemy) {
+                    bot.baseStats = { ...enemy.stats }
+                    bot.ability = enemy.ability;
+                    bot.helditems = [...enemy.helditems||[]].map(el => ({ id: el }))
+                    bot._nickname = enemy.name
+                    bot.ai = enemy.ai
+                }
+            }
+            bot.updateStats()
             if (this.type == "boss") {
                 bot.level *= 1 + (levelPerPlayer * this.users.length)
                 this.battle.statBoost(bot, "atk", 1);
@@ -148,17 +162,6 @@ export class BattleLobby {
                     bot.helditems.push({id: it[Math.floor(Math.random() * it.length)]})
                 }
             }
-            //@ts-ignore
-            bot.baseStats = {...b[Math.floor(Math.random() * b.length)]}
-            if (this.bossType) {
-                var enemy = enemies.get(this.bossType);
-                if (enemy) {
-                    bot.baseStats = {...enemy.stats}
-                    bot._nickname = enemy.name
-                    bot.ai = enemy.ai
-                }
-            }
-            bot.updateStats()
             this.battle.players.push(bot)
         }
         for (var p of this.battle.players) {

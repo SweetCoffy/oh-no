@@ -1,6 +1,7 @@
 import { Collection } from "discord.js";
 import { Battle, calcDamage, Player } from "./battle.js";
 import { getString, LocaleString } from "./locale.js";
+import { StatID } from "./stats.js";
 import { rng } from "./util.js"
 export interface HeldItem {
     id: string,
@@ -42,7 +43,7 @@ function multiEffect(...effects: HeldItemCallback[]): HeldItemCallback {
         }
     }
 }
-function statEffect(stat: string, stages: number, silent = false): HeldItemCallback {
+function statEffect(stat: StatID, stages: number, silent = false): HeldItemCallback {
     return function (b, p, it) {
         b.statBoost(p, stat, stages, silent)
     }
@@ -86,9 +87,9 @@ export var items: Collection<string, HeldItemType> = new Collection()
 items.set("eggs", 
     new HeldItemType("Eggs", (b, p, item) => {
         if (p.dead) return
-        b.heal(p, Math.floor(p.maxhp * 0.05 / (1 + b.turn/8)), false, "heal.eggs")
+        b.heal(p, Math.floor(p.maxhp / 16), false, "heal.eggs")
 }, multiEffect(healEffect(1), statEffect("def", 1), statEffect("spdef", 1)))
-.setEffect("Slowly regenerates the user's HP. Regeneration slows down over time", "Fully heals the user and increases Defense and Special Defense").setIcon("🥚"))
+.setEffect("Slowly regenerates the user's HP", "Fully heals the user and increases Defense and Special Defense").setIcon("🥚"))
 
 items.set("shield", 
 new HeldItemType("Shield", function(b, p, i) {

@@ -2,21 +2,9 @@ import { Collection, User } from "discord.js"
 import { LOWER_FACTOR, STAT_MUL } from "./params.js"
 import { getUser, PresetList } from "./users.js"
 import { experimental } from "./util.js"
-
-export interface Stats {
-    [key: string]: number,
-    /** Max HP */
-    hp: number,
-    /** Physical Attack, used when using a physical attacking move */
-    atk: number,
-    /** Physical Defense, used when taking damage from a physical attacking move */
-    def: number,
-    /** Special Attack, used when using a special attacking move */
-    spatk: number,
-    /** Special Defense, used when taking damage from a special attacking move */
-    spdef: number,
-    /** Speed, used for determining the order of actions with the same priority */
-    spd: number,
+export type StatID = "hp" | "atk" | "def" | "spatk" | "spdef" | "spd"
+export type Stats = {
+    [x in StatID]: number
 }
 export interface StatPreset {
     name: string,
@@ -98,7 +86,7 @@ export function makeStats(obj?: {[key: string]: number}): Stats {
     }
     if (obj) {
         for (var k in obj) {
-            o[k] = obj[k]
+            o[k as StatID] = obj[k]
         }
     }
     return o
@@ -112,7 +100,7 @@ export function calcStat(base: number, level: number, ev: number = 0) {
 export function calcStats(level: number, baseStats: Stats, hpboost: number = 1): Stats {
     var s = makeStats()
     for (var k in baseStats) {
-        s[k] = calcStat(baseStats[k], level, 0)
+        s[k as StatID] = calcStat(baseStats[k as StatID], level, 0)
     }
     s.hp = Math.floor(s.hp*2.5*hpboost)
     return s
