@@ -694,7 +694,7 @@ export class Battle extends EventEmitter {
             return icons;
         }
         function playerInfo(p: Player) {
-            if (p.dead) return `${Start}0;${FG_Gray}m🞨 ${p.name}${Reset}`
+            if (p.dead) return `${Start}0;${FG_Gray}m- ${p.name}${Reset}`
             let icons = getIcons(p)
             let barColor = "green"
             if (p.hp <= p.maxhp / 2) barColor = "yellow"
@@ -704,10 +704,10 @@ export class Battle extends EventEmitter {
                 if (p.charge || p.magic) { 
                     str += "\n"
                     if (p.charge) {
-                        str += formatString(`[u]CHG[r] [red]${xOutOfY(p.charge, p.maxCharge, true)} `)
+                        str += formatString(`[red]CHG ${xOutOfY(p.charge, p.maxCharge, true)} `)
                     }
                     if (p.magic) {
-                        str += formatString(`[u]MAG[r] [blue]${xOutOfY(p.magic, p.maxMagic, true)} `)
+                        str += formatString(`[blue]MAG ${xOutOfY(p.magic, p.maxMagic, true)} `)
                     }
                 }
             if (p.status.length > 0) {
@@ -1186,11 +1186,7 @@ export class Battle extends EventEmitter {
                         p.baseStats.spdef = Math.floor(p.baseStats.spdef * spdef)
                         p.baseStats.spd   = Math.floor(p.baseStats.spd   * spd  )
                         p.updateStats(false)
-                        var newStats = {...p.stats}
-                        this.log(`${p.toString()}'s Bruh Orb is now active`, "red")
-                        // for (var k in dif) {
-                        //     this.log(`${k.toUpperCase().padEnd(6, " ")} ${oldStats[k].toString().padEnd(4, " ")} + ${dif[k].toString().padStart(4, " ")}`)
-                        // }
+                        //this.log(`${p.toString()}'s Bruh Orb is now active`, "red")
                         p.helditems = p.helditems.filter(el => !el.id.startsWith("bruh_orb"))
                         this.inflictStatus(p, "bruh", p);
                     }
