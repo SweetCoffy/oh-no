@@ -85,7 +85,7 @@ export var command: Command = {
         }
         function findPlayerID(name: string) {
             var split = name.split(" ")
-            var num = Number(split[0].slice(1))
+            var num = parseInt(split[0])
             return num || Number(name)
         }
         if (!(i.channel instanceof TextChannel)) return await i.reply("What")

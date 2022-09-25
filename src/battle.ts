@@ -700,14 +700,14 @@ export class Battle extends EventEmitter {
             if (p.hp <= p.maxhp / 2) barColor = "yellow"
             if (p.hp <= p.maxhp / 4) barColor = "red"
             let str = `${Start}0;${FG_Gray}m${icons}${Reset}${p.name}` + "\n" +
-                formatString(`[${barColor}]${bar(p.hp, p.maxhp, 10)}[r] ${xOutOfY(Math.floor(p.hp), Math.floor(p.maxhp), true)}`)
+                formatString(`[${barColor}]${bar(p.hp, p.maxhp, 10)}| ${xOutOfY(Math.floor(p.hp), Math.floor(p.maxhp), true)}`)
                 if (p.charge || p.magic) { 
                     str += "\n"
                     if (p.charge) {
-                        str += formatString(`CHG ${xOutOfY(p.charge, p.maxCharge, true)} `)
+                        str += formatString(`[u]CHG[r] [red]${xOutOfY(p.charge, p.maxCharge, true)} `)
                     }
                     if (p.magic) {
-                        str += formatString(`MAG ${xOutOfY(p.magic, p.maxMagic, true)} `)
+                        str += formatString(`[u]MAG[r] [blue]${xOutOfY(p.magic, p.maxMagic, true)} `)
                     }
                 }
             if (p.status.length > 0) {
@@ -751,7 +751,7 @@ export class Battle extends EventEmitter {
                 for (let p of players) {
                     str += "\n" + playerInfo(p) + "\n"
                 }
-                str += "\n"
+                str += "—————————————————————\n"
             }
             str = `\`\`\`ansi\n${str}\n\`\`\``
         }

@@ -28,7 +28,7 @@ export var command: Command = {
     async run(i) {
         function findPlayerID(name: string) {
             var split = name.split(" ")
-            var num = Number(split[0].slice(1))
+            var num = parseInt(split[0])
             return num || Number(name)
         }
         var lobby = getUser(i.user).lobby
