@@ -50,7 +50,7 @@ function statEffect(stat: StatID, stages: number, silent = false): HeldItemCallb
 }
 function messageEffect(message: LocaleString): HeldItemCallback {
     return function (b, p, it) {
-        b.log(getString(message, {player: p.name}))
+        b.log(getString(message, { player: p.toString()}))
     }
 }
 export class HeldItemType {
@@ -87,7 +87,7 @@ export var items: Collection<string, HeldItemType> = new Collection()
 items.set("eggs", 
     new HeldItemType("Eggs", (b, p, item) => {
         if (p.dead) return
-        b.heal(p, Math.floor(p.maxhp / 16), false, "heal.eggs")
+        b.heal(p, Math.floor(p.maxhp / 20), false, "heal.eggs")
 }, multiEffect(healEffect(1), statEffect("def", 1), statEffect("spdef", 1)))
 .setEffect("Slowly regenerates the user's HP", "Fully heals the user and increases Defense and Special Defense").setIcon("🥚"))
 

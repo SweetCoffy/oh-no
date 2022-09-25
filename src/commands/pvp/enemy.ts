@@ -1,5 +1,6 @@
 import { Command } from "../../command-loader.js"
 import { enemies } from "../../enemies.js"
+import { StatID } from "../../stats.js"
 import { bar } from "../../util.js"
 
 export var command: Command = {
@@ -24,7 +25,7 @@ export var command: Command = {
                         title: e.name,
                         description: `${e.description || "N/A"}\n\nStats:\n${
                             Object.keys(e.stats)
-                            .map(k => `\`${k.padEnd(6, " ")} ${e?.stats[k].toString().padStart(6, " ")} ${bar(e?.stats[k] as number, max, 20)}\``)
+                            .map(k => `\`${k.padEnd(6, " ")} ${e?.stats[k as StatID].toString().padStart(6, " ")} ${bar(e?.stats[k as StatID] as number, max, 20)}\``)
                             .join("\n")
                         }\n\`Total  ${Object.values(e?.stats).reduce((prev, cur) => prev + cur, 0).toString().padStart(6, " ")}\``
                     }

@@ -90,6 +90,7 @@ export class BattleLobby {
     difficulty: Difficulty = "medium"
     start() {
         this.battle = new Battle(this)
+        if (this.type == "team_match") this._flags.T = true
         var l = this
         if (this.battle.on("end", (winner: Player) => {
             l.delete()
@@ -111,7 +112,7 @@ export class BattleLobby {
                 }
             }
             if (this.flags.T) {
-                play.team = e.team || 0
+                play.team = e.team ?? this.type == "team_match" ? Math.floor(Math.random() * 4) : 0
             }
             play.updateStats()
             if (e.nickname) play._nickname = e.nickname;
@@ -129,12 +130,21 @@ export class BattleLobby {
             allowedPresets = allowedPresets.filter(el => !exclude.includes(el))
         }
         var b = allowedPresets.map(el => presets.get(el)?.stats)
+        let perTeam = Math.floor(this.botCount + this.users.length) / 4
+        let teams = [0, 0, 0, 0]
+        for (let p of this.battle.players) {
+            teams[p.team]++
+        }
         for (var i = 0; i < this.botCount; i++) {
             var bot = new Player()
             bot.level = this.level
             if (this.type == "pve") {
                 bot.level = Math.ceil(bot.level * 0.46)
                 bot.team = 1;
+            }
+            if (this.type == "team_match") {
+                bot.team = teams.findIndex((v) => v < perTeam || v <= 0)
+                teams[bot.team]++
             }
             //@ts-ignore
             bot.baseStats = {...b[Math.floor(Math.random() * b.length)]}
@@ -173,6 +183,7 @@ export class BattleLobby {
                 else if (p.team == 1) p.team = 0;
             }
         }
+        this.battle.players.sort((a, b) => a.team - b.team)
     }
     channels: TextBasedChannel[] = []
     join(user: User, e?: UserJoinData, channel?: TextBasedChannel) {

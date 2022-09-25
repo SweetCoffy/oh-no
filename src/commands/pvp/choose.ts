@@ -4,7 +4,7 @@ import { getUser, users } from '../../users.js';
 import { EmbedFieldData, TextChannel } from 'discord.js';
 import { moves } from '../../moves.js';
 import { getString, LocaleString } from '../../locale.js';
-import { Stats } from "../../stats.js";
+import { StatID, Stats } from "../../stats.js";
 import { items } from '../../helditem.js';
 export var command: Command = {
     name: "choose",
@@ -116,7 +116,7 @@ export var command: Command = {
                 u.lobby.battle.moveAction(play, moveId, player)
                 if (u.lobby.battle.isPve && u.lobby.users.length > 1) {
                     await i.reply({
-                        content: `${i.user.username} Has chosen the move ${move?.name} targeted at \`#${idx}\` ${player.name}`
+                        content: `${i.user.username} has chosen the move ${move?.name} targeted at \`#${idx}\` ${player.name}`
                     })
                 } else {
                     await i.reply({
@@ -137,7 +137,7 @@ export var command: Command = {
                         return `${num}`
                     }
                     function funi(boost: Stats) {
-                        return Object.keys(boost).map(el => ({stat: el, boost: boost[el]})).filter(el => el.boost != 0)
+                        return Object.keys(boost).map(el => ({stat: el, boost: boost[el as StatID]})).filter(el => el.boost != 0)
                     }
                     var userStat = funi(move.userStat)
                     var targetStat = funi(move.targetStat)

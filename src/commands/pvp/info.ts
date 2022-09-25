@@ -1,8 +1,11 @@
 // "stable" version info command
-import { calcMul, statusTypes } from "../../battle.js"
+import { MessageAttachment } from "discord.js"
+import { calcMul, statusTypes, teamNames } from "../../battle.js"
 import { Command } from "../../command-loader.js"
+import { StatID } from "../../stats.js"
 import { getUser } from "../../users.js"
 import { bar } from "../../util.js"
+import { inspect } from "util"
 export var command: Command = {
     type: "CHAT_INPUT",
     name: "info",
@@ -20,7 +23,7 @@ export var command: Command = {
         var u = getUser(i.user)
         if (!u.lobby?.battle) return await i.respond([])
         var b = u.lobby.battle;
-        return await i.respond(b.players.map((el, i) => ({name: `#${i} ${el.name}`, value: i + ""})))
+        return await i.respond(b.players.map((el, i) => ({name: `#${i} ${el.name} (${Math.floor(el.hp / el.maxhp * 100)}%, Team ${teamNames[el.team]})`, value: i + ""})))
     },
     async run(i) {
         function findPlayerID(name: string) {
@@ -47,9 +50,10 @@ export var command: Command = {
             }).join("\n") || "---------------- | -- Turns left"}\n` + 
             `Stats:\n${Object.keys(player.modifiers).map(el => {
                 var mds = player.modifiers[el]
-                return `${el.toUpperCase()}: ${Math.floor(player.stats[el])}\n├${mds.filter(el => !el.disabled).map(el => `${el.label || "Unknown modifier"}: ${el.type == "add" ? `+` : "x"}${el.value.toFixed(2)}`).join("\n├")}\n└Stage modifier: ${calcMul(player.statStages[el]).toFixed(2)}x`
+                return `${el.toUpperCase()}: ${Math.floor(player.stats[el as StatID])}\n├${mds.filter(el => !el.disabled).map(el => `${el.label || "Unknown modifier"}: ${el.type == "add" ? `+` : "x"}${el.value.toFixed(2)}`).join("\n├")}\n└Stage modifier: ${calcMul(player.statStages[el as StatID]).toFixed(2)}x`
             }).join("\n")}\n`
-            +  "\n```"
+                + "\n```",
+            files: [new MessageAttachment(Buffer.from(inspect(player.events, false, 4, false)), "debug_events.js")]
         })
     }
 }

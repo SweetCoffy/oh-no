@@ -91,11 +91,10 @@ export function makeStats(obj?: {[key: string]: number}): Stats {
     }
     return o
 }
-// floor(0.01 x (2 x Base + IV + floor(0.25 x EV)) x Level) + Level + 10
-// floor(0.01 x (2 x Base + IV + floor(0.25 x EV)) x Level) + 5)
 export function calcStat(base: number, level: number, ev: number = 0) {
-    return Math.floor( 
+    let v = Math.floor( 
         ((base / 1.5) + (base/5 * level/9) + (level * base/32) + level*7.5) * (1 + level/LOWER_FACTOR) * STAT_MUL)
+    return v
 }
 export function calcStats(level: number, baseStats: Stats, hpboost: number = 1): Stats {
     var s = makeStats()

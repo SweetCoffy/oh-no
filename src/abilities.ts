@@ -30,7 +30,7 @@ Ability.add("hardening", new Ability("Bone Hardening", 300)).onTurn = function(b
 }
 Ability.add("massive_health_bar", new Ability("Massive Health Bar", 300)).onDamage = function (b, p, dmg, inf) {
     if (!p.abilityData.activated) {
-        b.logL("ability.massive_health_bar", { name: p.name })
+        b.logL("ability.massive_health_bar", { name: p.toString() })
         //p.abilityData.activated = p.addModifier("hp", {
         //    type: "multiply",
         //    value: 2,

@@ -2,7 +2,7 @@ import { abilities } from "../../abilities.js";
 import { Command } from "../../command-loader.js"
 import { items } from "../../helditem.js";
 import { getString } from "../../locale.js";
-import { getPresetList, makeStats, getPreset, presets } from "../../stats.js";
+import { getPresetList, makeStats, getPreset, presets, StatID } from "../../stats.js";
 import { getUser } from "../../users.js";
 import { bar, confirmation, getMaxTotal, helditemString } from "../../util.js"
 function getWeighted(weights: number[], total: number = 600) {
@@ -273,7 +273,7 @@ export var command: Command = {
                 let stats = makeStats()
                 var j = 0
                 for (var k in makeStats()) {
-                    stats[k] = statsAr[j++]
+                    stats[k as StatID] = statsAr[j++]
                 }
                 getUser(i.user).presets[id] = {
                     name: name,
@@ -323,7 +323,7 @@ export var command: Command = {
                     var prevtotal = Object.values(preset.stats).reduce((prev, cur) => prev + cur, 0)
                     var total = getMaxTotal({ ability: a })
                     for (var k in preset.stats) {
-                        preset.stats[k] = Math.floor(preset.stats[k] / prevtotal * total)
+                        preset.stats[k as StatID] = Math.floor(preset.stats[k as StatID] / prevtotal * total)
                     }
                     console.log(preset)
                     await i.reply(`Ability set to ${abilities.get(a as string)?.name || "None"}\nYou might have to do /stats use <preset> again to apply changes`)
@@ -335,7 +335,7 @@ export var command: Command = {
                 var total = getMaxTotal({ ability: a })
                 u.ability = a;
                 for (var k in u.baseStats) {
-                    u.baseStats[k] = Math.floor(u.baseStats[k] / prevtotal * total)
+                    u.baseStats[k as StatID] = Math.floor(u.baseStats[k as StatID] / prevtotal * total)
                 }
                 await i.reply(`Ability set to ${abilities.get(a as string)?.name || "None"}`)
                 break;

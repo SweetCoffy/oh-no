@@ -264,3 +264,28 @@ enemies.set("y", {
         maxLevel: 5,
     }
 })
+enemies.set("sun", {
+    name: "The Sun",
+    ai: "the_cat",
+    description: "The Sun looking fire",
+    stats: {
+        hp: 1200,
+        atk: 25,
+        def: 75,
+        spatk: 150,
+        spdef: 100,
+        spd: 25,
+    },
+    boss: true,
+    xpYield: 100000,
+    helditems: ["mirror"],
+    ability: "plot_armor",
+    encounter: {
+        rate: 1,
+        relativeLevel: true,
+        minPlayerLevel: 30,
+        maxPlayerLevel: Infinity,
+        minLevel: 1.1,
+        maxLevel: 1.5,
+    }
+})

@@ -8,6 +8,7 @@ import { load } from "./content-loader.js"
 import { items } from "./helditem.js"
 import { setupOwO } from "./locale.js"
 import { FG_Cyan, FG_Green, FG_Red, FG_Yellow, FG_Gray, FG_Blue, FG_Pink, Start, Reset } from "./ansi.js"
+import { readFileSync } from "fs"
 export const CURRENCY_ICON = "$"
 export function lexer(str: string) {
     var ar: string[] = []
@@ -268,6 +269,12 @@ export function getID(max: number = 10000) {
     if (idCounter < 0) idCounter = start
     return (idCounter-- % max).toString().padStart((max - 1).toString().length, "0")
 }
+let names = readFileSync("names.txt", "utf8").split("\n")
+export function getName() {
+    let n = names.pop() as string
+    names.unshift(n)
+    return n
+}
 export function getMaxTotal({ ability }: { ability?: string }) {
     if (!ability) return BASE_STAT_TOTAL;
     return BASE_STAT_TOTAL - (abilities.get(ability)?.cost ?? 0)
@@ -276,8 +283,9 @@ export function subscriptNum(num: number | string) {
     var str = num + ""
     return [...str].map(el => String.fromCharCode((el.charCodeAt(0) - 32) + 0x2070)).join("")
 }
-export function xOutOfY(x: number, y: number) {
+export function xOutOfY(x: number, y: number, color?: boolean) {
     let longest = Math.max(x.toString().length, y.toString().length)
+    if (color) return `${x.toString().padStart(longest, " ")}/[u]${y.toString().padEnd(longest, " ")}[r]`
     return `${x.toString().padStart(longest, " ")}/${y.toString().padEnd(longest, " ")}`
 }
 export function name(name: string) {

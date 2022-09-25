@@ -1,6 +1,6 @@
 import { Command } from "../command-loader.js";
 import Fixed from "../fixed.js";
-import { getPreset, getPresetList } from "../stats.js";
+import { getPreset, getPresetList, StatID } from "../stats.js";
 import { getUser } from "../users.js";
 import { Dictionary } from "../util.js";
 export var command: Command = {
@@ -34,7 +34,7 @@ export var command: Command = {
         for (var k in getPresetList(i.user)) {
             var stats = getPreset(k, i.user)?.stats
             for (var s in stats) {
-                target[`${k}_${s}`] = f.fromFloat(stats[s])
+                target[`${k}_${s}`] = f.fromFloat(stats[s as StatID])
             }
         }
         var vars: Dictionary<bigint> = new Proxy(target, {

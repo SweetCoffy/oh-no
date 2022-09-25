@@ -247,7 +247,7 @@ moves.set("release", new Move("Release", "attack", 0).set(move => {
     }
     move.onUse = function(b, p, t) {
         let damage = Math.ceil(p.damageBlockedInTurn * 1.75)
-        let enemies = b.players.filter(e => e.hp > -e.plotArmor && b.isEnemy(p, e))
+        let enemies = b.players.filter(e => !e.dead && b.isEnemy(p, e) && e.team == t.team)
         let dist = weightedDistribution(enemies.map(e => e.hp), damage)
         let total = 0
         for (let i = 0; i < dist.length; i++) {
@@ -256,7 +256,7 @@ moves.set("release", new Move("Release", "attack", 0).set(move => {
         }
         b.logL(`dmg.release`, { damage: total })
     }
-}).setDesc("A different version of Counter, which deals less damage overall and is unable to do critical hits, but distributes the damage across all enemies"))
+}).setDesc("A different version of Counter, which deals less damage overall and is unable to do critical hits, but distributes the damage across all enemies of the same team as the target"))
 
 moves.set("regen", new Move("Regeneration", "status", 0, "status", 100).set(move => {
     move.requiresMagic = 20
@@ -272,7 +272,21 @@ moves.set("regen", new Move("Regeneration", "status", 0, "status", 100).set(move
 moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
     move.requiresMagic = 30
 }).setDesc("A basic healing move, restores 40% of the user's max hp"))
-
+moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
+    move.accuracy = 100
+    move.priority = 1
+    move.setDamage = "set"
+    move.targetSelf = true
+    move.requiresMagic = 60
+    move.checkFail = function (b, p, t) {
+        return t.dead
+    }
+    move.onUse = function (b, p, t) {
+        t.hp = 1
+        b.heal(t, t.maxhp)
+        b.logL("heal.revive", { player: t.toString() })
+    }
+}).setDesc("Revives the target with max HP"))
 //moves.set("overheal", new Move("Overheal", "heal", 150, "status", 100).set(move => {
 //    move.requiresMagic = 30
 //    move.userStat.atk = -12
