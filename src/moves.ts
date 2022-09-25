@@ -154,7 +154,7 @@ export var moves: Collection<string, Move> = new Collection()
 
 // Physical/Special basic attacks
 moves.set("bonk", new Move("Bonk", "attack", 60))
-moves.set("needle", new Move("Needle", "attack", 100/16, "physical", 80).set(move => {
+moves.set("needle", new Move("Needle", "attack", 100/20, "physical", 80).set(move => {
     move.inflictStatus.push({ status: "bleed", chance: 1 })
     move.setDamage = "percent"
 }).setDesc("A weak move that will always do the same amount of damage. Can also make the target Bleed"))
