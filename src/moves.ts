@@ -246,7 +246,7 @@ moves.set("release", new Move("Release", "attack", 0).set(move => {
         return p.damageBlockedInTurn > 0
     }
     move.onUse = function(b, p, t) {
-        let damage = Math.ceil(p.damageBlockedInTurn * 1.75)
+        let damage = Math.ceil(p.damageBlockedInTurn * 1.5)
         let enemies = b.players.filter(e => !e.dead && b.isEnemy(p, e) && e.team == t.team)
         let dist = weightedDistribution(enemies.map(e => e.hp), damage)
         let total = 0
@@ -259,7 +259,7 @@ moves.set("release", new Move("Release", "attack", 0).set(move => {
 }).setDesc("A different version of Counter, which deals less damage overall and is unable to do critical hits, but distributes the damage across all enemies of the same team as the target"))
 
 moves.set("regen", new Move("Regeneration", "status", 0, "status", 100).set(move => {
-    move.requiresMagic = 20
+    move.requiresMagic = 10
     move.targetSelf = true
     move.inflictStatus.push({
         chance: 1,

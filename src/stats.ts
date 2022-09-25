@@ -101,7 +101,7 @@ export function calcStats(level: number, baseStats: Stats, hpboost: number = 1):
     for (var k in baseStats) {
         s[k as StatID] = calcStat(baseStats[k as StatID], level, 0)
     }
-    s.hp = Math.floor(s.hp*2.5*hpboost)
+    s.hp = Math.floor(s.hp * 2.5 * hpboost)
     return s
 }
 export function getPreset(name: string, user?: User) {
