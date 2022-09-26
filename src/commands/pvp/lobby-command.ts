@@ -230,21 +230,26 @@ export var command: Command = {
                     ))]
                 }) as Message
             }
-            let select = await r.awaitMessageComponent({
-                componentType: "SELECT_MENU", filter: (int) => {
-                    if (int.user.id != interaction.user.id) {
-                        int.reply({ content: "This is not for you", ephemeral: true })
-                        return false
-                    }
-                    return true
-                }, time: 60 * 1000
-            })
-            await select.deferUpdate()
-            await r.edit({ content: `Team selected`, components: [] })
-            if (!select) return undefined
-            let v = select.values[0]
-            if (v == "random") return undefined
-            return parseInt(v)
+            let team = undefined
+            try {
+                let select = await r.awaitMessageComponent({
+                    componentType: "SELECT_MENU", filter: (int) => {
+                        if (int.user.id != interaction.user.id) {
+                            int.reply({ content: "This is not for you", ephemeral: true })
+                            return false
+                        }
+                        return true
+                    }, time: 60 * 1000
+                })
+                await select.deferUpdate()
+                let v = select.values[0]
+                if (v == "random") team = undefined
+                else team = parseInt(v)
+            } catch (_) { }
+            finally {
+                await r.edit("Team selected")
+                return team
+            }
         }
         switch (i.options.getSubcommand()) {
             case "list": {

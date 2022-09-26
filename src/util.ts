@@ -327,19 +327,24 @@ export async function confirmation(i: CommandInteraction | ButtonInteraction, st
         components,
         fetchReply: true,
     }) as Message
-    let int = await reply.awaitMessageComponent({
-        componentType: "BUTTON",
-        filter: (interaction) => {
-            if (interaction.user.id != i.user.id) {
-                interaction.reply({ content: "This isn't for you", ephemeral: true })
-                return false
-            }
-            return true
-        },
-        time: 1000 * 60
-    })
-    if (int) await int.deferUpdate()
-    return int?.customId == "yes"
+    try {        
+        let int = await reply.awaitMessageComponent({
+            componentType: "BUTTON",
+            filter: (interaction) => {
+                if (interaction.user.id != i.user.id) {
+                    interaction.reply({ content: "This isn't for you", ephemeral: true })
+                    return false
+                }
+                return true
+            },
+            time: 1000 * 60
+        })
+        await int.deferUpdate()
+        return int.customId == "yes"
+    } catch (_) { }
+    finally {
+        return false
+    }
 }
 export function helditemString(id: string) {
     let type = items.get(id)
