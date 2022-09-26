@@ -37,6 +37,7 @@ export class BattleLobby {
     bossType?: string
     startedAt: number
     _flags: Dictionary<boolean> = { E: false, T: false, W: false }
+    teamCount: number = 4
     get flagsString() {
         return Object.entries(this._flags).filter(e => e[1]).map(e => e[0])
     }
@@ -130,8 +131,8 @@ export class BattleLobby {
             allowedPresets = allowedPresets.filter(el => !exclude.includes(el))
         }
         var b = allowedPresets.map(el => presets.get(el)?.stats)
-        let perTeam = Math.floor(this.botCount + this.users.length) / 4
-        let teams = [0, 0, 0, 0]
+        let perTeam = Math.floor(this.botCount + this.users.length) / this.teamCount
+        let teams = new Array(this.teamCount).fill(0)
         for (let p of this.battle.players) {
             teams[p.team]++
         }

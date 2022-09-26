@@ -25,19 +25,24 @@ export const teamColors = [
     "red",
     "yellow",
     "green",
+    "purple",
 ]
 export const teamEmojis = [
     "🟦",
     "🟥",
     "🟨",
     "🟩",
+    "🟪",
 ]
 export const teamNames = [
     "Blue",
     "Red",
     "Yellow",
     "Green",
+    "Lean",
 ]
+export const MinTeams = 2
+export const MaxTeams = 5
 export type BotAIType = "normal" | "egg_lord" | "the_cat" | "u";
 export class StatusType {
     name: string

@@ -2,7 +2,7 @@ import { BattleLobby, createLobby, Difficulty, findValidLobby, lobbies } from '.
 import { Command } from '../../command-loader.js'
 import { getUser, users } from '../../users.js';
 import { ButtonInteraction, CommandInteraction, Message, MessageActionRow, MessageButton, MessageComponentInteraction, MessageSelectMenu, TextChannel } from 'discord.js';
-import { BattleType, Player, teamEmojis, teamNames } from '../../battle.js';
+import { BattleType, MaxTeams, MinTeams, Player, teamEmojis, teamNames } from '../../battle.js';
 import { enemies } from '../../enemies.js';
 import { getString } from '../../locale.js';
 import { confirmation } from '../../util.js';
@@ -63,6 +63,12 @@ export var command: Command = {
                             value: "team_match",
                         }
                     ]
+                },
+                {
+                    name: "team_count",
+                    required: false,
+                    type: "INTEGER",
+                    description: "The amount of teams for Team Match",
                 },
                 {
                     name: "difficulty",
@@ -272,12 +278,16 @@ export var command: Command = {
             case "create": {
                 let botCount = i.options.getInteger("bot_count", false) || 0
                 let lobby = createLobby(i.user, i.options.getString("name", false) || undefined, 100000)
+                let teamCount = i.options.getInteger("team_count", false) || 4
+                if (teamCount < MinTeams) return await i.reply(`Too little teams (min: ${MinTeams})`)
+                if (teamCount > MaxTeams) return await i.reply(`Too many teams (max: ${MaxTeams})`)
                 lobby.level = i.options.getInteger("level", false) || 50
                 lobby.botCount = botCount
                 lobby.type = (i.options.getString("battle_type", false) || "ffa") as BattleType
                 lobby.difficulty = (i.options.getString("difficulty", false) || "medium") as Difficulty
                 lobby.bossType = i.options.getString("boss_type") || undefined
                 lobby.flags = i.options.getString("flags") || ""
+                lobby.teamCount = teamCount
                 lobby.usersE[0].enemyPreset = i.options.getString("enemy_preset") || "default"
                 lobby.usersE[0].nickname = (await i.guild?.members.fetch(i.user.id))?.nickname || undefined
                 lobby.channels.push(i.channel)
