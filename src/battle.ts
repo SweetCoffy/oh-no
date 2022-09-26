@@ -20,12 +20,12 @@ export interface CategoryStats {
     atk: string,
     def: string,
 }
-export const teamColors = [
+export const teamColors: LogColor[] = [
     "blue",
     "red",
     "yellow",
     "green",
-    "purple",
+    "pink",
 ]
 export const teamEmojis = [
     "🟦",
