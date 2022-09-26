@@ -665,12 +665,6 @@ export class Battle extends EventEmitter {
     turn: number = 0
     actions: TurnAction[] = []
     logs: string[] = []
-    get totalScore() {
-        return this.players.reduce((prev, cur) => {
-            if (!cur.user) return prev + 100
-            return prev + getUser(cur.user).score
-        }, 0)
-    }
     ended: boolean = false
     botAI: BotAI
     isEnemy(player: Player, target: Player) {
