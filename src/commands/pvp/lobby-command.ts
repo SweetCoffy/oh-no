@@ -247,7 +247,7 @@ export var command: Command = {
                 else team = parseInt(v)
             } catch (_) { }
             finally {
-                await r.edit("Team selected")
+                await r.edit({ content: "Team selected", components: [] })
                 return team
             }
         }
