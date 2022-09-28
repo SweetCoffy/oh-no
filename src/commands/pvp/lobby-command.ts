@@ -192,7 +192,7 @@ export var command: Command = {
                         let team = undefined
                         lobby.join(i.user, { team }, i.channel || undefined)
                         if (lobby.type == "team_match") {
-                            team = await teamPrompt(i)
+                            team = await teamPrompt(i, lobby.teamCount)
                             await i.followUp({
                                 content: `${i.user.username} has joined`,
                             })
@@ -210,14 +210,14 @@ export var command: Command = {
                 reply.edit({components: []})
             })
         }
-        async function teamPrompt(interaction: CommandInteraction | MessageComponentInteraction) {
+        async function teamPrompt(interaction: CommandInteraction | MessageComponentInteraction, teamCount: number) {
             var r
             if (interaction.replied) {
                 r = await interaction.followUp({
                     content: `Which team do you want to join?`,
                     components: [new MessageActionRow().addComponents(new MessageSelectMenu().setCustomId("team").addOptions(
                         { label: "Random", value: "random", default: false },
-                        ...teamNames.map((v, i) => ({ label: `Team ${v}`, value: i.toString(), emoji: teamEmojis[i] }))
+                        ...teamNames.slice(0, teamCount).map((v, i) => ({ label: `Team ${v}`, value: i.toString(), emoji: teamEmojis[i] }))
                     ))]
                 }) as Message
             } else {
@@ -226,7 +226,7 @@ export var command: Command = {
                     fetchReply: true,
                     components: [new MessageActionRow().addComponents(new MessageSelectMenu().setCustomId("team").addOptions(
                         { label: "Random", value: "random", default: false },
-                        ...teamNames.map((v, i) => ({ label: `Team ${v}`, value: i.toString(), emoji: teamEmojis[i] }))
+                        ...teamNames.slice(0, teamCount).map((v, i) => ({ label: `Team ${v}`, value: i.toString(), emoji: teamEmojis[i] }))
                     ))]
                 }) as Message
             }
@@ -275,7 +275,7 @@ export var command: Command = {
                 let lobby = lobbies.get(i.options.getString("id", true))
                 if (!lobby) return await i.reply("uaishfuiersnvgeiurgrgerg")
                 let team = i.options.getInteger("team") ?? undefined
-                if (lobby.type == "team_match" && team == undefined) team = await teamPrompt(i)
+                if (lobby.type == "team_match" && team == undefined) team = await teamPrompt(i, lobby.teamCount)
                 lobby.join(i.user, { team, nickname: (await i.guild?.members.fetch(i.user.id))?.nickname || undefined, enemyPreset: i.options.getString("enemy_preset") || undefined }, i.channel)
                 await i.reply(`Joined the lobby`)
                 break;
@@ -297,7 +297,7 @@ export var command: Command = {
                 lobby.usersE[0].nickname = (await i.guild?.members.fetch(i.user.id))?.nickname || undefined
                 lobby.channels.push(i.channel)
                 await lobbyInfo(lobby, i)
-                if (lobby.type == "team_match") lobby.usersE[0].team = await teamPrompt(i)
+                if (lobby.type == "team_match") lobby.usersE[0].team = await teamPrompt(i, lobby.teamCount)
                 break;
             }
             case "start": {
