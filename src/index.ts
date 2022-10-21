@@ -127,6 +127,7 @@ client.on("messageCreate", async(m) => {
     u.msgLvl_messages++
     u.lastMessage = Date.now();
 })
+
 setInterval(async() => {
     for (let [k, v] of users) {
         v.money.points += (BigInt(v.banks) * (v.multiplier/4n))*15n*5n*3n
@@ -162,3 +163,4 @@ client.on("error", (error) => {
 
 // get real
 if (experimental.april_fools) import("./april-fools.js")
+// pain
