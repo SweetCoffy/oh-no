@@ -1,4 +1,4 @@
-import { ApplicationCommandType, ApplicationCommandOptionType } from "discord.js";
+import { ApplicationCommandType, ApplicationCommandOptionType, ChatInputCommandInteraction } from "discord.js";
 import { Command } from "../command-loader.js";
 import Fixed from "../fixed.js";
 import { getPreset, getPresetList, StatID } from "../stats.js";
@@ -22,7 +22,7 @@ export var command: Command = {
             description: "a",
         }
     ],
-    async run(i) {
+    async run(i: ChatInputCommandInteraction) {
         var p = BigInt(i.options.getInteger("precision", false) || 24)
         if (p > 64n || p < 1n) return await i.reply(`precision: ${p} is out of the range 1 - 64`)
         var f = new Fixed(p)

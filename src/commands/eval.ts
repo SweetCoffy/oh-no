@@ -31,7 +31,7 @@ export var command: Command = {
             description: "a"
         }
     ],
-    async run(i) {
+    async run(i: discord.ChatInputCommandInteraction) {
         var str = ""
         var data: any = undefined
         if (i.user.id == settings.ownerID) {

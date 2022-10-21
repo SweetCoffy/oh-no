@@ -1,4 +1,4 @@
-import { ApplicationCommandType, ApplicationCommandOptionType } from "discord.js";
+import { ApplicationCommandType, ApplicationCommandOptionType, ChatInputCommandInteraction } from "discord.js";
 import { Command } from "../../command-loader.js";
 import { getRank, getUser } from "../../users.js";
 import { money } from "../../util.js";
@@ -15,7 +15,7 @@ export var command: Command = {
             required: true,
         }
     ],
-    async run(i) {
+    async run(i: ChatInputCommandInteraction) {
         var u = getUser(i.user)
         var cur = getRank(i.user)
         var next = cur + 1
