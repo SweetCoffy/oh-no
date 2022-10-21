@@ -2,7 +2,7 @@ import { ApplicationCommandType, ApplicationCommandOptionType } from "discord.js
 import { Command } from "../../command-loader.js"
 import { getLevelUpXP, getUser, level, getRank } from "../../users.js"
 import { bar, format, settings, money } from "../../util.js"
-export var command: Command = {
+export let command: Command = {
     type: ApplicationCommandType.ChatInput,
     name: "profile",
     description: "bru",
@@ -15,11 +15,11 @@ export var command: Command = {
         }
     ],
     async run(i) {
-        var user = i.options.getUser("user") || i.user
-        var u = getUser(user)
-        var val = (BigInt(u.banks) * (u.multiplier/4n))*15n
-        var b = val / 60n
-        var funi = val % 60n
+        let user = i.options.getUser("user") || i.user
+        let u = getUser(user)
+        let val = (BigInt(u.banks) * (u.multiplier/4n))*15n
+        let b = val / 60n
+        let funi = val % 60n
         await i.reply({
             embeds: [
                 {

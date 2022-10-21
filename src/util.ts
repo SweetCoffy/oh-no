@@ -10,14 +10,14 @@ import { FG_Cyan, FG_Green, FG_Red, FG_Yellow, FG_Gray, FG_Blue, FG_Pink, Start,
 import { readFileSync } from "fs"
 export const CURRENCY_ICON = "$"
 export function lexer(str: string) {
-    var ar: string[] = []
-    var acc: string = ""
-    var quotes = "\'\""
-    var quote = ""
-    for (var i = 0; i < str.length; i++) {
-        var c = str[i]
+    let ar: string[] = []
+    let acc: string = ""
+    let quotes = "\'\""
+    let quote = ""
+    for (let i = 0; i < str.length; i++) {
+        let c = str[i]
         if (c == "\\") {
-            var char = str[++i]
+            let char = str[++i]
             if (char == "n") char = "\n"
             if (char == "t") char = "\t"
             acc += char
@@ -51,7 +51,7 @@ export function lexer(str: string) {
  * @returns A reference to `dst`
  */
 export function setKeys(src: any, dst: any) {
-    for (var k in src) {
+    for (let k in src) {
         dst[k] = src[k]
     }
     return dst
@@ -70,28 +70,28 @@ export class RNG {
         return this.get() / 1024
     }
 }
-export var rng = new RNG()
+export let rng = new RNG()
 export function randomRange(min: number, max: number) {
-    var v = (rng.get() + rng.get() + rng.get() + rng.get()) / 4096
+    let v = (rng.get() + rng.get() + rng.get() + rng.get()) / 4096
     return (min * v) + (max * (1 - v))
 }
 export function randomChance(chance: number) {
     return rng.get01() < chance
 }
 export function bar(num: number, max: number, width: number = 25) {
-    var c = 0
-    var fill = "█"
-    var bg = " "
+    let c = 0
+    let fill = "█"
+    let bg = " "
 
-    var things = ["▉", "▊", "▋", "▌", "▍", "▎", "▏"]
+    let things = ["▉", "▊", "▋", "▌", "▍", "▎", "▏"]
 
-    var str = ""
+    let str = ""
     str += "+".repeat(Math.min(Math.max(Math.floor((num - 0.01) / max), 0), width - 1))
     width -= str.length;
-    var chars = Math.ceil((((num - 0.01) / max) * width) % (width))
+    let chars = Math.ceil((((num - 0.01) / max) * width) % (width))
     while (c < chars) {
-        var f = fill
-        var epicVal = 1
+        let f = fill
+        let epicVal = 1
         if (c + 1 >= chars && num % max != 0) epicVal = num / max * width % 1
         if (epicVal < 1) f = things[0]
         if (epicVal < 7 / 8) f = things[1]
@@ -114,17 +114,17 @@ export function abs(number: bigint | number) {
     return number
 }
 export function format(number: bigint) {
-    var funi = null
-    for (var f of formats) {
+    let funi = null
+    for (let f of formats) {
       if (abs(number) >= f.min) funi = f
     }
     if (!funi) return `${number}`
-    var m = number / funi.min
-    var d = abs((number % funi.min) / (funi.min / 100n))
+    let m = number / funi.min
+    let d = abs((number % funi.min) / (funi.min / 100n))
 	function yes(num: bigint) {
-		var str = num.toString()
-		var a = str.slice(0, 4)
-		var count = str.length - 4
+		let str = num.toString()
+		let a = str.slice(0, 4)
+		let count = str.length - 4
 		return `${a}e${count}`
 	  }
 	if (abs(number) > funi.min * 1000n) return `${yes(number)}`
@@ -137,7 +137,7 @@ export async function itemResponseReply(res: ItemResponse, i: CommandInteraction
             reason: "The item did not have a use response"
         }
     }
-    var funi = {
+    let funi = {
         embeds: [
             {
                 title: (res.type == "fail") ? "Failed using item" : undefined,
@@ -155,7 +155,7 @@ export function lerp(a: number, b: number, x: number) {
 	return a*x + b*(1-x)
 }
 let date = new Date()
-export var experimental = {
+export let experimental = {
     // ansi_logs now works well enough and doesn't break on mobile, so it's now 
     // enabled by default and can't be turned off
 
@@ -164,7 +164,7 @@ export var experimental = {
     // Now automatically set
     april_fools: date.getDate() == 1 && date.getMonth() == 4,
 }
-export var settings = {
+export let settings = {
 	ownerID: "",
   	noSave: false,
     experimental: false,
@@ -175,20 +175,20 @@ export var settings = {
 }
 export class BitArray extends Uint8Array {
 	getBit(bit: number) {
-	 	var byte = Math.floor(bit / 8)
-	 	var b = bit % 8
-	 	var val = 0b1000_0000 >> b
+	 	let byte = Math.floor(bit / 8)
+	 	let b = bit % 8
+	 	let val = 0b1000_0000 >> b
 	  	return (this[byte] & val) > 0
 	}
 	setBit(bit: number, value = true) {
-	  	var byte = Math.floor(bit / 8)
-	  	var b = bit % 8
-	  	var val = 0b1000_0000 >> b
+	  	let byte = Math.floor(bit / 8)
+	  	let b = bit % 8
+	  	let val = 0b1000_0000 >> b
 	  	if (value) this[byte] = this[byte] | val
 	  	else this[byte] = this[byte] & ~val
 	}
 	* bits() {
-		for (var i = 0; i < this.length * 8; i++) {
+		for (let i = 0; i < this.length * 8; i++) {
 			yield this.getBit(i)
 		}
 	}
@@ -215,8 +215,8 @@ export class BitArray2D extends BitArray {
 		this.setBit(x + (this.width * y), value)
 	}
 	setAll(func: (x: number, y: number, value: boolean, bitArray: BitArray2D) => boolean) {
-		for (var y = 0; y < this.height; y++) {
-			for (var x = 0; x < this.width; x++) {
+		for (let y = 0; y < this.height; y++) {
+			for (let x = 0; x < this.width; x++) {
 				this.set2D(x, y, func(x, y, this.get2D(x, y), this))
 			}
 		}
@@ -239,14 +239,14 @@ export function weightedRandom<T>(data: [T, number][]) {
     return data[data.length - 1][0];
 }
 export function weightedDistribution(weights: number[], total: number): number[] {
-    var totalw = weights.reduce((prev, cur) => prev + cur, 0)
+    let totalw = weights.reduce((prev, cur) => prev + cur, 0)
     return weights.map(el => el / totalw * total)
 }
 export type Dictionary<T> = {[key: string]: T}
 export function max(...numbers: bigint[]): bigint {
-    var m: bigint | undefined = undefined
+    let m: bigint | undefined = undefined
 
-    for (var num of numbers) {
+    for (let num of numbers) {
         if (m == undefined || num > m) {
             m = num;
         }
@@ -254,9 +254,9 @@ export function max(...numbers: bigint[]): bigint {
     return m || 0n
 }
 export function min(...numbers: bigint[]): bigint {
-    var m: bigint | undefined = undefined
+    let m: bigint | undefined = undefined
 
-    for (var num of numbers) {
+    for (let num of numbers) {
         if (m == undefined || num < m) {
             m = num;
         }
@@ -267,8 +267,8 @@ export function min(...numbers: bigint[]): bigint {
 export function money(amount: bigint) {
     return `${CURRENCY_ICON}${format(amount)}`
 }
-var start = 9999
-var idCounter = start
+let start = 9999
+let idCounter = start
 export function getID(max: number = 10000) {
     if (idCounter < 0) idCounter = start
     return (idCounter-- % max).toString().padStart((max - 1).toString().length, "0")
@@ -284,7 +284,7 @@ export function getMaxTotal({ ability }: { ability?: string }) {
     return BASE_STAT_TOTAL - (abilities.get(ability)?.cost ?? 0)
 }
 export function subscriptNum(num: number | string) {
-    var str = num + ""
+    let str = num + ""
     return [...str].map(el => String.fromCharCode((el.charCodeAt(0) - 32) + 0x2070)).join("")
 }
 export function xOutOfY(x: number, y: number, color?: boolean) {
@@ -296,8 +296,8 @@ export function name(name: string) {
     return `[a]${name}[r]`
 }
 export function loadRecursive(path: string) {
-    var files = readdirSync(path)
-    for (var f of files) {
+    let files = readdirSync(path)
+    for (let f of files) {
         if (f.startsWith("exp_") && !settings.experimental) continue
         if (statSync(`${path}/${f}`).isDirectory()) {
             loadRecursive(`${path}/${f}`)
@@ -320,7 +320,7 @@ export async function confirmation(i: CommandInteraction | ButtonInteraction, st
         new ButtonBuilder().setLabel("YES").setCustomId("yes").setStyle(ButtonStyle.Success),
         new ButtonBuilder().setLabel("NO").setCustomId("no").setStyle(ButtonStyle.Danger),
     ).toJSON()]
-    var reply: Message
+    let reply: Message
     if (i.replied) reply = await i.followUp({
         content: str,
         components,

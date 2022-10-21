@@ -42,26 +42,26 @@ Ability.add("massive_health_bar", new Ability("Massive Health Bar", 300)).onDama
     }
     return undefined
 }
-var plot_armor = Ability.add("plot_armor", new Ability("Plot Armor", 200))
+let plot_armor = Ability.add("plot_armor", new Ability("Plot Armor", 200))
 plot_armor.onTurn = function(b, p) {
     if (p.plotArmor < p.maxhp / 2) {
         p.plotArmor += Math.ceil(p.maxhp/24)
     }
 }
-var beserker_soul = Ability.add("beserker_soul", new Ability("Beserker Soul", 55))
+let beserker_soul = Ability.add("beserker_soul", new Ability("Beserker Soul", 55))
 beserker_soul.onTurn = function(b, p) {
     if (b.turn % 3 == 0) {
         b.takeDamage(p, p.maxhp/4)
-        for (var player of b.players) {
+        for (let player of b.players) {
             if (player != p) {
                 b.takeDamageO(player, player.maxhp*0.03, { silent: true })
             }
         }
     }
 }
-var training_arc = Ability.add("training_arc", new Ability("Training Arc", -325))
+let training_arc = Ability.add("training_arc", new Ability("Training Arc", -325))
 training_arc.onTurn = function(b, p) {
-    var data = p.abilityData as { modifiers?: StatModifierID[] }
+    let data = p.abilityData as { modifiers?: StatModifierID[] }
     if (!data.modifiers) data.modifiers = [
         p.addModifier("hp", {
             label: "Training Arc Ability",
@@ -88,9 +88,9 @@ training_arc.onTurn = function(b, p) {
             value: 1,
         })
     ]
-    var v = 1 - Math.max((b.turn - 1) / 6 / 2, 0)
+    let v = 1 - Math.max((b.turn - 1) / 6 / 2, 0)
     if (v >= 0.5) {
-        for (var mod of data.modifiers) {
+        for (let mod of data.modifiers) {
             mod.value = v;
         }
     }

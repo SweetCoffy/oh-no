@@ -27,7 +27,7 @@ export interface Enemy {
     drops?: ItemDrop[],
 }
 
-export var enemies: Collection<string, Enemy> = new Collection()
+export let enemies: Collection<string, Enemy> = new Collection()
 enemies.set("egg_hater", {
     name: "Egg Hater",
     ai: "normal",

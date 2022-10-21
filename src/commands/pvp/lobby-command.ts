@@ -6,7 +6,7 @@ import { BattleType, MaxTeams, MinTeams, Player, teamEmojis, teamNames } from '.
 import { enemies } from '../../enemies.js';
 import { getString } from '../../locale.js';
 import { confirmation } from '../../util.js';
-export var command: Command = {
+export let command: Command = {
     name: "lobby",
     description: "ur mom",
     type: ApplicationCommandType.ChatInput,
@@ -174,7 +174,7 @@ export var command: Command = {
     async run(i: ChatInputCommandInteraction) {
         if (!i.channel?.isTextBased()) return await i.reply("Wha")
         async function lobbyInfo(lobby: BattleLobby, i: CommandInteraction) {
-            var reply = await i.reply({
+            let reply = await i.reply({
                 embeds: [
                     {
                         title: `${lobby.name}`,
@@ -211,7 +211,7 @@ export var command: Command = {
             })
         }
         async function teamPrompt(interaction: CommandInteraction | MessageComponentInteraction, teamCount: number) {
-            var r
+            let r
             if (interaction.replied) {
                 r = await interaction.followUp({
                     content: `Which team do you want to join?`,
@@ -309,8 +309,8 @@ export var command: Command = {
                     })
                     let battle = lobby.battle
                     if (battle) {
-                        var lastInfos: Message[] = []
-                        for (var c of lobby.channels) {
+                        let lastInfos: Message[] = []
+                        for (let c of lobby.channels) {
                             lastInfos.push(await battle.infoMessage(c))
                         }
                         battle.checkActions();
@@ -318,11 +318,11 @@ export var command: Command = {
                             if (!battle) return
                             if (!lobby) return
                             if (!(i.channel instanceof TextChannel)) return
-                            for (var lastInfo of lastInfos) {
+                            for (let lastInfo of lastInfos) {
                                 if (lastInfo.deletable) await lastInfo.delete()
                             }
                             lastInfos = []
-                            for (var c of lobby.channels) {
+                            for (let c of lobby.channels) {
                                 lastInfos.push(await battle.infoMessage(c))
                             }
                             setTimeout(() => {

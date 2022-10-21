@@ -6,7 +6,7 @@ import { Console } from "console"
 
 
 
-var workerData: {
+let workerData: {
     code: string,
     dev: boolean,
     userId: string,
@@ -15,7 +15,7 @@ var workerData: {
 
 
 function validateStructure(og: any, value: any) {
-    for (var k in value) {
+    for (let k in value) {
         if (!validate(og[k], value[k])) return false
     }
     return true
@@ -30,7 +30,7 @@ function validate(og: any, value: any) {
 
 type EvalModule = {devOnly?: boolean, exports: any, name?: string, description?: string, author?: string}
 
-var modules: {[key: string]: EvalModule} = {
+let modules: {[key: string]: EvalModule} = {
     "your_mom": {
         devOnly: false,
         exports: {
@@ -43,7 +43,7 @@ var modules: {[key: string]: EvalModule} = {
 
 
 
-var context: any = {
+let context: any = {
     get userId() {
         return workerData.userId
     },
@@ -62,9 +62,9 @@ var context: any = {
 }
 
 // if (workerData.dev && workerData.userData) {
-//     var data: any = {}
+//     let data: any = {}
 //     context.userData = data
-//     for (var k in workerData.userData) {
+//     for (let k in workerData.userData) {
 //         let proxy = new Proxy(workerData.userData[k], {
 //             set(target, p, value) {
 //                 //@ts-ignore
@@ -73,9 +73,9 @@ var context: any = {
 //                 return Reflect.set(target, p, value)
 //             }
 //         })
-//         var users = workerData.userData
+//         let users = workerData.userData
 //         function proxify(base: any, obj: any) {
-//             for (var p in obj) {
+//             for (let p in obj) {
 //                 //@ts-ignore
 //                 if (typeof obj[p] == "object") {
 //                     proxify(base, obj[p])
@@ -95,9 +95,9 @@ var context: any = {
 // }
 
 function cloneObj(obj: any) {
-    var o: any = {}
+    let o: any = {}
     if (Array.isArray(obj)) o = []
-    for (var k in obj) {
+    for (let k in obj) {
         if (typeof obj[k] == "object") {
             o[k] = cloneObj(obj[k])
         } else if (typeof obj[k] != "function") {
@@ -107,16 +107,16 @@ function cloneObj(obj: any) {
     return o
 }
 
-var vm = new vm2.VM({ sandbox: context })
+let vm = new vm2.VM({ sandbox: context })
 try {
-    var out = vm.run(workerData.code)
+    let out = vm.run(workerData.code)
     // if (workerData.dev) {
-    //     var modified: any = {}
-    //     for (var k in workerData.userData) {
-    //         var d: any = workerData.userData[k]
+    //     let modified: any = {}
+    //     for (let k in workerData.userData) {
+    //         let d: any = workerData.userData[k]
     //         if (d.modified) {
-    //             var m: any = modified[k] = {}
-    //             for (var key in d) {
+    //             let m: any = modified[k] = {}
+    //             for (let key in d) {
     //                 m[key] = d[key]
     //             }
     //         }

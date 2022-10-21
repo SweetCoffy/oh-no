@@ -7,10 +7,10 @@ DefaultData:
     fs: { 
         install.js: '
         (async() => { 
-        var files = await readDir("dev2/eggos"); 
-        var installpath = "dev1/eggos";
+        let files = await readDir("dev2/eggos"); 
+        let installpath = "dev1/eggos";
         console.log("installing eggos to " + installpath);
-        for (var f of files) { 
+        for (let f of files) { 
         console.log("copying dev2/eggos/" + f);  
         await writeFile(installpath + "/" + f, await readFile("dev2/" + f)); 
         } 
@@ -20,8 +20,8 @@ DefaultData:
             js: {
                 ls.js: '
                 (async function() {
-                var path = joinpath(argv[0] || "/")
-                var files = await readDir(path)
+                let path = joinpath(argv[0] || "/")
+                let files = await readDir(path)
                 console.log(`**${path}**\n${files.join("\n")}`)
                 })() '
             }

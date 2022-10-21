@@ -4,12 +4,12 @@ import { moves } from "../../moves.js";
 import { getUser } from "../../users.js";
 import { settings } from "../../util.js";
 
-export var command: Command = {
+export let command: Command = {
     name: "moveset",
     description: "A",
     type: ApplicationCommandType.ChatInput,
     async run(i: ChatInputCommandInteraction) {
-        var msg = await i.reply({
+        let msg = await i.reply({
             content: "Choose your moveset",
             components: [
                 new ActionRowBuilder ({
@@ -46,8 +46,8 @@ export var command: Command = {
             ] as APIActionRowComponent<any>[],
             fetchReply: true
         }) as Message<boolean>
-        var moveset = getUser(i.user).moveset
-        var col = msg.createMessageComponentCollector({filter: (interaction) => {
+        let moveset = getUser(i.user).moveset
+        let col = msg.createMessageComponentCollector({filter: (interaction) => {
             if (interaction.user.id != i.user.id) {
                 interaction.reply({
                     ephemeral: true,

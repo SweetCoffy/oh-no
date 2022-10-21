@@ -11,7 +11,7 @@ export interface HeldItem {
 type HeldItemCallback = (battle: Battle, player: Player, item: HeldItem) => any
 function healEffect(percent: number, silent: boolean = false, message: LocaleString = "heal.generic"): HeldItemCallback {
     return function(b, p, it) {
-        var amt = p.maxhp * percent
+        let amt = p.maxhp * percent
         b.heal(p, amt, silent, message)
     }
 }
@@ -38,7 +38,7 @@ function chanceEffect(effect: HeldItemCallback, chance: number): HeldItemCallbac
 }
 function multiEffect(...effects: HeldItemCallback[]): HeldItemCallback {
     return function (b, p, it) {
-        for (var e of effects) {
+        for (let e of effects) {
             e(b, p, it)
         }
     }
@@ -83,7 +83,7 @@ export class HeldItemType {
         if (this.onUse) this.onUse(p, player, it)
     }
 }
-export var items: Collection<string, HeldItemType> = new Collection()
+export let items: Collection<string, HeldItemType> = new Collection()
 items.set("eggs", 
     new HeldItemType("Eggs", (b, p, item) => {
         if (p.dead) return
@@ -93,7 +93,7 @@ items.set("eggs",
 
 items.set("shield", 
 new HeldItemType("Shield", function(b, p, i) {
-    var d = i as HeldItem & { used: boolean }
+    let d = i as HeldItem & { used: boolean }
     if (!d.used) {
         p.addModifier("def", { value: 2, label: "Shield Item" })
         p.addModifier("spdef", { value: 2, label: "Shield Item" })

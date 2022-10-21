@@ -3,7 +3,7 @@ import { getUser } from "../../users.js"
 import { Message, ApplicationCommandOptionType, ApplicationCommandType, ComponentType, ChatInputCommandInteraction, APIMessageActionRowComponent, ActionRowBuilder, ButtonBuilder, APIActionRowComponent, ButtonStyle } from "discord.js"
 import { addItem, getItem, recipes, shopItems, stackString, useItem } from "../../items.js"
 import { experimental, format, itemResponseReply, lexer, money } from "../../util.js"
-export var command: Command = {
+export let command: Command = {
     type: ApplicationCommandType.ChatInput,
     name: "item",
     description: "Do stuff with items",
@@ -121,13 +121,13 @@ export var command: Command = {
         },
     ],
     async autocomplete(i) {
-        var focused = i.options.getFocused(true)
-        var inv = getUser(i.user).items;
-        var query = focused.value.toString().toLowerCase();
+        let focused = i.options.getFocused(true)
+        let inv = getUser(i.user).items;
+        let query = focused.value.toString().toLowerCase();
         if (focused.name == "args") {
-            var it = getItem(i.user, i.options.getString("item", true))
+            let it = getItem(i.user, i.options.getString("item", true))
             if (it) {
-                var a = shopItems.get(it.item)?.autocomplete
+                let a = shopItems.get(it.item)?.autocomplete
                 if (a) return await a(i.user, it, i)
             } else await i.respond([])
         } else if (focused.name == "item") {
@@ -139,14 +139,14 @@ export var command: Command = {
         } else await i.respond([])
     },
     async run(i: ChatInputCommandInteraction) {
-        var u = getUser(i.user)
+        let u = getUser(i.user)
         switch (i.options.getSubcommand()) {
             case "list": {
-                var page = 0
-                var pageSize = 10
-                var items = u.items
-                var pageCount = Math.ceil(items.length / pageSize)
-                var components: APIActionRowComponent<any>[] = [new ActionRowBuilder({
+                let page = 0
+                let pageSize = 10
+                let items = u.items
+                let pageCount = Math.ceil(items.length / pageSize)
+                let components: APIActionRowComponent<any>[] = [new ActionRowBuilder({
                     components: [
                         new ButtonBuilder({ emoji: "◀️", style: ButtonStyle.Primary, customId: "prev" }),
                         new ButtonBuilder({ emoji: "▶️", style: ButtonStyle.Primary, customId: "next" }),
@@ -163,7 +163,7 @@ export var command: Command = {
                         components
                     })
                 }
-                var msg = await i.reply({
+                let msg = await i.reply({
                     fetchReply: true,
                     embeds: [
                         {
@@ -203,24 +203,24 @@ export var command: Command = {
                 break;
             }
             case "use": {
-                var item = i.options.getString("item", true)
-                var amount = BigInt(i.options.getInteger("amount", false) || 0) || getItem(i.user, item)?.amount || 1n
-                var args: string[] = lexer(i.options.get("args")?.value as string || "")
-                var resGen = useItem(i.user, item, amount, ...args)
+                let item = i.options.getString("item", true)
+                let amount = BigInt(i.options.getInteger("amount", false) || 0) || getItem(i.user, item)?.amount || 1n
+                let args: string[] = lexer(i.options.get("args")?.value as string || "")
+                let resGen = useItem(i.user, item, amount, ...args)
                 for await (let res of resGen) {
                     await itemResponseReply(res, i)
                 }
                 break;
             }
             case "sell": {
-                var item = i.options.getString("item", true)
-                var amount = BigInt(i.options.getInteger("amount", false) || 0) || getItem(i.user, item)?.amount || 1n
-                var it = getItem(i.user, item)
-                var itemInfo = shopItems.get(it?.item as string)
+                let item = i.options.getString("item", true)
+                let amount = BigInt(i.options.getInteger("amount", false) || 0) || getItem(i.user, item)?.amount || 1n
+                let it = getItem(i.user, item)
+                let itemInfo = shopItems.get(it?.item as string)
                 if (!it) return await i.reply("Bruh")
                 if (it.amount < amount) return await i.reply("No")
                 if (itemInfo) {
-                    var amt = itemInfo.cost/2n * amount
+                    let amt = itemInfo.cost/2n * amount
                     it.amount -= amount
                     getUser(i.user).money.points += amt
                     if (itemInfo.stock != Infinity) {
@@ -231,15 +231,15 @@ export var command: Command = {
                 break;
             }
             case "smelt": {
-                var item = i.options.getString("item", true)
-                var amount = BigInt(i.options.getInteger("amount", false) || 0) || getItem(i.user, item)?.amount || 1n
-                var it = getItem(i.user, item)
-                var itemInfo = shopItems.get(it?.item as string)
+                let item = i.options.getString("item", true)
+                let amount = BigInt(i.options.getInteger("amount", false) || 0) || getItem(i.user, item)?.amount || 1n
+                let it = getItem(i.user, item)
+                let itemInfo = shopItems.get(it?.item as string)
                 if (!it) return await i.reply("Bruh")
                 if (it.amount < amount) return await i.reply("No")
                 if (itemInfo) {
                     if (!itemInfo.smeltInto) return await i.reply(`This item cannot be smelted`)
-                    var fuelNeeded = amount * itemInfo.fuelNeeded
+                    let fuelNeeded = amount * itemInfo.fuelNeeded
                     if (u.fuel < fuelNeeded) return await i.reply(`You don't have enough fuel to smelt this item`)
                     it.amount -= amount
                     getUser(i.user).fuel -= fuelNeeded
@@ -247,20 +247,20 @@ export var command: Command = {
                         item: itemInfo.smeltInto,
                         amount: amount,
                     })
-                    var newItem = shopItems.get(itemInfo.smeltInto)
+                    let newItem = shopItems.get(itemInfo.smeltInto)
                     await i.reply(`Smelted ${itemInfo.toString(amount)} into ${newItem?.toString(amount)}`)
                 } else await i.reply("What\n\nHow")
                 break;
             }
             case "burn": {
-                var item = i.options.getString("item", true)
-                var amount = BigInt(i.options.getInteger("amount", false) || 0) || getItem(i.user, item)?.amount || 1n
-                var it = getItem(i.user, item)
-                var itemInfo = shopItems.get(it?.item as string)
+                let item = i.options.getString("item", true)
+                let amount = BigInt(i.options.getInteger("amount", false) || 0) || getItem(i.user, item)?.amount || 1n
+                let it = getItem(i.user, item)
+                let itemInfo = shopItems.get(it?.item as string)
                 if (!it) return await i.reply("Bruh")
                 if (it.amount < amount) return await i.reply("No")
                 if (itemInfo) {
-                    var fuel = itemInfo.fuelPower * amount
+                    let fuel = itemInfo.fuelPower * amount
                     it.amount -= amount
                     u.fuel += fuel
                     await i.reply(`Burnt ${itemInfo.toString(amount)}${(fuel > 0) ? `, got +${format(fuel)} fuel` : ""}`)
@@ -268,10 +268,10 @@ export var command: Command = {
                 break;
             }
             case "craft": {
-                var recipe = i.options.getString("recipe", true)
-                var r = recipes.get(recipe)
+                let recipe = i.options.getString("recipe", true)
+                let r = recipes.get(recipe)
                 if (!r) return await i.reply(`invalid recipe`)
-                var amount = BigInt(i.options.getInteger("amount", false) || 0) || r.canCraft(i.user);
+                let amount = BigInt(i.options.getInteger("amount", false) || 0) || r.canCraft(i.user);
                 if (amount > r.canCraft(i.user)) return await i.reply(`bru`);
                 for (let it of r.input) {
                     let stack = getItem(i.user, it.item)

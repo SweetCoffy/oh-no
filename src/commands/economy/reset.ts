@@ -3,7 +3,7 @@ import { Command } from "../../command-loader.js";
 import { data, users } from "../../users.js";
 import { confirmation } from "../../util.js";
 
-export var command: Command = {
+export let command: Command = {
     name: "reset",
     type: ApplicationCommandType.ChatInput,
     description: "Deletes your data",

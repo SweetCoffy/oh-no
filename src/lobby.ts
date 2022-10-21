@@ -43,7 +43,7 @@ export class BattleLobby {
     }
     set flags(v: string | Dictionary<boolean>) {
         if (typeof v == "string") {
-            for (var f in this._flags) {
+            for (let f in this._flags) {
                 this._flags[f] = v.includes(f);
             }
         } else {
@@ -68,7 +68,7 @@ export class BattleLobby {
     }
     delete() {
         lobbies.delete(this.id)
-        for (var u of this.users) {
+        for (let u of this.users) {
             getUser(u).lobby = undefined
         }
     }
@@ -76,12 +76,12 @@ export class BattleLobby {
         if (user.id == this.host.id) {
             throw new LeaveError(`The host of the lobby cannot leave, use .delete() instead`)
         }
-        var u = this.users.findIndex(el => el.id == user.id)
+        let u = this.users.findIndex(el => el.id == user.id)
         if (u == -1) throw new LeaveError(`Cannot leave a lobby the user is not in`)
         getUser(user).lobby = undefined
         this.users.splice(u, 1)
         if (this.battle) {
-            var idx = this.battle.players.findIndex(el => el.user?.id == user.id)
+            let idx = this.battle.players.findIndex(el => el.user?.id == user.id)
             if (idx == -1) return
             this.battle.players.splice(idx, 1)
             this.battle.actions = this.battle.actions.filter(el => el.player.user?.id != user.id)
@@ -92,21 +92,21 @@ export class BattleLobby {
     start() {
         this.battle = new Battle(this)
         if (this.type == "team_match") this._flags.T = true
-        var l = this
+        let l = this
         if (this.battle.on("end", (winner: Player) => {
             l.delete()
         }))
         this.started = true
-        var i = 0;
-        for (var u of this.users) {
-            var play = new Player(u)
+        let i = 0;
+        for (let u of this.users) {
+            let play = new Player(u)
             play.level = this.level
             play.moveset = (getUser(u).moveset).slice(0, settings.maxMoves)
             play.helditems = (getUser(u).helditems || []).slice(0, settings.maxMoves).map(el => ({id: el}))
             play.ability = getUser(u).ability
-            var e = this.usersE[i]
+            let e = this.usersE[i]
             if (this.flags.E) {
-                var preset = e.enemyPreset || "default"
+                let preset = e.enemyPreset || "default"
                 if (preset != "default" && enemies.get(preset)) {
                     //@ts-ignore
                     play.baseStats = {...enemies.get(e).stats}
@@ -120,24 +120,24 @@ export class BattleLobby {
             this.battle.players.push(play)
             i++
         }
-        var it = items.map((el, k) => k)
-        var levelPerPlayer = 0.1
+        let it = items.map((el, k) => k)
+        let levelPerPlayer = 0.1
         if (this.difficulty == "easy") levelPerPlayer = 0
         if (this.difficulty == "hard") levelPerPlayer = 0.2
         if (this.difficulty == "hell") levelPerPlayer = 0.35
-        var allowedPresets = [...presets.keys()]
+        let allowedPresets = [...presets.keys()]
         if (this.type == "boss") {
-            var exclude = ["tonk", "extreme-tonk", "default"]
+            let exclude = ["tonk", "extreme-tonk", "default"]
             allowedPresets = allowedPresets.filter(el => !exclude.includes(el))
         }
-        var b = allowedPresets.map(el => presets.get(el)?.stats)
+        let b = allowedPresets.map(el => presets.get(el)?.stats)
         let perTeam = Math.floor(this.botCount + this.users.length) / this.teamCount
         let teams = new Array(this.teamCount).fill(0)
         for (let p of this.battle.players) {
             teams[p.team]++
         }
-        for (var i = 0; i < this.botCount; i++) {
-            var bot = new Player()
+        for (let i = 0; i < this.botCount; i++) {
+            let bot = new Player()
             bot.level = this.level
             if (this.type == "pve") {
                 bot.level = Math.ceil(bot.level * 0.46)
@@ -150,7 +150,7 @@ export class BattleLobby {
             //@ts-ignore
             bot.baseStats = {...b[Math.floor(Math.random() * b.length)]}
             if (this.bossType) {
-                var enemy = enemies.get(this.bossType);
+                let enemy = enemies.get(this.bossType);
                 if (enemy) {
                     bot.baseStats = { ...enemy.stats }
                     bot.ability = enemy.ability;
@@ -169,17 +169,17 @@ export class BattleLobby {
                 bot.helditems.push({id: "bruh_orb"});
                 bot.team = 1;
             } else {
-                for (var j = 0; j < 4; j++) {
+                for (let j = 0; j < 4; j++) {
                     bot.helditems.push({id: it[Math.floor(Math.random() * it.length)]})
                 }
             }
             this.battle.players.push(bot)
         }
-        for (var p of this.battle.players) {
+        for (let p of this.battle.players) {
             p.helditems = [...new Set(p.helditems.map(el => el.id))].map(el => ({id: el}))
         }
         if (this.flags.W) {
-            for (var p of this.battle.players) {
+            for (let p of this.battle.players) {
                 if (p.team == 0) p.team = 1;
                 else if (p.team == 1) p.team = 0;
             }
@@ -201,7 +201,7 @@ export class BattleLobby {
     }
 }
 export function createLobby(host: User, name?: string, capacity: number = 2) {
-    var lobby = new BattleLobby(host, capacity, name, capacity)
+    let lobby = new BattleLobby(host, capacity, name, capacity)
     return lobby
 }
 export function findValidLobby(user?: User) {

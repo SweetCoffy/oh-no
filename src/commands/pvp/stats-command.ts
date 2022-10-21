@@ -7,14 +7,14 @@ import { getPresetList, makeStats, getPreset, presets, StatID } from "../../stat
 import { getUser } from "../../users.js";
 import { bar, confirmation, getMaxTotal, helditemString } from "../../util.js"
 function getWeighted(weights: number[], total: number = 600) {
-    var totalW = weights.reduce((prev, cur) => prev + cur, 0)
-    var ar = []
-    for (var w of weights) {
+    let totalW = weights.reduce((prev, cur) => prev + cur, 0)
+    let ar = []
+    for (let w of weights) {
         ar.push(w / totalW * total)
     }
     return ar
 }
-export var command: Command = {
+export let command: Command = {
     type: ApplicationCommandType.ChatInput,
     name: "stats",
     description: "Does stuff with stats",
@@ -185,19 +185,19 @@ export var command: Command = {
         },
     ],
     async autocomplete(i) {
-        var focus = i.options.getFocused(true)
+        let focus = i.options.getFocused(true)
         if (focus.name == "ability") return await i.respond(abilities.map((v, k) => ({ value: k, name: v.name })))
         return await i.respond([])
     },
     async run(i: ChatInputCommandInteraction) {
         switch (i.options.getSubcommand()) {
             case "generate": {
-                var weights: number[] = []
-                var highest = "hp"
-                var highestI = 0
-                var highestVal = 0
-                for (var k in makeStats()) {
-                    var val = i.options.getNumber(k) || 1
+                let weights: number[] = []
+                let highest = "hp"
+                let highestI = 0
+                let highestVal = 0
+                for (let k in makeStats()) {
+                    let val = i.options.getNumber(k) || 1
                     weights.push(val)
                     if (val > highestVal) {
                         highestVal = val
@@ -205,10 +205,10 @@ export var command: Command = {
                         highestI = weights.length - 1
                     }
                 }
-                var maxTotal = i.options.getNumber("total", false) || getMaxTotal({ ability: i.options.getString("ability", false) || undefined })
-                var stats = getWeighted(weights, maxTotal).map(el => Math.floor(el))
-                var total = stats.reduce((prev, cur) => prev + cur, 0)
-                var missing = maxTotal - total
+                let maxTotal = i.options.getNumber("total", false) || getMaxTotal({ ability: i.options.getString("ability", false) || undefined })
+                let stats = getWeighted(weights, maxTotal).map(el => Math.floor(el))
+                let total = stats.reduce((prev, cur) => prev + cur, 0)
+                let missing = maxTotal - total
                 stats[highestI] += missing
                 await i.reply(`${Object.keys(makeStats()).map((el, i) => `\`${el.padEnd(6, " ")} ${stats[i].toString().padStart(3, " ")} ${bar(stats[i], 300)}\``).join("\n")}\nJSON: \`${JSON.stringify(
                     {
@@ -221,7 +221,7 @@ export var command: Command = {
             case "presets": {
                 let defaultPresets = presets;
                 let userPresets = getUser(i.user).presets;
-                var list = getPresetList(i.user)
+                let list = getPresetList(i.user)
                 let presetInfo = (el: string) => `${list[el].name} (\`${el}\`)`
                 await i.reply(`**Default Presets**:\n${defaultPresets.map((_, el) => presetInfo(el)).join("\n")}\n\n**Custom Presets**:\n${Object.keys(userPresets).map(el => presetInfo(el)).join("\n") || "None"}`)
                 break;
@@ -236,8 +236,8 @@ export var command: Command = {
                 break;
             }
             case "delete": {
-                var list = getPresetList(i.user);
-                var preset = i.options.getString("preset", true)
+                let list = getPresetList(i.user);
+                let preset = i.options.getString("preset", true)
                 if (!(preset in list)) return await i.reply(`Invalid preset`);
                 if (presets.has(preset)) return await i.reply(`Can't delete a default preset`);
                 delete getUser(i.user).presets[preset];
@@ -246,34 +246,34 @@ export var command: Command = {
             }
             case "create": {
                 if (Object.keys(getPresetList(i.user)).length >= presets.size + 25) return await i.reply(`You can't create more than 25 presets`);
-                var name = i.options.getString("name", true)
-                var json = i.options.getString("json", true)
-                var id = name.toLowerCase().replace(/[^A-Za-z_\-0-9 ]/g, "-")
+                let name = i.options.getString("name", true)
+                let json = i.options.getString("json", true)
+                let id = name.toLowerCase().replace(/[^A-Za-z_\-0-9 ]/g, "-")
                 let existing = getUser(i.user).presets[id]
                 if (existing) {
                     if (!await confirmation(i, `You are about to overwrite your existing '${existing.name}' preset. Are you sure you want to do that?`))
                         return await i.followUp(`Cancelled preset creation`)
                 }
-                var ar = [1, 1, 1, 1, 1, 1]
-                var o = JSON.parse(json)
-                for (var j = 0; j < o.weights.length; j++) {
+                let ar = [1, 1, 1, 1, 1, 1]
+                let o = JSON.parse(json)
+                for (let j = 0; j < o.weights.length; j++) {
                     ar[j] = o.weights[j] || 1
                 }
-                var statsAr = getWeighted(ar, getMaxTotal(o)).map(el => Math.floor(el))
-                var highestJ = 0
+                let statsAr = getWeighted(ar, getMaxTotal(o)).map(el => Math.floor(el))
+                let highestJ = 0
                 let highest = 0
-                for (var j = 0; j < statsAr.length; j++) {
+                for (let j = 0; j < statsAr.length; j++) {
                     if (statsAr[j] > highest) {
                         highest = statsAr[j]
                         highestJ = statsAr[j]
                     }
                 }
-                var total = statsAr.reduce((prev, cur) => prev + cur, 0)
-                var missing = getMaxTotal(o) - total
+                let total = statsAr.reduce((prev, cur) => prev + cur, 0)
+                let missing = getMaxTotal(o) - total
                 statsAr[highestJ] += missing
                 let stats = makeStats()
-                var j = 0
-                for (var k in makeStats()) {
+                let j = 0
+                for (let k in makeStats()) {
                     stats[k as StatID] = statsAr[j++]
                 }
                 getUser(i.user).presets[id] = {
@@ -287,11 +287,11 @@ export var command: Command = {
                 break
             }
             case "use": {
-                var id = i.options.getString("preset", true)
-                var p = getPreset(id, i.user)
+                let id = i.options.getString("preset", true)
+                let p = getPreset(id, i.user)
                 if (!p) return await i.reply("Unknown preset")
-                var u = getUser(i.user)
-                var total = Object.values(p.stats).reduce((prev, cur) => prev + cur, 0)
+                let u = getUser(i.user)
+                let total = Object.values(p.stats).reduce((prev, cur) => prev + cur, 0)
                 if (total > getMaxTotal(p)) return await i.reply(`Illegal preset, base stat total must not exceed the maximum allowed`)
                 u.baseStats = {...p.stats}
                 u.ability = p.ability
@@ -314,16 +314,16 @@ export var command: Command = {
                 break;
             }
             case "ability": {
-                var u = getUser(i.user)
-                var a = i.options.getString("ability", false) || undefined
+                let u = getUser(i.user)
+                let a = i.options.getString("ability", false) || undefined
                 let preset = u.presets[i.options.getString("preset", false) as string]
                 if (!preset && i.options.getString("preset", false)) return await i.reply(`Unknown preset`)
                 if (preset) {
                     preset.ability = a
                     console.log(preset)
-                    var prevtotal = Object.values(preset.stats).reduce((prev, cur) => prev + cur, 0)
-                    var total = getMaxTotal({ ability: a })
-                    for (var k in preset.stats) {
+                    let prevtotal = Object.values(preset.stats).reduce((prev, cur) => prev + cur, 0)
+                    let total = getMaxTotal({ ability: a })
+                    for (let k in preset.stats) {
                         preset.stats[k as StatID] = Math.floor(preset.stats[k as StatID] / prevtotal * total)
                     }
                     console.log(preset)
@@ -332,10 +332,10 @@ export var command: Command = {
                 }
                 if (!abilities.has(a as string ) && a) await i.reply(`Unknown ability: ${a}`)
                 
-                var prevtotal = Object.values(u.baseStats).reduce((prev, cur) => prev + cur, 0)
-                var total = getMaxTotal({ ability: a })
+                let prevtotal = Object.values(u.baseStats).reduce((prev, cur) => prev + cur, 0)
+                let total = getMaxTotal({ ability: a })
                 u.ability = a;
-                for (var k in u.baseStats) {
+                for (let k in u.baseStats) {
                     u.baseStats[k as StatID] = Math.floor(u.baseStats[k as StatID] / prevtotal * total)
                 }
                 await i.reply(`Ability set to ${abilities.get(a as string)?.name || "None"}`)

@@ -6,7 +6,7 @@ import { StatID } from "../../stats.js"
 import { getUser } from "../../users.js"
 import { bar } from "../../util.js"
 import { inspect } from "util"
-export var command: Command = {
+export let command: Command = {
     type: ApplicationCommandType.ChatInput,
     name: "info",
     description: "pingery",
@@ -20,24 +20,24 @@ export var command: Command = {
         }
     ],
     async autocomplete(i) {
-        var u = getUser(i.user)
+        let u = getUser(i.user)
         if (!u.lobby?.battle) return await i.respond([])
-        var b = u.lobby.battle;
+        let b = u.lobby.battle;
         return await i.respond(b.players.map((el, i) => ({name: `#${i} ${el.name} (${Math.floor(el.hp / el.maxhp * 100)}%, Team ${teamNames[el.team]})`, value: i + ""})))
     },
     async run(i: ChatInputCommandInteraction) {
         function findPlayerID(name: string) {
-            var split = name.split(" ")
-            var num = parseInt(split[0])
+            let split = name.split(" ")
+            let num = parseInt(split[0])
             return num || Number(name)
         }
-        var lobby = getUser(i.user).lobby
+        let lobby = getUser(i.user).lobby
         if (!lobby?.battle) return await i.reply({
             ephemeral: true,
             content: "bruh",
         })
-        var idx = findPlayerID(i.options.getString("player", false) || "") ?? lobby.battle.players.findIndex(el => el.user?.id == i.user.id)
-        var player = lobby.battle.players[idx]
+        let idx = findPlayerID(i.options.getString("player", false) || "") ?? lobby.battle.players.findIndex(el => el.user?.id == i.user.id)
+        let player = lobby.battle.players[idx]
         if (!player) return await i.reply({
             ephemeral: true,
             content: "bruh",
@@ -49,7 +49,7 @@ export var command: Command = {
                 return `${statusTypes.get(el.type)?.name.padEnd(16, " ")} | ${el.duration.toString().padEnd(2, " ")} Turns left`
             }).join("\n") || "---------------- | -- Turns left"}\n` + 
             `Stats:\n${Object.keys(player.modifiers).map(el => {
-                var mds = player.modifiers[el]
+                let mds = player.modifiers[el]
                 return `${el.toUpperCase()}: ${Math.floor(player.stats[el as StatID])}\n├${mds.filter(el => !el.disabled).map(el => `${el.label || "Unknown modifier"}: ${el.type == "add" ? `+` : "x"}${el.value.toFixed(2)}`).join("\n├")}\n└Stage modifier: ${calcMul(player.statStages[el as StatID]).toFixed(2)}x`
             }).join("\n")}\n`
                 + "\n```",

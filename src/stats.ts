@@ -20,7 +20,7 @@ export const baseStats: Stats = {
     spdef:  100,
     spd  :  100,
 }
-export var presets: Collection<string, StatPreset> = new Collection()
+export let presets: Collection<string, StatPreset> = new Collection()
 presets.set("default", {
     name: "Default",
     stats: {...baseStats},
@@ -76,7 +76,7 @@ presets.set("extreme-tonk", {
     ability: "hardening",
 })
 export function makeStats(obj?: {[key: string]: number}): Stats {
-    var o: Stats = {
+    let o: Stats = {
         hp: 0,
         atk: 0,
         def: 0,
@@ -85,7 +85,7 @@ export function makeStats(obj?: {[key: string]: number}): Stats {
         spd: 0,
     }
     if (obj) {
-        for (var k in obj) {
+        for (let k in obj) {
             o[k as StatID] = obj[k]
         }
     }
@@ -97,8 +97,8 @@ export function calcStat(base: number, level: number, ev: number = 0) {
     return v
 }
 export function calcStats(level: number, baseStats: Stats, hpboost: number = 1): Stats {
-    var s = makeStats()
-    for (var k in baseStats) {
+    let s = makeStats()
+    for (let k in baseStats) {
         s[k as StatID] = calcStat(baseStats[k as StatID], level, 0)
     }
     s.hp = Math.floor(s.hp * 2.5 * hpboost)
@@ -106,18 +106,18 @@ export function calcStats(level: number, baseStats: Stats, hpboost: number = 1):
 }
 export function getPreset(name: string, user?: User) {
     if (user) {
-        var u = getUser(user)
+        let u = getUser(user)
         if (u.presets[name]) return u.presets[name]
     }
     return presets.get(name)
 }
 export function getPresetList(user?: User) {
-    var list: PresetList = {}
+    let list: PresetList = {}
     if (user) {
-        var u = getUser(user)
+        let u = getUser(user)
         list = {...list, ...u.presets}
     }
-    for (var [k, v] of presets) {
+    for (let [k, v] of presets) {
         list[k] = v
     }
     return list

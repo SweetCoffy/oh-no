@@ -1,14 +1,14 @@
 import * as worker_threads from "worker_threads"
 import { VM } from "vm2"
-var workerData: { args: string[] } = worker_threads.workerData;
-var idcounter = 0;
+let workerData: { args: string[] } = worker_threads.workerData;
+let idcounter = 0;
 function getid() {
     return idcounter++;
 }
 function readFile(path: string): Promise<Buffer | undefined> {
     return new Promise((resolve) => {
-        var id = getid()
-        var func = (msg: any) => {
+        let id = getid()
+        let func = (msg: any) => {
             if (msg.id == id) {
                 worker_threads.parentPort?.removeListener("message", func)
                 resolve(msg.content && Buffer.from(msg.content))
@@ -20,8 +20,8 @@ function readFile(path: string): Promise<Buffer | undefined> {
 }
 function readDir(path: string): Promise<string[] | undefined> {
     return new Promise((resolve) => {
-        var id = getid()
-        var func = (msg: any) => {
+        let id = getid()
+        let func = (msg: any) => {
             if (msg.id == id) {
                 worker_threads.parentPort?.removeListener("message", func)
                 resolve(msg.content)
@@ -33,9 +33,9 @@ function readDir(path: string): Promise<string[] | undefined> {
 }
 function writeFile(path: string, cont: Buffer): Promise<void> {
     return new Promise((resolve) => {
-        var id = getid()
+        let id = getid()
         worker_threads.parentPort?.postMessage({ type: "read", path: path, id: id })
-        var func = (msg: any) => {
+        let func = (msg: any) => {
             if (msg.resid == id) {
                 worker_threads.parentPort?.removeListener("message", func)
                 resolve()
@@ -47,12 +47,12 @@ function writeFile(path: string, cont: Buffer): Promise<void> {
 function joinpath(...segs: string[]) {
     return segs.join("/").split("/").filter(el => el).join("/") || "/"
 }
-var cwd = "main"
-var path = new Set(["", cwd, "main", "main/eggos", "main/js", ...((await readFile("main/cfg/path.cfg") + "") || "").split(";")])
-var filename = workerData.args[0]
+let cwd = "main"
+let path = new Set(["", cwd, "main", "main/eggos", "main/js", ...((await readFile("main/cfg/path.cfg") + "") || "").split(";")])
+let filename = workerData.args[0]
 if (!filename.includes(".")) filename = filename + ".js"
-var file = undefined
-for (var p of path) {
+let file = undefined
+for (let p of path) {
     file = await readFile(joinpath(p, filename))
     if (file) break;
 }
@@ -60,12 +60,12 @@ if (!file) {
     console.log(`File not found: ${filename}`)
     process.exit(1)
 }
-var vm = new VM({
+let vm = new VM({
     eval: true,
     wasm: false,
     sandbox: {
         async load(lib: string): Promise<any> {
-            var str = (await readFile(joinpath("main", "libs", "lib" + lib + ".js")))?.toString()
+            let str = (await readFile(joinpath("main", "libs", "lib" + lib + ".js")))?.toString()
             if (!str) return undefined;
             return vm.run(str)
         },

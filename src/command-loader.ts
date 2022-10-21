@@ -7,20 +7,20 @@ export type UserCommand = UserApplicationCommandData & { run(i: ContextMenuComma
 
 export type Command = (ChatInputCommand | UserCommand) & {dev?: boolean, autocomplete?(i: AutocompleteInteraction): any}
 
-export var commands: Collection<string, Command> = new Collection()
+export let commands: Collection<string, Command> = new Collection()
 
 export async function load(file: string) {
-    var h: Command = (await import(file)).command
+    let h: Command = (await import(file)).command
     commands.set(h.name, h)
     return h
 }
 
 export async function loadDir(dir: string) {
-    var fulldir = resolve(`./build/${dir}`)
+    let fulldir = resolve(`./build/${dir}`)
     function readdirRecursive(dir: string) {
-        var files: string[] = []
-        for (var f of readdirSync(dir)) {
-            var p = join(dir, f)
+        let files: string[] = []
+        for (let f of readdirSync(dir)) {
+            let p = join(dir, f)
             if (f.startsWith("stable_") && settings.experimental) continue;
             if (f.startsWith("exp_") && !settings.experimental) continue;
             if (statSync(p).isDirectory()) {
@@ -31,7 +31,7 @@ export async function loadDir(dir: string) {
         }
         return files
     }
-    var files = readdirRecursive(fulldir)
+    let files = readdirRecursive(fulldir)
     return (await Promise.allSettled(files.map(el => load(`${el}`)))).map((v, i) => ({file: files[i], value: v}))
 }
 

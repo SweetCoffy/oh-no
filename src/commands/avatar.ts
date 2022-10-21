@@ -1,6 +1,6 @@
 import { ApplicationCommandOptionType, ApplicationCommandType } from "discord.js"
 import { Command } from "../command-loader.js"
-export var command: Command = {
+export let command: Command = {
     type: ApplicationCommandType.ChatInput,
     name: "avatar",
     description: "when you",
@@ -13,7 +13,7 @@ export var command: Command = {
         }
     ],
     async run(i) {
-        var user = i.options.getUser("user") || i.user
+        let user = i.options.getUser("user") || i.user
         await i.reply({
             embeds: [
                 {

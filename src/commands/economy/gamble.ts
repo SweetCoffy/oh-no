@@ -3,7 +3,7 @@ import { Command } from "../../command-loader.js";
 import { getRank, getUser } from "../../users.js";
 import { money } from "../../util.js";
 
-export var command: Command = {
+export let command: Command = {
     name: "gamble",
     description: "gamble or something idfk",
     options: [
@@ -15,13 +15,13 @@ export var command: Command = {
         }
     ],
     async run(i: ChatInputCommandInteraction) {
-        var m = BigInt(i.options.getInteger("money", true))
-        var u = getUser(i.user)
+        let m = BigInt(i.options.getInteger("money", true))
+        let u = getUser(i.user)
         if (getRank(i.user) < 10) return await i.reply(`You must be at least Rank 10 to gamble`)
         if (u.money.points < m) return await i.reply(`You can't gamble more money than you have!`)
-        var req = 10000n + (u.multiplier - 1n) * 5000n
+        let req = 10000n + (u.multiplier - 1n) * 5000n
         if (m < req) return await i.reply(`You must bet at least ${money(req)}`)
-        var chance = 0.4
+        let chance = 0.4
         u.money.points -= m;
         if (Math.random() < chance) {
             u.money.points += m * 2n;

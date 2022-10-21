@@ -16,14 +16,14 @@ export interface ItemResponse {
     edit?: boolean
 }
 export async function* useItem(user: User, item: string, amount: bigint, ...args: string[]): AsyncGenerator<ItemResponse> {
-    var u = getUser(user)
-    var stack = getItem(user, item)
+    let u = getUser(user)
+    let stack = getItem(user, item)
     if (stack) {
         if (stack.amount < amount) return {
             type: "fail",
             reason: "Tried to use more items than you have"
         }
-        var a = shopItems.get(stack.item)?.use(user, stack, amount, ...args)
+        let a = shopItems.get(stack.item)?.use(user, stack, amount, ...args)
         // @ts-ignore
         if (a?.[Symbol.toStringTag] == "AsyncGenerator") {
             let gen = a as AsyncGenerator<ItemResponse>
@@ -52,7 +52,7 @@ export async function* useItem(user: User, item: string, amount: bigint, ...args
     }
 }
 export function stackString(stack: ItemStack, icon: boolean = true) {
-    var type = shopItems.get(stack.item)
+    let type = shopItems.get(stack.item)
     return `${stack.amount != 1n ? `x${format(stack.amount)} ` : ""}` + 
     `${icon ? (shopItems.get(stack.item)?.icon || "🅱️") + " " : ""}` + 
     `${stack.data?.name || shopItems.get(stack.item)?.name}` + 
@@ -79,7 +79,7 @@ export class ItemType {
     defaultData?: Dictionary<any>
     autocomplete?: (user: User, stack: ItemStack, i: AutocompleteInteraction) => any
     toString(amount: bigint = 1n) {
-        var pre = ""
+        let pre = ""
         if (amount != 1n) {
             pre = `${format(amount)}x `
         }
@@ -89,7 +89,7 @@ export class ItemType {
     onUse?: ItemUseCallback
     use(user: User, stack: ItemStack, amount: bigint, ...args: string[]): ItemResponse | AsyncGenerator<ItemResponse> {
         if (this.onUse) {
-            var r = this.onUse(user, stack, amount, ...args)
+            let r = this.onUse(user, stack, amount, ...args)
             //@ts-ignore
             return r;
         }
@@ -110,14 +110,14 @@ export class ItemType {
     }
 }
 export function getItem(user: User, item: string) {
-    var u = getUser(user)
+    let u = getUser(user)
     u.items = u.items.filter(el => el.amount > 0n)
     if (!Number.isNaN(+item)) return u.items[+item];
     return u.items.find(el => el.item == item)
 }
 export function addItem(user: User, item: ItemStack): ItemStack {
-    var u = getUser(user)
-    var stack = u.items.find(el => el.item == item.item)
+    let u = getUser(user)
+    let stack = u.items.find(el => el.item == item.item)
     if (stack && !stack.data && !item.data && !shopItems.get(item.item)?.unstackable) {
         stack.amount += item.amount
         return stack
@@ -132,8 +132,8 @@ export function addItem(user: User, item: ItemStack): ItemStack {
     }
 }
 export function removeItem(user: User, item: ItemStack): boolean {
-    var u = getUser(user)
-    var stack = u.items.find(el => el.item == item.item)
+    let u = getUser(user)
+    let stack = u.items.find(el => el.item == item.item)
     if (stack) {
         stack.amount -= item.amount
         if (stack.amount < 0) return false
@@ -142,14 +142,14 @@ export function removeItem(user: User, item: ItemStack): boolean {
     return false
 }
 export function addMultiplierItem(user: User, stack: ItemStack, amount: bigint, mul: bigint): ItemResponse {
-    var add = amount * mul
+    let add = amount * mul
     getUser(user).multiplier += add
     return {
         type: "success",
         reason: `+${format(add)} Multiplier`
     }
 }
-export var shopItems: Collection<string, ItemType> = new Collection()
+export let shopItems: Collection<string, ItemType> = new Collection()
 shopItems.set("spaghet", new ItemType("Spaghet", "spaghet", "🍝", 1000000n).set(el => {
     el.onUse = function(user, stack, amount) {
         stack.amount -= amount
@@ -164,7 +164,7 @@ shopItems.set("coin", new ItemType("Coin", "coin", "🪙", 10000000n).set(el => 
 }))
 shopItems.set("bank", new ItemType("Bank", "bank", "🏦", 1000000000n).set(el => {
     el.onUse = function(user, stack, amount) {
-        var a = getUser(user).bankLimit - getUser(user).banks
+        let a = getUser(user).bankLimit - getUser(user).banks
         if (amount < a) a = amount
         if (a <= 0) return {
             type: "fail",
@@ -187,7 +187,7 @@ shopItems.set("cookie", new ItemType("Cookie", "cookie", "🍪", 5000n).set(el =
             type: "info",
             reason: "It had no effect"
         }
-        var e = enemies.get("u")
+        let e = enemies.get("u")
         if (Math.random() > 0.5) e = enemies.get("o")
         //@ts-ignore
         getUser(user).forceEncounter = [e]
@@ -212,7 +212,7 @@ shopItems.set("soul", new ItemType("Soul", "soul", "🧹", 5n).set(el => {
 
 }))
 export function summonBoss(user: User, stack: ItemStack, amount: bigint, boss: string): ItemResponse {
-    var b = enemies.get(boss)
+    let b = enemies.get(boss)
     if (getUser(user).forceEncounter) return {
         type: "fail",
         reason: `${b?.name} cannot be summoned right now`
@@ -244,7 +244,7 @@ shopItems.set("sus_bell", new ItemType("Suspicious Looking Bell", "sus_bell", "�
     }
 }))
 //if (!globalData.itemStock) globalData.itemStock = {}
-//for (var [k, v] of shopItems) {
+//for (let [k, v] of shopItems) {
 //    if (globalData.itemStock[k] == undefined && v.stock != Infinity) globalData.itemStock[k] = v.stock
 //    v.stock = globalData.itemStock[k] ?? v.stock
 //}
@@ -271,20 +271,20 @@ export class Shop {
         return this.items.find(el => el.id == item)
     }
     buyItem(user: User, item: string, amount: bigint): ShopResponse {
-        var money = this.getMoney(user)
-        var it = this.getItem(item)
+        let money = this.getMoney(user)
+        let it = this.getItem(item)
         if (!it) return {
             type: "fail",
             reason: `Unknown item`
         }
-        var type = shopItems.get(it.id)
+        let type = shopItems.get(it.id)
         if (type && type.unstackable) amount = 1n;
-        var cost = amount * it.cost
+        let cost = amount * it.cost
         if (money < cost) return {
             type: "fail",
             reason: `Can't afford item (${this.moneyIcon} ${format(cost)})`
         }
-        var d = shopItems.get(it.id)?.defaultData
+        let d = shopItems.get(it.id)?.defaultData
         if (d) d = {...d}
         addItem(user, {
             item: it.id,
@@ -308,7 +308,7 @@ export class ItemShop extends Shop {
         return getItem(user, this.itemCurrency)?.amount || 0n
     }
     setMoney(user: User, amount: bigint) {
-        var stack = getItem(user, this.itemCurrency)
+        let stack = getItem(user, this.itemCurrency)
         if (!stack) addItem(user, {
             item: this.itemCurrency,
             amount: amount
@@ -331,19 +331,19 @@ export class Recipe {
         this.input = input;
     }
     canCraft(user: User): bigint {
-        var inv = getUser(user).items;
-        var h = min(...this.input.map(el => (getItem(user, el.item)?.amount||0n) / el.amount))
+        let inv = getUser(user).items;
+        let h = min(...this.input.map(el => (getItem(user, el.item)?.amount||0n) / el.amount))
         return h;
     }
 }
-var mainShop = new Shop("Main Shop", [{ id: "cookie", cost: 10000n }, { id: "spaghet", cost: 100000n }, { id: "egg", cost: 100n }, { id: "wood", cost: 200n }])
-//var cookieShop = new ItemShop("Cookie Shop", [{id: "coin", cost: 150n}, { id: "bank", cost: 175000n }, { id: "soul", cost: 10000000n }], "cookie")
-//var soulShop = new ItemShop("Soul Shop", [{id: "bank_license", cost: 1n}], "soul")
-export var shops: Collection<string, Shop> = new Collection()
+let mainShop = new Shop("Main Shop", [{ id: "cookie", cost: 10000n }, { id: "spaghet", cost: 100000n }, { id: "egg", cost: 100n }, { id: "wood", cost: 200n }])
+//let cookieShop = new ItemShop("Cookie Shop", [{id: "coin", cost: 150n}, { id: "bank", cost: 175000n }, { id: "soul", cost: 10000000n }], "cookie")
+//let soulShop = new ItemShop("Soul Shop", [{id: "bank_license", cost: 1n}], "soul")
+export let shops: Collection<string, Shop> = new Collection()
 shops.set("main", mainShop)
 //shops.set("cookie", cookieShop)
 //shops.set("soul", soulShop)
-export var recipes: Collection<string, Recipe> = new Collection()
+export let recipes: Collection<string, Recipe> = new Collection()
 //recipes.set("bank_license", new Recipe("Bank License (Cookies)", { item: "bank_license", amount: 1n }, 
 //    { item: "cookie", amount: 2n },
 //))

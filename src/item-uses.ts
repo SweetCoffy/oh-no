@@ -7,7 +7,7 @@ import { Worker } from "worker_threads"
 import { readFileSync, existsSync } from "fs"
 import { load } from "js-yaml";
 
-export var sandwich: ItemUseCallback = (user, stack, amount) => {
+export let sandwich: ItemUseCallback = (user, stack, amount) => {
     return addMultiplierItem(user, stack, amount, 1n);
 }
 interface NameableItemData {
@@ -34,8 +34,8 @@ function tryClone(obj: any) {
     if (typeof obj != "object") return obj
     return {...obj}
 }
-export var fishing_rod: ItemUseCallback = (user, stack, amount) => {
-    var data = stack.data as ToolItemData;
+export let fishing_rod: ItemUseCallback = (user, stack, amount) => {
+    let data = stack.data as ToolItemData;
     if (!data?.type.includes("tool")) return {
         type: "fail",
         reason: `This item has the wrong item data type. Expected "tool", got "${data?.type}"`
@@ -52,7 +52,7 @@ export var fishing_rod: ItemUseCallback = (user, stack, amount) => {
         type: "info",
         reason: "Nothing bit..."
     }
-    var o = weightedRandom([
+    let o = weightedRandom([
         [{item: "box"        , amount: 1n, data: 
         { type: "box", capacity: 4, name: "Egg Box", 
         items: [{item: "egg", amount: 12n}] 
@@ -65,7 +65,7 @@ export var fishing_rod: ItemUseCallback = (user, stack, amount) => {
         items: [{item: "fish", amount: 5n}, {item: "1g_gold", amount: 5n}, {item: "bone", amount: 15n}] 
         }} , 0.115]
     ])
-    var s = o as ItemStack;
+    let s = o as ItemStack;
     if (!o.data) {
         o.amount *= BigInt(Math.floor(1 + (getRank(user) * (1 + ((getRank(user)-1)*0.07)))))
     }
@@ -75,14 +75,14 @@ export var fishing_rod: ItemUseCallback = (user, stack, amount) => {
         reason: `You got ${stackString(s)}!`
     }
 }
-export var box: ItemUseCallback = (user, stack, amount, command, item, amt) => {
-    var data = stack.data as BoxItemData;
+export let box: ItemUseCallback = (user, stack, amount, command, item, amt) => {
+    let data = stack.data as BoxItemData;
     if (!data?.type.includes("box")) return {
         type: "fail",
         reason: `This item has the wrong item data type. Expected "box", got "${data?.type}"`
     }
     if (command == "store") {
-        var it = getItem(user, item)
+        let it = getItem(user, item)
         if (!it) return {
             type: "fail",
             reason: `You don't have the item \`${item}\``
@@ -95,7 +95,7 @@ export var box: ItemUseCallback = (user, stack, amount, command, item, amt) => {
             type: "fail",
             reason: "This box is full"
         }
-        var a = min(it.amount, BigInt(amt || it.amount))
+        let a = min(it.amount, BigInt(amt || it.amount))
         it.amount -= a;
         data.items.push({amount: a, item: it.item, data: tryClone(it.data)})
         return {
@@ -130,7 +130,7 @@ export var box: ItemUseCallback = (user, stack, amount, command, item, amt) => {
                 type: "fail",
                 reason: "The name must not exceed 16 characters"
             }
-            var oldname = data.name
+            let oldname = data.name
             data.name = item;
             return {
                 type: "success",
@@ -153,7 +153,7 @@ export var box: ItemUseCallback = (user, stack, amount, command, item, amt) => {
                 type: "fail",
                 reason: `The box doesn't have the item \`${item}\``
             }
-            var a = min(s.amount, BigInt(amt))
+            let a = min(s.amount, BigInt(amt))
             addItem(user, {...s, amount: a})
             s.amount -= a;
             data.items = data.items.filter(el => el.amount > 0n)
@@ -168,7 +168,7 @@ export var box: ItemUseCallback = (user, stack, amount, command, item, amt) => {
         reason: "?"
     }
 }
-export var bone: ItemUseCallback = (user, stack, amount) => {
+export let bone: ItemUseCallback = (user, stack, amount) => {
     if (stack.amount < 10n) return {
         type: "fail",
         reason: "It had no effect"
@@ -208,17 +208,17 @@ interface Pkg {
     depends: string[]
 }
 export async function* phone(user: User, stack: ItemStack, amount: bigint, ...args: string[]): AsyncGenerator<ItemResponse> {
-    var data = stack.data as PhoneItemData
+    let data = stack.data as PhoneItemData
     if (data?.type != "box-phone") return {
         type: "fail",
         reason: `This item has the wrong item data type. Expected "box-phone", got "${data?.type}"`
     }
-    var cmd = args.shift()
+    let cmd = args.shift()
     if (cmd == "inv") {
         yield box(user, stack, amount, ...args) as ItemResponse
         return
     }
-    var battery = data.items[0]
+    let battery = data.items[0]
     if (battery?.item != "battery") {
         yield {
             type: "fail",
@@ -226,7 +226,7 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
         }
         return
     }
-    var batteryData = battery.data as BatteryItemData
+    let batteryData = battery.data as BatteryItemData
     if (cmd == "power") {
         if (data.powered) {
             data.powered = false;
@@ -240,10 +240,10 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
     } else if (!data.powered) return yield { type: "fail", reason: "why tf are you trying to use a phone while it's off" }
     yield { type: "info", reason: "...", edit: true }
     type PhoneFS = NodeJS.Dict<Buffer & PhoneFS>
-    var _fs: PhoneFS = {main: data.items[1].data?.fs}
+    let _fs: PhoneFS = {main: data.items[1].data?.fs}
     if (!_fs.main) return yield { type: "fail", reason: `storage when` }
     function getFSItem(item: any) {
-        var data = item.data
+        let data = item.data
         if (!data) return undefined;
         if (data.type == "storage") return data.fs;
         else if (item.item == "battery") return {
@@ -252,12 +252,12 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
         }
         return undefined
     }
-    var fs: PhoneFS = new Proxy(_fs, {
+    let fs: PhoneFS = new Proxy(_fs, {
         get(t, p, r) {
             if (typeof p == "symbol") return Reflect.get(t, p, r)
             if (p.startsWith("dev")) {
-                var num = parseInt(p[3], 16)
-                var it = data.items[num]
+                let num = parseInt(p[3], 16)
+                let it = data.items[num]
                 return getFSItem(it)
             }
             return Reflect.get(t, p, r)
@@ -265,8 +265,8 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
         getOwnPropertyDescriptor(t, p) {
             if (typeof p == "symbol") return Reflect.getOwnPropertyDescriptor(t, p)
             if (p.startsWith("dev")) {
-                var num = parseInt(p[3], 16)
-                var it = data.items[num]
+                let num = parseInt(p[3], 16)
+                let it = data.items[num]
                 if (data.items[num]) return { enumerable: true, value: getFSItem(it), configurable: true, writable: false }
             }
             return Reflect.getOwnPropertyDescriptor(t, p)
@@ -275,7 +275,7 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
             return Reflect.deleteProperty(t, p)
         },
         ownKeys(t) {
-            var ar = [...data.items.map((el, i) => `dev${i}_${el.item}`), ...Reflect.ownKeys(t)]
+            let ar = [...data.items.map((el, i) => `dev${i}_${el.item}`), ...Reflect.ownKeys(t)]
             console.log(data.items)
             console.log(ar)
             return ar
@@ -284,30 +284,30 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
     })
     if (cmd == "eggman") {
         if(args.length < 2) return yield { type: "fail", reason: "Not enough arguments", edit: true }
-        var sub = args.shift() as string
-        var arg = args.shift() as string
-        var installpath = "main"
+        let sub = args.shift() as string
+        let arg = args.shift() as string
+        let installpath = "main"
         function query(name: string): Pkg | undefined {
-            var path = `eggos_pkg/${name}`
+            let path = `eggos_pkg/${name}`
             console.log(`Querying '${name}' (${path})`)
             if (!existsSync(`${path}/pkg.yml`)) return
             return load(readFileSync(`${path}/pkg.yml`, "utf8")) as Pkg
         }
         function add(name: string): Pkg | undefined {
-            var path = `eggos_pkg/${name}`
-            var p = query(name)
+            let path = `eggos_pkg/${name}`
+            let p = query(name)
             console.log(`Adding '${name}'`)
             if (!p) return
-            for (var k in p.files) {
+            for (let k in p.files) {
                 setPath(fs, `${installpath}/${p.files[k]}`, readFileSync(`${path}/${k}`, "utf8"))
             }
             return p
         }
         function rm(name: string): Pkg | undefined {
-            var path = `eggos_pkg/${name}`
-            var p = query(name)
+            let path = `eggos_pkg/${name}`
+            let p = query(name)
             if (!p) return
-            for (var k in p.files) {
+            for (let k in p.files) {
                 deletePath(fs, `${installpath}/${p.files[k]}`)
             }
             return p
@@ -317,7 +317,7 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
                 return yield { type: "success", reason: `Removed '${arg}'`, edit: true }
             } else return yield { type: "fail", reason: `br`, edit: true }
         } else if (sub == "add") {
-            var pk = add(arg)
+            let pk = add(arg)
             if (pk) {
                 return yield { type: "success", reason: `Added '${arg}'`, edit: true }
             } else return yield { type: "fail", reason: `br`, edit: true }
@@ -325,8 +325,8 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
     }
     
     //return yield { type: "info", reason: "lol no", edit: true }
-    var acc = ""
-    var worker = new Worker("./build/phone-worker.js", {workerData: { args: [cmd, ...args] }, resourceLimits: { maxYoungGenerationSizeMb: 8, codeRangeSizeMb: 8, maxOldGenerationSizeMb: 16 }})
+    let acc = ""
+    let worker = new Worker("./build/phone-worker.js", {workerData: { args: [cmd, ...args] }, resourceLimits: { maxYoungGenerationSizeMb: 8, codeRangeSizeMb: 8, maxOldGenerationSizeMb: 16 }})
     worker.on("message", (msg: { id: number } & 
         ({ type: "read", path: string } 
         | { type: "write", path: string, cont: Uint8Array } 
@@ -334,7 +334,7 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
         | { type: "readdir", cont: string[], path: string })) => {
         if (msg.type == "read") {
             console.log(`Read to ${msg.path} received`)
-            var c = getPath(fs, msg.path)
+            let c = getPath(fs, msg.path)
             worker.postMessage({ id: msg.id, content: (c == undefined) ? undefined : Buffer.from(c + "") })
             console.log(`Read to ${msg.path} sent (id: ${msg.id})`)
         } else if (msg.type == "write") {
@@ -343,7 +343,7 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
         } else if (msg.type == "msg") {
             acc += msg.message + "\n"
         } else if (msg.type == "readdir") {
-            var c = getPath(fs, msg.path)
+            let c = getPath(fs, msg.path)
             
             worker.postMessage({ id: msg.id, content: (typeof c == "object") ? Object.keys(c) : undefined })
         }
@@ -355,7 +355,7 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
         acc += chunk
         console.log(chunk + "")
     })
-    var timeout = setTimeout(() => {
+    let timeout = setTimeout(() => {
         worker.terminate()
     }, 5000)
     function waitForExit(): Promise<number> {
@@ -365,9 +365,9 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
             })
         })
     }
-    var code = await waitForExit()
+    let code = await waitForExit()
     clearTimeout(timeout)
-    var type: "info" | "fail" = (code == 0) ? "info" : "fail"
+    let type: "info" | "fail" = (code == 0) ? "info" : "fail"
     
     if (!acc) yield { type: type, reason: "br", edit: true }
     else yield { type: type, reason: acc, edit: true }

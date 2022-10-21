@@ -4,7 +4,7 @@ import { enemies } from "../../enemies.js"
 import { StatID } from "../../stats.js"
 import { bar } from "../../util.js"
 
-export var command: Command = {
+export let command: Command = {
     name: "enemy",
     description: "le bruhe",
     type: ApplicationCommandType.ChatInput,
@@ -17,9 +17,9 @@ export var command: Command = {
         }
     ],
     async run(i: ChatInputCommandInteraction) {
-        var e = enemies.get(i.options.getString("enemy", false) || "")
+        let e = enemies.get(i.options.getString("enemy", false) || "")
         if (e) {
-            var max = Math.max(300, Math.max(...Object.values(e.stats)))
+            let max = Math.max(300, Math.max(...Object.values(e.stats)))
             await i.reply({
                 embeds: [
                     {

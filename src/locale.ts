@@ -23,16 +23,16 @@ type LocaleStrings = {
     [key in LocaleString]?: string
 }
 export type LocaleID = "en_US" | "es_SP"
-export var locale: LocaleID = "en_US"
+export let locale: LocaleID = "en_US"
 export type Locales = {
     [key in LocaleID]?: LocaleStrings
 }
-export var locales: Locales = {
+export let locales: Locales = {
     en_US: {},
 }
 export function getString(key: LocaleString, obj: {[key: string]: any} | string[] = {}) {
     // @ts-ignore
-    var str: string = locales[locale]?.[key]
+    let str: string = locales[locale]?.[key]
     if (!str) return key
     if (!Array.isArray(obj)) {
         for (let k in obj) {

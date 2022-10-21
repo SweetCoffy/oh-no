@@ -3,7 +3,7 @@ import { Command } from "../../command-loader.js"
 import { shopItems, addItem, useItem, shops, Shop, stackString, itemString } from "../../items.js"
 import { getUser } from "../../users.js"
 import { format, itemResponseReply } from "../../util.js"
-export var command: Command = {
+export let command: Command = {
     type: ApplicationCommandType.ChatInput,
     name: "shop",
     description: "Shop stuff",
@@ -71,10 +71,10 @@ export var command: Command = {
         getUser(i.user).lastShop = shopName || "main"
         switch (i.options.getSubcommand()) {
             case "list": {
-                var page = 0
-                var pageSize = 10
-                var pageCount = Math.ceil(shop.items.length / pageSize)
-                var components: APIActionRowComponent<any>[] = [new ActionRowBuilder({
+                let page = 0
+                let pageSize = 10
+                let pageCount = Math.ceil(shop.items.length / pageSize)
+                let components: APIActionRowComponent<any>[] = [new ActionRowBuilder({
                     components: [
                         new ButtonBuilder({ emoji: "◀️", style: ButtonStyle.Primary, customId: "prev" }),
                         new ButtonBuilder({ emoji: "▶️", style: ButtonStyle.Primary, customId: "next" }),
@@ -92,7 +92,7 @@ export var command: Command = {
                         components
                     })
                 }
-                var msg = await i.reply({
+                let msg = await i.reply({
                     fetchReply: true,
                     embeds: [
                         {
@@ -133,12 +133,12 @@ export var command: Command = {
                 break;
             }
             case "buy": {
-                var u = getUser(i.user)
-                var item = i.options.getString("item", true)
-                var itm = shop.getItem(item)
-                var itemInfo = shopItems.get(item)
-                var amount = BigInt(i.options.getInteger("amount", false) || 0) || (shop.getMoney(i.user) / (itm?.cost || 1n)) || 1n
-                var autouse = i.options.getBoolean("auto_use")
+                let u = getUser(i.user)
+                let item = i.options.getString("item", true)
+                let itm = shop.getItem(item)
+                let itemInfo = shopItems.get(item)
+                let amount = BigInt(i.options.getInteger("amount", false) || 0) || (shop.getMoney(i.user) / (itm?.cost || 1n)) || 1n
+                let autouse = i.options.getBoolean("auto_use")
                 if (itemInfo) {
                     let res = shop.buyItem(i.user, item, amount)
                     await itemResponseReply(res, i)

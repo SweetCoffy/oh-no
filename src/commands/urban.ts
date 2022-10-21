@@ -18,7 +18,7 @@ interface UDDefinitionData {
     current_vote: string,
     written_on: string,
 }
-export var command: Command = {
+export let command: Command = {
     name: "urban",
     type: ApplicationCommandType.ChatInput,
     description: "Looks up something in urban dictionary",
@@ -31,26 +31,26 @@ export var command: Command = {
         }
     ],
     async run(i: ChatInputCommandInteraction) {
-        var h = await fetch(`${BASE_URL}?term=${encodeURIComponent(i.options.getString("term", true))}`)
+        let h = await fetch(`${BASE_URL}?term=${encodeURIComponent(i.options.getString("term", true))}`)
         if (!h.ok) return await i.reply("epic error moment")
-        var data: UDDefinitionData[] = JSON.parse(await h.text()).list
-        var cur = 0
-        var embeds: APIEmbed[] = []
+        let data: UDDefinitionData[] = JSON.parse(await h.text()).list
+        let cur = 0
+        let embeds: APIEmbed[] = []
         function uFormat(str: string) {
-            var regex = /\[([^\[\]]+)\]/g
+            let regex = /\[([^\[\]]+)\]/g
             return str.replace(regex, function(substr, s: string) {
                 return `[${s}](https://www.urbandictionary.com/define.php?term=${encodeURIComponent(s)})`
             })
         }
         function funi() {
-            var d = data[cur]
+            let d = data[cur]
             embeds = [
                 {
                     title: `${d.word}`
                 }
             ]
-            var s = split(uFormat(d.definition))
-            for (var i = 0; i < s.length; i++) {
+            let s = split(uFormat(d.definition))
+            for (let i = 0; i < s.length; i++) {
                 if (!embeds[i]) {
                     embeds[i] = {
                         description: ""
@@ -59,8 +59,8 @@ export var command: Command = {
                 embeds[i].description = s[i]
             }
             if (d.example) {
-                var s = split(uFormat(d.example))
-                for (var i = 0; i < s.length; i++) {
+                let s = split(uFormat(d.example))
+                for (let i = 0; i < s.length; i++) {
                     if (i == 0) {
                         embeds.push({
                             title: "Example",
@@ -74,10 +74,10 @@ export var command: Command = {
                 }
             }
             function split(str: string) {
-                var parts = str.split(/[ ]/g).map(el => el + " ")
-                var a = []
-                var acc = ""
-                for (var p of parts) {
+                let parts = str.split(/[ ]/g).map(el => el + " ")
+                let a = []
+                let acc = ""
+                for (let p of parts) {
                     if (acc.length + p.length >= 2000) {
                         a.push(acc)
                         acc = ""
@@ -87,7 +87,7 @@ export var command: Command = {
                 if (acc) a.push(acc)
                 return a
             }
-            var last = embeds[embeds.length - 1]
+            let last = embeds[embeds.length - 1]
             last.footer = { text: `Definition ${cur + 1} of ${data.length} | 👍 ${d.thumbs_up} | 👎 ${d.thumbs_down}` }
             last.timestamp = d.written_on
             return embeds
@@ -96,16 +96,16 @@ export var command: Command = {
             ephemeral: true,
             content: "b"
         })
-        var msgs: Message[] = []
+        let msgs: Message[] = []
         async function update() {
-            for (var m of msgs) {
+            for (let m of msgs) {
                 await m.delete()
             }
             msgs = []
-            var e = funi()
-            for (var j = 0; j < e.length; j += 2) {
-                var embeds = e.slice(j, j + 2)
-                var components: APIActionRowComponent<any>[] = []
+            let e = funi()
+            for (let j = 0; j < e.length; j += 2) {
+                let embeds = e.slice(j, j + 2)
+                let components: APIActionRowComponent<any>[] = []
                 if (j >= e.length - 2) {
                     components = [
                         new ActionRowBuilder().addComponents(new ButtonBuilder({ emoji: "◀️", style: ButtonStyle.Primary, customId: "prev" }),
@@ -115,7 +115,7 @@ export var command: Command = {
                 msgs.push(await i.followUp({embeds: [...embeds], components: [...components] }) as Message)
             }
             try {
-                var btn = await msgs[msgs.length - 1].awaitMessageComponent({
+                let btn = await msgs[msgs.length - 1].awaitMessageComponent({
                     time: 1000 * 60,
                     componentType: ComponentType.Button,
                     filter(i) {

@@ -150,7 +150,7 @@ export class Move {
         return this
     }
 }
-export var moves: Collection<string, Move> = new Collection()
+export let moves: Collection<string, Move> = new Collection()
 
 // Physical/Special basic attacks
 moves.set("bonk", new Move("Bonk", "attack", 60))

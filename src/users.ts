@@ -6,7 +6,7 @@ import { writeFileSync, existsSync, readFileSync, mkdirSync } from "fs"
 import { BitArray, BitArray2D, experimental, settings } from './util.js'
 import { client } from './index.js'
 import { Enemy } from './enemies.js'
-export var data: any = {}
+export let data: any = {}
 
 function reviver(k: string, v: any) {
     if (typeof v == "string" && v.startsWith("BigInt(") && v.endsWith(")")) return BigInt(v.slice("BigInt(".length, -1))
@@ -72,12 +72,12 @@ export interface UserSaveData {
     [key: string]: any,
 }
 export function getUserSaveData(info: UserInfo) {
-    var m: any = {}
+    let m: any = {}
     for (let k in info.money) {
         //@ts-ignore
         m[k] = info.money[k] + ""
     }
-    var obj = {
+    let obj = {
         baseStats: info.baseStats,
         preset: info.preset,
         presets: info.presets,
@@ -103,19 +103,19 @@ export interface GlobalData {
         [key: string]: number
     }
 }
-export var globalData: GlobalData = {
+export let globalData: GlobalData = {
     itemStock: {
 
     }
 }
 if (existsSync("global.json")) {
-    var g = JSON.parse(readFileSync("global.json", "utf8"), (k, v) => {
+    let g = JSON.parse(readFileSync("global.json", "utf8"), (k, v) => {
         if (typeof v == "string" && v.startsWith("BigInt:")) return BigInt(v.slice("BigInt:".length))
         return v
     })
     globalData = g || {}
 }
-export var users: Collection<string, UserInfo> = new Collection()
+export let users: Collection<string, UserInfo> = new Collection()
 export function replacer(k: string, v: any) {
     if (typeof v == "bigint") return `BigInt(${v})`
     return v
@@ -125,7 +125,7 @@ export function getUser(user: User | string): UserInfo {
         user = client.users.cache.get(user) as User
     }
     if (!users.get(user.id)) createUser(user)
-    var data = users.get(user.id) as UserInfo;
+    let data = users.get(user.id) as UserInfo;
     if (!data.unloadTimeout) {
         // Don't unload users that are in a lobby as it can cause "funny" things to happen
         data.unloadTimeout = setTimeout(function() {
@@ -141,16 +141,16 @@ export function getUser(user: User | string): UserInfo {
     return data
 }
 export function level(user: User) {
-    var u = getUser(user)
+    let u = getUser(user)
     return Math.floor(Math.cbrt(u.msgLvl_xp))
 }
 export function getLevelUpXP(user: User) {
-    var u = getUser(user)
-    var l = u.level + 1
+    let u = getUser(user)
+    let l = u.level + 1
     return (l * l * l) - ((l-1) * (l-1) * (l-1))
 }
 export function createUser(user: User) {
-    var obj: UserInfo = {
+    let obj: UserInfo = {
         user,
         lobby: undefined,
         baseStats: {...baseStats},
@@ -187,7 +187,7 @@ export function createUser(user: User) {
     if (existsSync(`data/${settings.saveprefix}${user.id}.json`)) {
         obj = {...obj, ...JSON.parse(readFileSync(`data/${settings.saveprefix}${user.id}.json`, "utf8"), reviver)}
     } else obj = {...obj, ...(data[user.id] || {})}
-    for (var k in obj.money) {
+    for (let k in obj.money) {
         //@ts-ignore
         obj.money[k] = BigInt(obj.money[k])
     }
@@ -207,9 +207,9 @@ export function addXP(user: User, amount: number) {
     if (experimental.april_fools) {
         amount << Math.floor(Math.cbrt(Math.random() * 50))
     }
-    var u = getUser(user)
+    let u = getUser(user)
     u.xp += amount
-    var levels = 0;
+    let levels = 0;
     while (u.xp >= getLevelUpXP(user)) {
         u.xp -= getLevelUpXP(user)
         levels++

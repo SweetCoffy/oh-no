@@ -18,7 +18,7 @@ import * as items from "../items.js"
 import { shopItems } from "../items.js"
 import { ApplicationCommandType, ApplicationCommandOptionType } from "discord.js"
 
-export var command: Command = {
+export let command: Command = {
     type: ApplicationCommandType.ChatInput,
     name: "eval",
     description: "Runs JavaScript code. Some features are restricted to the bot owner.",
@@ -32,10 +32,10 @@ export var command: Command = {
         }
     ],
     async run(i: discord.ChatInputCommandInteraction) {
-        var str = ""
-        var data: any = undefined
+        let str = ""
+        let data: any = undefined
         if (i.user.id == settings.ownerID) {
-            var context = {
+            let context = {
                 console,
                 interaction: i,
                 process,
@@ -53,9 +53,9 @@ export var command: Command = {
                 discord,
                 items,
             }
-            var vm = new VM({sandbox: context, timeout: 5000})
+            let vm = new VM({sandbox: context, timeout: 5000})
             let out = vm.run(i.options.getString("code", true))
-            var outstr = out + ""
+            let outstr = out + ""
             if (typeof out == "object") {
                 outstr = inspect(out, true, undefined, true)
             }
@@ -68,20 +68,20 @@ export var command: Command = {
         await i.deferReply()
         
 
-        var w = new Worker("./build/eval-worker.js", 
+        let w = new Worker("./build/eval-worker.js", 
         { workerData: {code: i.options.getString("code", true), userId: i.user.id, dev: i.user.id == settings.ownerID, userData: data, loaded: loaded},
         resourceLimits: {maxOldGenerationSizeMb: 256, maxYoungGenerationSizeMb: 8} })
         
         let out = ""
-        var exited = false
+        let exited = false
         w.on("message", (v) => {
             if (v.type == "return") {
                 out = v.data + ""
             }
             if (v.type == "patch-user") {
-                for (var id in v.data) {
-                    var u = users.get(id)
-                    for (var k in v.data[id]) {
+                for (let id in v.data) {
+                    let u = users.get(id)
+                    for (let k in v.data[id]) {
                         //@ts-ignore
                         u[k] = v.data[id][k]
                     }

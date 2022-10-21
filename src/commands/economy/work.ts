@@ -3,16 +3,16 @@ import { Command } from "../../command-loader.js"
 import { addItem, shopItems } from "../../items.js"
 import { getRank, getUser } from "../../users.js"
 import { format, money, rng } from "../../util.js"
-export var command: Command = {
+export let command: Command = {
     type: ApplicationCommandType.ChatInput,
     name: "work",
     description: "Work and earn money, money earned lowers the more often you use it",
     async run(i) {
-        var real = Math.ceil(50 * (1 + (getRank(i.user) * (1 + ((getRank(i.user) - 1) * 0.03)))))
-        var base = real/2 + Math.floor(Math.random() * real)
-        var t = Math.min((Date.now() - getUser(i.user).lastWork) / 1000, 60*5)
+        let real = Math.ceil(50 * (1 + (getRank(i.user) * (1 + ((getRank(i.user) - 1) * 0.03)))))
+        let base = real/2 + Math.floor(Math.random() * real)
+        let t = Math.min((Date.now() - getUser(i.user).lastWork) / 1000, 60*5)
         base -= Math.floor((60*5 - t) / 60*5 * base*1.1)
-        var earned = BigInt(Math.floor(base)) * (1n + getUser(i.user).multiplier/8n*3n)
+        let earned = BigInt(Math.floor(base)) * (1n + getUser(i.user).multiplier/8n*3n)
         getUser(i.user).money.points += earned
         getUser(i.user).lastWork = Date.now()
         if (earned < 0) {

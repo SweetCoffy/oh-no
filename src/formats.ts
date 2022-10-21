@@ -1,4 +1,4 @@
-export var formats = [
+export let formats = [
     { suffix: ' K', decimalPlaces: 2, min: 1000n },
     { suffix: ' M', decimalPlaces: 2, min: 1000000n },
     { suffix: ' B', decimalPlaces: 2, min: 1000000000n },

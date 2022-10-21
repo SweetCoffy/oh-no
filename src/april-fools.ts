@@ -7,8 +7,8 @@ import { moves } from "./moves.js"
 import { experimental, loadRecursive, RNG } from "./util.js"
 // April fools tomfoolery
 
-var seed = 69
-var rng = new RNG(seed)
+let seed = 69
+let rng = new RNG(seed)
 
 function shuffleCollection(col: Collection<any, any>) {
     let names = [...col.keys()]
@@ -27,10 +27,10 @@ function shuffleCollection(col: Collection<any, any>) {
 }
 
 // Get a list of all the stuff names
-var names: string[] = []
-var namecols: Collection<string, {name: string}>[] = [items, shopItems, enemies, statusTypes, moves]
-for (var c of namecols) {
-    for (var [k, v] of c) {
+let names: string[] = []
+let namecols: Collection<string, {name: string}>[] = [items, shopItems, enemies, statusTypes, moves]
+for (let c of namecols) {
+    for (let [k, v] of c) {
         names.push(v.name)
     }
 }
@@ -44,23 +44,23 @@ shuffleCollection(moves)
 shuffleCollection(enemies)
 shuffleCollection(statusTypes)
 
-var namesleft = new Set(names)
+let namesleft = new Set(names)
 function getName() {
-    var list = Array.from(namesleft)
-    var i = Math.floor(rng.get01() * list.length)
-    var name = list[i]
+    let list = Array.from(namesleft)
+    let i = Math.floor(rng.get01() * list.length)
+    let name = list[i]
     namesleft.delete(name)
     return name ||  names[Math.floor(rng.get01() * names.length)];
 }
-for (var c of namecols) {
-    for (var [k, v] of c) {
+for (let c of namecols) {
+    for (let [k, v] of c) {
         v.name = getName()
         console.log(`${k}: ${v.name}`)
     }
 }
 
 // Randomize experimental flags
-for (var k in experimental) {
+for (let k in experimental) {
     //@ts-ignore
     experimental[k] = rng.get01() < 0.5
 }

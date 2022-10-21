@@ -2,7 +2,7 @@ import { ApplicationCommandOptionType, ApplicationCommandType, ChatInputCommandI
 import { Command, commands } from "../../command-loader.js";
 import { settings } from "../../util.js";
 
-export var command: Command = {
+export let command: Command = {
     name: "deploy",
     dev: true,
     type: ApplicationCommandType.ChatInput,
@@ -18,9 +18,9 @@ export var command: Command = {
     async run(i: ChatInputCommandInteraction) {
         if (i.user.id != settings.ownerID) return await i.reply("not funny")
         await i.deferReply()
-        var cmds = await i.guild?.commands.fetch()
+        let cmds = await i.guild?.commands.fetch()
         if (!cmds) return
-        var p = []
+        let p = []
         for (let [k, v] of cmds) {
             if (v.applicationId == i.client.application?.id) {
                 if (commands.get(v.name)?.dev) continue

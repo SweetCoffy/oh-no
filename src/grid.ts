@@ -3,9 +3,9 @@ export class Grid<T> {
     readonly width: number
     readonly height: number
     constructor(width: number, height: number, func: (x: number, y: number, grid: Grid<T>) => T) {
-        for (var x = 0; x < width; x++) {
+        for (let x = 0; x < width; x++) {
             this.#tiles[x] = []
-            for (var y = 0; y < height; y++) {
+            for (let y = 0; y < height; y++) {
                 this.#tiles[x].push(func(x, y, this))
             }
         }

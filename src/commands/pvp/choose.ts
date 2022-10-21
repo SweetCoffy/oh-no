@@ -6,7 +6,7 @@ import { moves } from '../../moves.js';
 import { getString, LocaleString } from '../../locale.js';
 import { StatID, Stats } from "../../stats.js";
 import { items } from '../../helditem.js';
-export var command: Command = {
+export let command: Command = {
     name: "choose",
     description: "ur mom",
     type: ApplicationCommandType.ChatInput,
@@ -63,17 +63,17 @@ export var command: Command = {
         }
     ],
     async autocomplete(i) {
-        var u = getUser(i.user)
+        let u = getUser(i.user)
         if (!u.lobby?.battle) return await i.respond([])
-        var play = u.lobby.battle.players.find(el => el.user?.id == i.user.id)
+        let play = u.lobby.battle.players.find(el => el.user?.id == i.user.id)
         if (!play) return await i.respond([])
 
-        var focused = i.options.getFocused(true)
+        let focused = i.options.getFocused(true)
         if (focused.name == "move") {
-            var list = moves.filter((v, k) => v.selectable && play?.moveset.includes(k) || false).filter((v, k) => v.name.split(" ").some(el => el.toLowerCase().startsWith(focused.value as string)))
+            let list = moves.filter((v, k) => v.selectable && play?.moveset.includes(k) || false).filter((v, k) => v.name.split(" ").some(el => el.toLowerCase().startsWith(focused.value as string)))
             await i.respond(list.map((v, k) => ({ value: k, name: v.name })))
         } else if (focused.name == "target") {
-            var c = commands.get("info")
+            let c = commands.get("info")
             if (typeof c?.autocomplete == "function") {
                 return await c.autocomplete(i)
             }
@@ -84,23 +84,23 @@ export var command: Command = {
             return moves.findKey(el => el.name == name) || (moves.has(name) && name) || name
         }
         function findPlayerID(name: string) {
-            var split = name.split(" ")
-            var num = parseInt(split[0])
+            let split = name.split(" ")
+            let num = parseInt(split[0])
             return num || Number(name)
         }
         if (!(i.channel instanceof TextChannel)) return await i.reply("What")
-        var u = getUser(i.user)
+        let u = getUser(i.user)
         switch (i.options.getSubcommand()) {
             case "move": {
                 if (!u.lobby?.battle) return await i.reply("You cannot choose outside of battle")
-                var moveId = findMoveID(i.options.getString("move", true))
-                var move = moves.get(moveId)
+                let moveId = findMoveID(i.options.getString("move", true))
+                let move = moves.get(moveId)
                 if (!move) return await i.reply(`Invalid move`)
-                var idx = findPlayerID(i.options.getString("target", true));
-                var player = u.lobby.battle.players[idx]
-                //var player = u.lobby.battle.players.find(el => el.user?.id == target.id)
+                let idx = findPlayerID(i.options.getString("target", true));
+                let player = u.lobby.battle.players[idx]
+                //let player = u.lobby.battle.players.find(el => el.user?.id == target.id)
                 if (!player) return await i.reply("Invalid target")
-                var play = u.lobby.battle.players.find(el => el.user?.id == i.user.id)
+                let play = u.lobby.battle.players.find(el => el.user?.id == i.user.id)
                 if (!play) return await i.reply("What")
                 if (!play.moveset.includes(moveId)) return await i.reply(`This move is not in your moveset`)
                 if (move) {
@@ -127,10 +127,10 @@ export var command: Command = {
                 break;
             }
             case "help": {
-                var moveId = i.options.getString("move", true);
-                var move = moves.get(moveId)
+                let moveId = i.options.getString("move", true);
+                let move = moves.get(moveId)
                 if (move) {
-                    var desc = `**Power**: ${move.power || "-"}\n**Accuracy**: ${move.accuracy}%\n**Category**: ${move.category}`
+                    let desc = `**Power**: ${move.power || "-"}\n**Accuracy**: ${move.accuracy}%\n**Category**: ${move.category}`
                     if (move.type == "attack") desc += `\n**Damage Type**: ${move.setDamage}`
                     function thing(num: number) {
                         if (num > 0) return `+${num}`
@@ -139,9 +139,9 @@ export var command: Command = {
                     function funi(boost: Stats) {
                         return Object.keys(boost).map(el => ({stat: el, boost: boost[el as StatID]})).filter(el => el.boost != 0)
                     }
-                    var userStat = funi(move.userStat)
-                    var targetStat = funi(move.targetStat)
-                    var fields: APIEmbedField[] = []
+                    let userStat = funi(move.userStat)
+                    let targetStat = funi(move.targetStat)
+                    let fields: APIEmbedField[] = []
                     fields.push({
                         name: "General info",
                         value: `${desc}`
@@ -179,7 +179,7 @@ export var command: Command = {
                 break;
             }
             case "item_info": {
-                var item = items.get(i.options.getString("item", true))
+                let item = items.get(i.options.getString("item", true))
                 if (!item) return await i.reply("wh")
                 await i.reply({
                     embeds: [{

@@ -5,15 +5,15 @@ import { existsSync } from "fs"
 import { timeFormat } from "../../util.js"
 import { ApplicationCommandType } from "discord.js";
 
-export var command: Command = {
+export let command: Command = {
     name: "bot-info",
     description: "a",
     type: ApplicationCommandType.ChatInput,
     async run(i) {
-        var gitinfo = ``
+        let gitinfo = ``
         if (existsSync(".git")) {
-            var branch = await readFile(".git/HEAD", "utf8")
-            var hash = await readFile(".git/" + branch.slice("ref: ".length, -1), "utf8")
+            let branch = await readFile(".git/HEAD", "utf8")
+            let hash = await readFile(".git/" + branch.slice("ref: ".length, -1), "utf8")
             gitinfo += `Branch: ${branch.split("/").slice(-1)[0].slice(0, -1)} (${hash.slice(0, 7)})`
         }
         await i.reply({
