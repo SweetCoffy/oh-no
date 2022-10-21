@@ -1,24 +1,38 @@
-import { ItemStack, ItemType, Recipe, recipes, shopItems, shops } from "./items.js";
+import { ItemShop, ItemStack, ItemType, Recipe, recipes, Shop, ShopItem, shopItems, shops } from "./items.js";
 import { Move, moves } from "./moves.js"
 import { Dictionary } from "./util.js";
 import { readFileSync } from "fs";
 import { resolve, join, dirname, basename } from "path";
-import Hjson from "hjson"
 import { locales, setupOwO } from "./locale.js";
 import yaml from "js-yaml"
 type TypeString = "string" | "number" | "bigint" | "itemstack" | "boolean" | "json" | "chance"
 type ArrayTypeString = `array<${TypeString}>`
 type Types = string | number | bigint | ItemStack | boolean | Dictionary<any>
-var defaultProperties: Dictionary<TypeString> = {
-    contentid: "string",
-}
 interface ContentType {
     properties: Dictionary<TypeString | ArrayTypeString>,
     onLoad: (obj: Dictionary<Types | Types[]>) => any
 }
-type Test = `${number}h`
 export var loaded: Dictionary<Dictionary<Types | Types[]>> = {}
 var types: Dictionary<ContentType> = {
+    shop: {
+        properties: {
+            name: "string",
+            type: "string",
+            currencyitem: "string",
+        },
+        onLoad(obj) {
+            let type = Shop
+            //@ts-ignore
+            if (obj.type == "ItemShop") type = ItemShop
+            //@ts-ignore
+            let shop = new type(obj.name as string, obj.items as ShopItem[] || [], obj.currencyitem as string)
+            let existingShop = shops.get(obj.contentid as string)
+            if (existingShop) {
+                shop.items.unshift(...existingShop.items)
+            }
+            shops.set(obj.contentid as string, shop)
+        }
+    },
     item: {
         properties: {
             name: "string",
@@ -132,86 +146,10 @@ var types: Dictionary<ContentType> = {
         }
     }
 }
-export function parseValueType(v: string, type: TypeString | ArrayTypeString): Types | Types[] {
-    if (type == "string") {
-        if (v.indexOf(`"`) == -1) return v.trim();
-        return v.slice(v.indexOf(`"`) + 1, v.lastIndexOf(`"`))
-    } else if (type == "number") {
-        return Number(v.trim())
-    } else if (type == "bigint") {
-        return BigInt(v.trim())
-    } else if (type == "itemstack") {
-        let split = v.trim().split("*")
-        var amt = BigInt(split[0])
-        var id = split[1]
-        return {
-            item: id,
-            amount: amt,
-        }
-    } else if (type.startsWith("array<")) {
-        let h = v.slice(v.indexOf(`[`) + 1, v.lastIndexOf(`]`))
-        let split = h.split(";")
-        var t = type.slice("array<".length, -1) as TypeString
-        //@ts-ignore
-        return split.map(el => parseValueType(el, t))
-    } else if (type == "boolean") {
-        let g = v.trim().toLowerCase()
-        if (g == "true" || g == "1" || g == "on" || g == "yes") return true
-        if (g == "false" || g == "0" || g == "off" || g == "no") return false
-        throw new Error(`Invalid boolean: ${g}`)
-    } else if (type == "json") {
-        var g = Hjson.parse(v)
-        return g
-    } else if (type == "chance") {
-        var h = v.trim().split("%")
-        var chance = Number(h[0]) / 100
-        var thing = h[1]
-        return {
-            id: thing,
-            chance: chance,
-        }
-    }
-    return 0
-}
-export function parse(str: string, basepath: string = ".") {
-    var h = str.split("\n")
-    var type = h.shift() + ""
-    if (type == "include_only") return undefined;
-    var props = {...defaultProperties, ...types[type].properties}
-    var o: Dictionary<Types | Types[]> = {}
-    for (var i = 0; i < h.length; i++) {
-        var s = h[i]
-        if (s.startsWith("#")) {
-            var r = s.slice(1)
-            if (r[0] == " ") r = r.slice(1)
-            var arg = r.split(" ")
-            if (arg[0] == "include") {
-                var path = arg.slice(1).join(" ")
-                h.push(...readFileSync(join(basepath, path), "utf8").split("\n"))
-            }
-            continue;
-        }
-        var g = s.split("=")
-        var kstr = g[0].trim().toLowerCase().replace(/[ \t\n]/g, "")
-        var v = g.slice(1).toString()
-        var keys = kstr.split(",")
-        for (var k of keys) {
-            if (k in props || "*" in props) {
-                var spl = k.split(":")
-                var realk = spl[0].trim()
-                var forceType = spl[1]?.trim() as TypeString | ArrayTypeString
-                o[realk] = parseValueType(v, forceType || props[k] || props["*"])
-            }
-        }
-    }
-    o._contentType = type;
-    return o
-}
 export function load(file: string) {
     console.log(`Loading file: ${file}`)
     file = resolve(join("./", file))
     
-    if (file.endsWith(".owo") || file.endsWith(".balls")) var a: any = parse(readFileSync(file, "utf8"), dirname(file))
     if (file.endsWith(".yml")) {
         var obj: any = yaml.load(readFileSync(file, "utf8"))
         var a: any = {}

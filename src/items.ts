@@ -249,7 +249,7 @@ shopItems.set("sus_bell", new ItemType("Suspicious Looking Bell", "sus_bell", "ð
 //    v.stock = globalData.itemStock[k] ?? v.stock
 //}
 
-interface ShopItem {
+export interface ShopItem {
     id: string,
     cost: bigint,
 }
