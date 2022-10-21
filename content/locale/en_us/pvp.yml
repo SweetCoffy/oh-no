@@ -93,6 +93,7 @@ ability.massive_health_bar: "[u]>[r] n:$.name;'s Massive Health Bar"
 battle.ffa: "Free for All"
 battle.pve: "Players vs Enemies"
 battle.boss: "Vs. Boss"
+battle.team_match: "Team Match"
 
 # Other
 enemy.appears: "n:$.name; appears."
