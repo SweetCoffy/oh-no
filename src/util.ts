@@ -155,12 +155,22 @@ export async function itemResponseReply(res: ItemResponse, i: CommandInteraction
 export function lerp(a: number, b: number, x: number) {
 	return a*x + b*(1-x)
 }
+let date = new Date()
+export var experimental = {
+    // ansi_logs now works well enough and doesn't break on mobile, so it's now 
+    // enabled by default and can't be turned off
+
+    // ohyes_stat_formula shouldn't have even been an option in the first place
+
+    // Now automatically set
+    april_fools: date.getDate() == 1 && date.getMonth() == 4,
+}
 export var settings = {
 	ownerID: "",
   	noSave: false,
     experimental: false,
     unloadTimeout: 2 * 60 * 1000,
-    saveprefix: "",
+    saveprefix: experimental.april_fools ? "fools_" : "",
     maxMoves: 5,
     accentColor: 0x15deff,
 }
@@ -255,12 +265,6 @@ export function min(...numbers: bigint[]): bigint {
     return m || 0n
 }
 
-export var experimental = {
-    // ansi_logs now works well enough and doesn't break on mobile, so it's now 
-    // enabled by default and can't be turned off
-    // ohyes_stat_formula shouldn't have even been an option in the first place
-    april_fools: false,
-}
 export function money(amount: bigint) {
     return `${CURRENCY_ICON}${format(amount)}`
 }
