@@ -20,7 +20,7 @@ export var command: Command = {
         var cur = getRank(i.user)
         var next = cur + 1
 
-        var cost = BigInt(i.options.get("money", true).value as number)
+        var cost = BigInt(i.options.getInteger("money", true))
         if (u.money.points < cost) return await i.reply(`Not enough money`)
         u.money.points -= cost;
         u.rank_xp += Number(cost)

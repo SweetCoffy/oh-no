@@ -272,7 +272,7 @@ export var command: Command = {
             }
             case "join": {
                 if (getUser(i.user).lobby) return await i.reply("eriughergieuhgr")
-                let lobby = lobbies.get(i.options.get("id", true).value as string)
+                let lobby = lobbies.get(i.options.getString("id", true))
                 if (!lobby) return await i.reply("uaishfuiersnvgeiurgrgerg")
                 let team = i.options.getInteger("team", false) ?? undefined
                 if (lobby.type == "team_match" && team == undefined) team = await teamPrompt(i, lobby.teamCount)
@@ -281,15 +281,15 @@ export var command: Command = {
                 break;
             }
             case "create": {
-                let botCount = i.options.get("bot_count", false)?.value as number || 0
-                let lobby = createLobby(i.user, i.options.get("name", false)?.value as string || undefined, 100000)
-                let teamCount = i.options.get("team_count", false)?.value as number || 4
+                let botCount = i.options.getInteger("bot_count", false) || 0
+                let lobby = createLobby(i.user, i.options.getString("name", false) || undefined, 100000)
+                let teamCount = i.options.getInteger("team_count", false) || 4
                 if (teamCount < MinTeams) return await i.reply(`Too little teams (min: ${MinTeams})`)
                 if (teamCount > MaxTeams) return await i.reply(`Too many teams (max: ${MaxTeams})`)
-                lobby.level = i.options.get("level", false)?.value as number || 50
+                lobby.level = i.options.getInteger("level", false) || 50
                 lobby.botCount = botCount
-                lobby.type = (i.options.get("battle_type", false)?.value as string || "ffa") as BattleType
-                lobby.difficulty = (i.options.get("difficulty", false)?.value as string || "medium") as Difficulty
+                lobby.type = (i.options.getString("battle_type", false) || "ffa") as BattleType
+                lobby.difficulty = (i.options.getString("difficulty", false) || "medium") as Difficulty
                 lobby.bossType = i.options.getString("boss_type", false) || undefined
                 lobby.flags = i.options.getString("flags", false) || ""
                 lobby.teamCount = teamCount

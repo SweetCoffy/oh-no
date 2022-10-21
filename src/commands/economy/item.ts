@@ -125,7 +125,7 @@ export var command: Command = {
         var inv = getUser(i.user).items;
         var query = focused.value.toString().toLowerCase();
         if (focused.name == "args") {
-            var it = getItem(i.user, i.options.get("item", true).value as string)
+            var it = getItem(i.user, i.options.getString("item", true))
             if (it) {
                 var a = shopItems.get(it.item)?.autocomplete
                 if (a) return await a(i.user, it, i)
@@ -203,8 +203,8 @@ export var command: Command = {
                 break;
             }
             case "use": {
-                var item = i.options.get("item", true).value as string
-                var amount = BigInt(i.options.get("amount", false)?.value as number || 0) || getItem(i.user, item)?.amount || 1n
+                var item = i.options.getString("item", true)
+                var amount = BigInt(i.options.getInteger("amount", false) || 0) || getItem(i.user, item)?.amount || 1n
                 var args: string[] = lexer(i.options.get("args")?.value as string || "")
                 var resGen = useItem(i.user, item, amount, ...args)
                 for await (let res of resGen) {
@@ -213,8 +213,8 @@ export var command: Command = {
                 break;
             }
             case "sell": {
-                var item = i.options.get("item", true).value as string
-                var amount = BigInt(i.options.get("amount", false)?.value as number || 0) || getItem(i.user, item)?.amount || 1n
+                var item = i.options.getString("item", true)
+                var amount = BigInt(i.options.getInteger("amount", false) || 0) || getItem(i.user, item)?.amount || 1n
                 var it = getItem(i.user, item)
                 var itemInfo = shopItems.get(it?.item as string)
                 if (!it) return await i.reply("Bruh")
@@ -231,8 +231,8 @@ export var command: Command = {
                 break;
             }
             case "smelt": {
-                var item = i.options.get("item", true).value as string
-                var amount = BigInt(i.options.get("amount", false)?.value as number || 0) || getItem(i.user, item)?.amount || 1n
+                var item = i.options.getString("item", true)
+                var amount = BigInt(i.options.getInteger("amount", false) || 0) || getItem(i.user, item)?.amount || 1n
                 var it = getItem(i.user, item)
                 var itemInfo = shopItems.get(it?.item as string)
                 if (!it) return await i.reply("Bruh")
@@ -253,8 +253,8 @@ export var command: Command = {
                 break;
             }
             case "burn": {
-                var item = i.options.get("item", true).value as string
-                var amount = BigInt(i.options.get("amount", false)?.value as number || 0) || getItem(i.user, item)?.amount || 1n
+                var item = i.options.getString("item", true)
+                var amount = BigInt(i.options.getInteger("amount", false) || 0) || getItem(i.user, item)?.amount || 1n
                 var it = getItem(i.user, item)
                 var itemInfo = shopItems.get(it?.item as string)
                 if (!it) return await i.reply("Bruh")
@@ -268,10 +268,10 @@ export var command: Command = {
                 break;
             }
             case "craft": {
-                var recipe = i.options.get("recipe", true).value as string
+                var recipe = i.options.getString("recipe", true)
                 var r = recipes.get(recipe)
                 if (!r) return await i.reply(`invalid recipe`)
-                var amount = BigInt(i.options.get("amount", false)?.value as number || 0) || r.canCraft(i.user);
+                var amount = BigInt(i.options.getInteger("amount", false) || 0) || r.canCraft(i.user);
                 if (amount > r.canCraft(i.user)) return await i.reply(`bru`);
                 for (let it of r.input) {
                     let stack = getItem(i.user, it.item)

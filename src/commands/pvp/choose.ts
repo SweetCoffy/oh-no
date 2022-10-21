@@ -93,10 +93,10 @@ export var command: Command = {
         switch (i.options.getSubcommand()) {
             case "move": {
                 if (!u.lobby?.battle) return await i.reply("You cannot choose outside of battle")
-                var moveId = findMoveID(i.options.get("move", true).value as string)
+                var moveId = findMoveID(i.options.getString("move", true))
                 var move = moves.get(moveId)
                 if (!move) return await i.reply(`Invalid move`)
-                var idx = findPlayerID(i.options.get("target", true).value as string);
+                var idx = findPlayerID(i.options.getString("target", true));
                 var player = u.lobby.battle.players[idx]
                 //var player = u.lobby.battle.players.find(el => el.user?.id == target.id)
                 if (!player) return await i.reply("Invalid target")
@@ -127,7 +127,7 @@ export var command: Command = {
                 break;
             }
             case "help": {
-                var moveId = i.options.get("move", true).value as string;
+                var moveId = i.options.getString("move", true);
                 var move = moves.get(moveId)
                 if (move) {
                     var desc = `**Power**: ${move.power || "-"}\n**Accuracy**: ${move.accuracy}%\n**Category**: ${move.category}`
@@ -179,12 +179,12 @@ export var command: Command = {
                 break;
             }
             case "item_info": {
-                var item = items.get(i.options.get("item", true).value as string)
+                var item = items.get(i.options.getString("item", true))
                 if (!item) return await i.reply("wh")
                 await i.reply({
                     embeds: [{
                         title: `${item.icon || "❓"} ${item.name}`,
-                        description: `**Effect**: ${item.passiveEffect || "N/A"}\n**ID**: ${i.options.get("item", true).value as string}`
+                        description: `**Effect**: ${item.passiveEffect || "N/A"}\n**ID**: ${i.options.getString("item", true)}`
                     }]
                 })
                 break;

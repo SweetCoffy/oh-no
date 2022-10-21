@@ -1,6 +1,6 @@
 import { Command } from "../command-loader.js"
 import fetch from "node-fetch"
-import {Message, ComponentType, ApplicationCommandOptionType, ApplicationCommandType, ActionRowBuilder, ButtonBuilder, AnyComponentBuilder, ButtonStyle, APIActionRowComponent, APIButtonComponent, APIEmbed } from "discord.js"
+import {Message, ComponentType, ApplicationCommandOptionType, ApplicationCommandType, ActionRowBuilder, ButtonBuilder, AnyComponentBuilder, ButtonStyle, APIActionRowComponent, APIButtonComponent, APIEmbed, ChatInputCommandInteraction } from "discord.js"
 const BASE_URL = "http://api.urbandictionary.com/v0/define"
 interface UDDefinitionData {
     permalink: string,
@@ -30,8 +30,8 @@ export var command: Command = {
             required: true,
         }
     ],
-    async run(i) {
-        var h = await fetch(`${BASE_URL}?term=${encodeURIComponent(i.options.get("term", true).value as string)}`)
+    async run(i: ChatInputCommandInteraction) {
+        var h = await fetch(`${BASE_URL}?term=${encodeURIComponent(i.options.getString("term", true))}`)
         if (!h.ok) return await i.reply("epic error moment")
         var data: UDDefinitionData[] = JSON.parse(await h.text()).list
         var cur = 0

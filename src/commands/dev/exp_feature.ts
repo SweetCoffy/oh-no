@@ -21,7 +21,7 @@ export var command: Command = {
     ],
     async run(i: ChatInputCommandInteraction) {
         if (i.user.id != settings.ownerID) return await i.reply({content: "This command is for developers only"})
-        var f = i.options.get("feature", true).value as string
+        var f = i.options.getString("feature", true)
         var v = i.options.getBoolean("value", true)
         //@ts-ignore
         experimental[f] = v

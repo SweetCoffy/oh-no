@@ -205,7 +205,7 @@ export var command: Command = {
                         highestI = weights.length - 1
                     }
                 }
-                var maxTotal = i.options.getNumber("total", false) || getMaxTotal({ ability: i.options.get("ability", false)?.value as string || undefined })
+                var maxTotal = i.options.getNumber("total", false) || getMaxTotal({ ability: i.options.getString("ability", false) || undefined })
                 var stats = getWeighted(weights, maxTotal).map(el => Math.floor(el))
                 var total = stats.reduce((prev, cur) => prev + cur, 0)
                 var missing = maxTotal - total
@@ -213,8 +213,8 @@ export var command: Command = {
                 await i.reply(`${Object.keys(makeStats()).map((el, i) => `\`${el.padEnd(6, " ")} ${stats[i].toString().padStart(3, " ")} ${bar(stats[i], 300)}\``).join("\n")}\nJSON: \`${JSON.stringify(
                     {
                         weights: weights,
-                        helditems: (i.options.get("held_items", false)?.value as string || "").split(",").map(el => el.trim()), 
-                        ability: i.options.get("ability", false)?.value as string
+                        helditems: (i.options.getString("held_items", false) || "").split(",").map(el => el.trim()), 
+                        ability: i.options.getString("ability", false)
                     })}\``)
                 break;
             }
@@ -227,7 +227,7 @@ export var command: Command = {
                 break;
             }
             case "preset": {
-                let p = getPreset(i.options.get("preset", false)?.value as string || getUser(i.user).preset, i.user)
+                let p = getPreset(i.options.getString("preset", false) || getUser(i.user).preset, i.user)
                 if (!p) return await i.reply(`Preset not found`)
                 let stats = p.stats
                 let json = JSON.stringify({weights: Object.values(p.stats), helditems: p.helditems, ability: p.ability})
@@ -237,7 +237,7 @@ export var command: Command = {
             }
             case "delete": {
                 var list = getPresetList(i.user);
-                var preset = i.options.get("preset", true).value as string
+                var preset = i.options.getString("preset", true)
                 if (!(preset in list)) return await i.reply(`Invalid preset`);
                 if (presets.has(preset)) return await i.reply(`Can't delete a default preset`);
                 delete getUser(i.user).presets[preset];
@@ -246,8 +246,8 @@ export var command: Command = {
             }
             case "create": {
                 if (Object.keys(getPresetList(i.user)).length >= presets.size + 25) return await i.reply(`You can't create more than 25 presets`);
-                var name = i.options.get("name", true).value as string
-                var json = i.options.get("json", true).value as string
+                var name = i.options.getString("name", true)
+                var json = i.options.getString("json", true)
                 var id = name.toLowerCase().replace(/[^A-Za-z_\-0-9 ]/g, "-")
                 let existing = getUser(i.user).presets[id]
                 if (existing) {
@@ -287,7 +287,7 @@ export var command: Command = {
                 break
             }
             case "use": {
-                var id = i.options.get("preset", true).value as string
+                var id = i.options.getString("preset", true)
                 var p = getPreset(id, i.user)
                 if (!p) return await i.reply("Unknown preset")
                 var u = getUser(i.user)
@@ -301,10 +301,10 @@ export var command: Command = {
                 break;
             }
             case "held_items": {
-                let item = i.options.get("items", false)?.value as string
+                let item = i.options.getString("items", false)
                 let u = getUser(i.user)
-                let preset = u.presets[i.options.get("preset", false)?.value as string as string]
-                if (!preset && i.options.get("preset", false)?.value as string) return await i.reply(`Unknown preset`)
+                let preset = u.presets[i.options.getString("preset", false) as string]
+                if (!preset && i.options.getString("preset", false)) return await i.reply(`Unknown preset`)
                 if (item) {
                     if (preset) {
                         preset.helditems = item.split(",").map(el => el.trim()).filter(el => items.has(el))
@@ -315,9 +315,9 @@ export var command: Command = {
             }
             case "ability": {
                 var u = getUser(i.user)
-                var a = i.options.get("ability", false)?.value as string || undefined
-                let preset = u.presets[i.options.get("preset", false)?.value as string as string]
-                if (!preset && i.options.get("preset", false)?.value as string) return await i.reply(`Unknown preset`)
+                var a = i.options.getString("ability", false) || undefined
+                let preset = u.presets[i.options.getString("preset", false) as string]
+                if (!preset && i.options.getString("preset", false)) return await i.reply(`Unknown preset`)
                 if (preset) {
                     preset.ability = a
                     console.log(preset)

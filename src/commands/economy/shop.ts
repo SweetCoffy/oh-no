@@ -134,10 +134,10 @@ export var command: Command = {
             }
             case "buy": {
                 var u = getUser(i.user)
-                var item = i.options.get("item", true).value as string
+                var item = i.options.getString("item", true)
                 var itm = shop.getItem(item)
                 var itemInfo = shopItems.get(item)
-                var amount = BigInt(i.options.get("amount", false)?.value as number || 0) || (shop.getMoney(i.user) / (itm?.cost || 1n)) || 1n
+                var amount = BigInt(i.options.getInteger("amount", false) || 0) || (shop.getMoney(i.user) / (itm?.cost || 1n)) || 1n
                 var autouse = i.options.getBoolean("auto_use")
                 if (itemInfo) {
                     let res = shop.buyItem(i.user, item, amount)

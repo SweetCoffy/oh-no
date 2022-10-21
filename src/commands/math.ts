@@ -23,7 +23,7 @@ export var command: Command = {
         }
     ],
     async run(i) {
-        var p = BigInt(i.options.get("precision", false)?.value as number || 24)
+        var p = BigInt(i.options.getInteger("precision", false) || 24)
         if (p > 64n || p < 1n) return await i.reply(`precision: ${p} is out of the range 1 - 64`)
         var f = new Fixed(p)
         var u = getUser(i.user)
@@ -44,8 +44,8 @@ export var command: Command = {
                 return Reflect.set(t, p, v, r)
             },
         })
-        var result = f.eval(i.options.get("op", true).value as string, vars)
-        await i.reply(`\`${i.options.get("op", true).value as string}\` = ${f.toString(result, 3n)} (Raw value: ${result})\n${
+        var result = f.eval(i.options.getString("op", true), vars)
+        await i.reply(`\`${i.options.getString("op", true)}\` = ${f.toString(result, 3n)} (Raw value: ${result})\n${
             Object.keys(vars).filter(el => modifiedVars[el]).map(el => `\`${el}\`: ${f.toString(vars[el], 3n)} (Raw: ${vars[el]})`).join("\n")
         }`)
     }

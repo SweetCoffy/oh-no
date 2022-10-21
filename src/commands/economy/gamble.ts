@@ -15,7 +15,7 @@ export var command: Command = {
         }
     ],
     async run(i: ChatInputCommandInteraction) {
-        var m = BigInt(i.options.get("money", true).value as number)
+        var m = BigInt(i.options.getInteger("money", true))
         var u = getUser(i.user)
         if (getRank(i.user) < 10) return await i.reply(`You must be at least Rank 10 to gamble`)
         if (u.money.points < m) return await i.reply(`You can't gamble more money than you have!`)
