@@ -60,6 +60,9 @@ export function stackString(stack: ItemStack, icon: boolean = true) {
     `${stack.data?.type?.startsWith("tool") ? ` (${Math.floor(stack.data.durability)} / ${Math.floor(stack.data.durability_max)} Durability)` : ``}` +
     `${type?.stackInfo ? `${type.stackInfo(stack)} ` : ``}`
 }
+export function itemString(id: string) {
+    return stackString({ item: id, amount: 1n })
+}
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary"
 export class ItemType {
     name: string

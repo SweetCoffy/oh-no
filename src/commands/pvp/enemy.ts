@@ -1,3 +1,4 @@
+import { ApplicationCommandType, ApplicationCommandOptionType, ChatInputCommandInteraction } from "discord.js"
 import { Command } from "../../command-loader.js"
 import { enemies } from "../../enemies.js"
 import { StatID } from "../../stats.js"
@@ -6,17 +7,17 @@ import { bar } from "../../util.js"
 export var command: Command = {
     name: "enemy",
     description: "le bruhe",
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     options: [
         {
-            type: "STRING",
+            type: ApplicationCommandOptionType.String,
             required: false,
             name: "enemy",
             description: "a",
         }
     ],
-    async run(i) {
-        var e = enemies.get(i.options.getString("enemy") || "")
+    async run(i: ChatInputCommandInteraction) {
+        var e = enemies.get(i.options.getString("enemy", false) || "")
         if (e) {
             var max = Math.max(300, Math.max(...Object.values(e.stats)))
             await i.reply({

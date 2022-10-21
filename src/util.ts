@@ -1,4 +1,4 @@
-import { ButtonInteraction, Collection, CommandInteraction, ContextMenuInteraction, Interaction, Message, MessageActionRow, MessageButton } from "discord.js"
+import { ActionRowBuilder, APIActionRowComponent, ButtonBuilder, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, ContextMenuCommandInteraction, Message } from "discord.js"
 import { abilities } from "./abilities.js"
 import { formats } from "./formats.js"
 import { ItemResponse, ItemStack, shopItems } from "./items.js"
@@ -131,7 +131,7 @@ export function format(number: bigint) {
 	if (abs(number) > funi.min * 1000n) return `${yes(number)}`
     return `${m}.${d}${funi.suffix}`
 }
-export async function itemResponseReply(res: ItemResponse, i: CommandInteraction | ContextMenuInteraction) {
+export async function itemResponseReply(res: ItemResponse, i: CommandInteraction | ContextMenuCommandInteraction) {
     if (!res.reason) {
         res = {
             type: "info",
@@ -162,6 +162,7 @@ export var settings = {
     unloadTimeout: 2 * 60 * 1000,
     saveprefix: "",
     maxMoves: 5,
+    accentColor: 0x15deff,
 }
 export class BitArray extends Uint8Array {
 	getBit(bit: number) {
@@ -312,10 +313,10 @@ export function timeFormat(seconds: number) {
 	return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
 }
 export async function confirmation(i: CommandInteraction | ButtonInteraction, str: string) {
-    let components = [new MessageActionRow().addComponents(
-        new MessageButton().setLabel("YES").setCustomId("yes").setStyle("SUCCESS"),
-        new MessageButton().setLabel("NO").setCustomId("no").setStyle("DANGER"),
-    )]
+    let components: APIActionRowComponent<any>[] = [new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setLabel("YES").setCustomId("yes").setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setLabel("NO").setCustomId("no").setStyle(ButtonStyle.Danger),
+    ).toJSON()]
     var reply: Message
     if (i.replied) reply = await i.followUp({
         content: str,
@@ -329,7 +330,7 @@ export async function confirmation(i: CommandInteraction | ButtonInteraction, st
     }) as Message
     try {        
         let int = await reply.awaitMessageComponent({
-            componentType: "BUTTON",
+            componentType: ComponentType.Button,
             filter: (interaction) => {
                 if (interaction.user.id != i.user.id) {
                     interaction.reply({ content: "This isn't for you", ephemeral: true })

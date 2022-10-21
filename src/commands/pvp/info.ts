@@ -1,5 +1,5 @@
 // "stable" version info command
-import { MessageAttachment } from "discord.js"
+import { ApplicationCommandOptionType, ApplicationCommandType, ChatInputCommandInteraction } from "discord.js"
 import { calcMul, statusTypes, teamNames } from "../../battle.js"
 import { Command } from "../../command-loader.js"
 import { StatID } from "../../stats.js"
@@ -7,12 +7,12 @@ import { getUser } from "../../users.js"
 import { bar } from "../../util.js"
 import { inspect } from "util"
 export var command: Command = {
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     name: "info",
     description: "pingery",
     options: [
         {
-            type: "STRING",
+            type: ApplicationCommandOptionType.String,
             name: "player",
             required: false,
             description: "a",
@@ -25,7 +25,7 @@ export var command: Command = {
         var b = u.lobby.battle;
         return await i.respond(b.players.map((el, i) => ({name: `#${i} ${el.name} (${Math.floor(el.hp / el.maxhp * 100)}%, Team ${teamNames[el.team]})`, value: i + ""})))
     },
-    async run(i) {
+    async run(i: ChatInputCommandInteraction) {
         function findPlayerID(name: string) {
             var split = name.split(" ")
             var num = parseInt(split[0])
@@ -36,7 +36,7 @@ export var command: Command = {
             ephemeral: true,
             content: "bruh",
         })
-        var idx = findPlayerID(i.options.getString("player") || "") ?? lobby.battle.players.findIndex(el => el.user?.id == i.user.id)
+        var idx = findPlayerID(i.options.getString("player", false) || "") ?? lobby.battle.players.findIndex(el => el.user?.id == i.user.id)
         var player = lobby.battle.players[idx]
         if (!player) return await i.reply({
             ephemeral: true,
@@ -53,7 +53,6 @@ export var command: Command = {
                 return `${el.toUpperCase()}: ${Math.floor(player.stats[el as StatID])}\n├${mds.filter(el => !el.disabled).map(el => `${el.label || "Unknown modifier"}: ${el.type == "add" ? `+` : "x"}${el.value.toFixed(2)}`).join("\n├")}\n└Stage modifier: ${calcMul(player.statStages[el as StatID]).toFixed(2)}x`
             }).join("\n")}\n`
                 + "\n```",
-            files: [new MessageAttachment(Buffer.from(inspect(player.events, false, 4, false)), "debug_events.js")]
         })
     }
 }

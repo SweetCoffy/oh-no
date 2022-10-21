@@ -1,13 +1,14 @@
+import { ApplicationCommandType, ApplicationCommandOptionType } from "discord.js"
 import { Command } from "../../command-loader.js"
 import { getLevelUpXP, getUser, level, getRank } from "../../users.js"
 import { bar, format, settings, money } from "../../util.js"
 export var command: Command = {
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     name: "profile",
     description: "bru",
     options: [
         {
-            type: "USER",
+            type: ApplicationCommandOptionType.User,
             name: "user",
             description: "asd",
             required: false,
@@ -23,7 +24,7 @@ export var command: Command = {
             embeds: [
                 {
                     title: `${user.username}'s Profile`,
-                    color: user.hexAccentColor || 0,
+                    color: settings.accentColor,
                     description: 
 `
 **Account**

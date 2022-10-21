@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType, ChatInputCommandInteraction } from "discord.js";
 import { Command } from "../../command-loader.js";
 import { experimental, settings } from "../../util.js";
 
@@ -9,18 +10,18 @@ export var command: Command = {
         {
             name: "feature",
             description: "a",
-            type: "STRING",
+            type: ApplicationCommandOptionType.String,
             choices: Object.keys(experimental).map(el => ({ name: el, value: el }))
         },
         {
             name: "value",
             description: "a",
-            type: "BOOLEAN",
+            type: ApplicationCommandOptionType.Boolean,
         }
     ],
-    async run(i) {
+    async run(i: ChatInputCommandInteraction) {
         if (i.user.id != settings.ownerID) return await i.reply({content: "This command is for developers only"})
-        var f = i.options.getString("feature", true)
+        var f = i.options.get("feature", true).value as string
         var v = i.options.getBoolean("value", true)
         //@ts-ignore
         experimental[f] = v

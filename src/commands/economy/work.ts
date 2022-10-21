@@ -1,9 +1,10 @@
+import { ApplicationCommandType } from "discord.js"
 import { Command } from "../../command-loader.js"
 import { addItem, shopItems } from "../../items.js"
 import { getRank, getUser } from "../../users.js"
 import { format, money, rng } from "../../util.js"
 export var command: Command = {
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     name: "work",
     description: "Work and earn money, money earned lowers the more often you use it",
     async run(i) {

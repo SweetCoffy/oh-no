@@ -1,10 +1,9 @@
-import { CommandInteraction, Collection, Guild, ContextMenuInteraction, ChatInputApplicationCommandData, UserApplicationCommandData, AutocompleteInteraction } from "discord.js";
+import { CommandInteraction, Collection, Guild, ContextMenuCommandInteraction, ChatInputApplicationCommandData, UserApplicationCommandData, AutocompleteInteraction } from "discord.js";
 import { statSync, readdirSync } from "fs"
 import { resolve, join } from "path"
 import { settings } from "./util.js"
-
 export type ChatInputCommand = ChatInputApplicationCommandData & { run(i: CommandInteraction): any}
-export type UserCommand = UserApplicationCommandData & { run(i: ContextMenuInteraction): any }
+export type UserCommand = UserApplicationCommandData & { run(i: ContextMenuCommandInteraction): any }
 
 export type Command = (ChatInputCommand | UserCommand) & {dev?: boolean, autocomplete?(i: AutocompleteInteraction): any}
 
@@ -33,7 +32,7 @@ export async function loadDir(dir: string) {
         return files
     }
     var files = readdirRecursive(fulldir)
-    return await Promise.all(files.map(el => load(`${el}`)))
+    return (await Promise.allSettled(files.map(el => load(`${el}`)))).map((v, i) => ({file: files[i], value: v}))
 }
 
 export async function addCommands(g: Guild, cmds: Command[]) {

@@ -1,4 +1,4 @@
-import { User, Collection, TextChannel, Message, TextBasedChannel, EmbedFieldData, MessageAttachment } from "discord.js"
+import { User, Collection, TextChannel, Message, TextBasedChannel, APIEmbedField, AttachmentBuilder } from "discord.js"
 import { EventEmitter } from "events"
 import { setKeys, rng, randomRange, bar, experimental, Dictionary, getID, subscriptNum, xOutOfY, name, colorToANSI, LogColor, formatString, LogColorWAccent, format, getName } from "./util.js"
 import { makeStats, calcStats, Stats, baseStats, StatID } from "./stats.js"
@@ -754,7 +754,7 @@ export class Battle extends EventEmitter {
             }
             str = `\`\`\`ansi\n${str}\n\`\`\``
         }
-        var fields: EmbedFieldData[] = []
+        var fields: APIEmbedField[] = []
         if (this.isPve) {
             if (this.type == "boss") {
                 fields.push({
@@ -809,7 +809,7 @@ export class Battle extends EventEmitter {
                     description: "```ansi" + "\n" + b.logs.slice(-35).join("\n").slice(-1900) + "\n```"
                 }
             ],
-            files: [new MessageAttachment(Buffer.from(b.logs.join("\n")), "log.ansi")]
+            files: [new AttachmentBuilder(Buffer.from(b.logs.join("\n"))).setName("log.ansi")]
         })
         return msg
     }

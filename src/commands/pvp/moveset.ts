@@ -1,4 +1,4 @@
-import { Message, MessageActionRow, MessageButton, MessageSelectMenu } from "discord.js";
+import { ActionRowBuilder, APIActionRowComponent, ApplicationCommandType, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, Message, SelectMenuBuilder } from "discord.js";
 import { Command } from "../../command-loader.js";
 import { moves } from "../../moves.js";
 import { getUser } from "../../users.js";
@@ -7,14 +7,14 @@ import { settings } from "../../util.js";
 export var command: Command = {
     name: "moveset",
     description: "A",
-    type: "CHAT_INPUT",
-    async run(i) {
+    type: ApplicationCommandType.ChatInput,
+    async run(i: ChatInputCommandInteraction) {
         var msg = await i.reply({
             content: "Choose your moveset",
             components: [
-                new MessageActionRow({
+                new ActionRowBuilder ({
                     components: [
-                        new MessageSelectMenu({
+                        new SelectMenuBuilder ({
                             maxValues: settings.maxMoves,
                             minValues: settings.maxMoves,
                             customId: "moveset",
@@ -28,22 +28,22 @@ export var command: Command = {
                             })
                         }),
                     ]
-                }),
-                new MessageActionRow({
+                }).toJSON(),
+                new ActionRowBuilder ({
                     components: [
-                        new MessageButton({
+                        new ButtonBuilder ({
                             label: "CONFIRM",
-                            style: "SUCCESS",
+                            style: ButtonStyle.Success,
                             customId: "yes",
                         }),
-                        new MessageButton({
+                        new ButtonBuilder ({
                             label: "CANCEL",
-                            style: "DANGER",
+                            style: ButtonStyle.Danger,
                             customId: "no",
                         }),
                     ]
-                })
-            ],
+                }).toJSON()
+            ] as APIActionRowComponent<any>[],
             fetchReply: true
         }) as Message<boolean>
         var moveset = getUser(i.user).moveset
@@ -63,7 +63,7 @@ export var command: Command = {
             }
             if (interaction.customId == "yes") {
                 await i.editReply({
-                    content: `${moveset.join(", ")}`,
+                    content: `${moveset.map(v => moves.get(v)?.name).join(", ")}`,
                     components: []
                 })
                 getUser(i.user).moveset = moveset;

@@ -3,11 +3,12 @@ import { uptime, arch, platform, version, release } from "os"
 import { readFile } from "fs/promises"
 import { existsSync } from "fs"
 import { timeFormat } from "../../util.js"
+import { ApplicationCommandType } from "discord.js";
 
 export var command: Command = {
     name: "bot-info",
     description: "a",
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     async run(i) {
         var gitinfo = ``
         if (existsSync(".git")) {

@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType, ApplicationCommandType } from "discord.js";
 import { Player } from "../../battle.js";
 import { Command } from "../../command-loader.js";
 import { enemies, Enemy } from "../../enemies.js";
@@ -10,15 +11,8 @@ import { money, randomRange, weightedDistribution, weightedRandom } from "../../
 export var command: Command = {
     name: "hunt",
     description: "a",
-    type: "CHAT_INPUT",
-    options: [
-        {
-            type: "BOOLEAN",
-            name: "dont_start",
-            required: false,
-            description: "fuc",
-        }
-    ],
+    type: ApplicationCommandType.ChatInput,
+    options: [],
     async run(i) {
         if (!i.channel) return await i.reply("what")
         var u = getUser(i.user)

@@ -1,7 +1,7 @@
 import { createLobby, findValidLobby, lobbies } from '../../lobby.js';
 import { Command, commands } from '../../command-loader.js'
 import { getUser, users } from '../../users.js';
-import { EmbedFieldData, TextChannel } from 'discord.js';
+import { APIEmbedField, ApplicationCommandOptionType, ApplicationCommandType, ChatInputCommandInteraction, TextChannel } from 'discord.js';
 import { moves } from '../../moves.js';
 import { getString, LocaleString } from '../../locale.js';
 import { StatID, Stats } from "../../stats.js";
@@ -9,24 +9,24 @@ import { items } from '../../helditem.js';
 export var command: Command = {
     name: "choose",
     description: "ur mom",
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     options: [
 
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             description: "Choose a move",
             name: "move",
             options: [
                 {
                     name: "move",
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     required: true,
                     description: "The move to use",
                     autocomplete: true
                 },
                 {
                     name: "target",
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     required: true,
                     description: "The target of the move",
                     autocomplete: true,
@@ -34,13 +34,13 @@ export var command: Command = {
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             description: "Shows info about a move",
             name: "help",
             options: [
                 {
                     name: "move",
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     required: true,
                     description: "The move to show info about",
                     choices: moves.map((el, k) => ({name: el.name, value: k}))
@@ -48,13 +48,13 @@ export var command: Command = {
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             description: "Shows info about an item",
             name: "item_info",
             options: [
                 {
                     name: "item",
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     required: true,
                     description: "The item",
                     choices: items.map((el, k) => ({ name: el.name, value: k }))
@@ -79,7 +79,7 @@ export var command: Command = {
             }
         }
     },
-    async run(i) {
+    async run(i: ChatInputCommandInteraction) {
         function findMoveID(name: string) {
             return moves.findKey(el => el.name == name) || (moves.has(name) && name) || name
         }
@@ -93,10 +93,10 @@ export var command: Command = {
         switch (i.options.getSubcommand()) {
             case "move": {
                 if (!u.lobby?.battle) return await i.reply("You cannot choose outside of battle")
-                var moveId = findMoveID(i.options.getString("move", true))
+                var moveId = findMoveID(i.options.get("move", true).value as string)
                 var move = moves.get(moveId)
                 if (!move) return await i.reply(`Invalid move`)
-                var idx = findPlayerID(i.options.getString("target", true));
+                var idx = findPlayerID(i.options.get("target", true).value as string);
                 var player = u.lobby.battle.players[idx]
                 //var player = u.lobby.battle.players.find(el => el.user?.id == target.id)
                 if (!player) return await i.reply("Invalid target")
@@ -127,7 +127,7 @@ export var command: Command = {
                 break;
             }
             case "help": {
-                var moveId = i.options.getString("move", true);
+                var moveId = i.options.get("move", true).value as string;
                 var move = moves.get(moveId)
                 if (move) {
                     var desc = `**Power**: ${move.power || "-"}\n**Accuracy**: ${move.accuracy}%\n**Category**: ${move.category}`
@@ -141,7 +141,7 @@ export var command: Command = {
                     }
                     var userStat = funi(move.userStat)
                     var targetStat = funi(move.targetStat)
-                    var fields: EmbedFieldData[] = []
+                    var fields: APIEmbedField[] = []
                     fields.push({
                         name: "General info",
                         value: `${desc}`
@@ -179,12 +179,12 @@ export var command: Command = {
                 break;
             }
             case "item_info": {
-                var item = items.get(i.options.getString("item", true))
+                var item = items.get(i.options.get("item", true).value as string)
                 if (!item) return await i.reply("wh")
                 await i.reply({
                     embeds: [{
                         title: `${item.icon || "❓"} ${item.name}`,
-                        description: `**Effect**: ${item.passiveEffect || "N/A"}\n**ID**: ${i.options.getString("item", true)}`
+                        description: `**Effect**: ${item.passiveEffect || "N/A"}\n**ID**: ${i.options.get("item", true).value as string}`
                     }]
                 })
                 break;

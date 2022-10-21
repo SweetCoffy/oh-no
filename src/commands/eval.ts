@@ -16,15 +16,16 @@ import * as fs from "fs"
 import * as discord from "discord.js"
 import * as items from "../items.js"
 import { shopItems } from "../items.js"
+import { ApplicationCommandType, ApplicationCommandOptionType } from "discord.js"
 
 export var command: Command = {
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     name: "eval",
-    description: "Runs Javascript code. Some features are restricted to the bot owner.",
+    description: "Runs JavaScript code. Some features are restricted to the bot owner.",
     dev: true,
     options: [
         {
-            type: "STRING",
+            type: ApplicationCommandOptionType.String,
             name: "code",
             required: true,
             description: "a"
@@ -53,7 +54,7 @@ export var command: Command = {
                 items,
             }
             var vm = new VM({sandbox: context, timeout: 5000})
-            let out = vm.run(i.options.getString("code", true))
+            let out = vm.run(i.options.get("code", true).value as string)
             var outstr = out + ""
             if (typeof out == "object") {
                 outstr = inspect(out, true, undefined, true)
@@ -68,7 +69,7 @@ export var command: Command = {
         
 
         var w = new Worker("./build/eval-worker.js", 
-        { workerData: {code: i.options.getString("code", true), userId: i.user.id, dev: i.user.id == settings.ownerID, userData: data, loaded: loaded},
+        { workerData: {code: i.options.get("code", true).value as string, userId: i.user.id, dev: i.user.id == settings.ownerID, userData: data, loaded: loaded},
         resourceLimits: {maxOldGenerationSizeMb: 256, maxYoungGenerationSizeMb: 8} })
         
         let out = ""

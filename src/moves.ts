@@ -1,4 +1,4 @@
-import Collection from "@discordjs/collection"
+import { Collection } from "discord.js"
 import { Battle, calcMul, Player } from "./battle.js"
 import { makeStats, Stats } from "./stats.js"
 import { rng, lerp, weightedDistribution } from "./util.js"

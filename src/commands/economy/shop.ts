@@ -1,20 +1,20 @@
-import { Message, MessageActionRow, MessageButton } from "discord.js"
+import { ActionRowBuilder, APIActionRowComponent, ApplicationCommandOptionType, ApplicationCommandType, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, ComponentType, Message } from "discord.js"
 import { Command } from "../../command-loader.js"
-import { shopItems, addItem, useItem, shops, Shop } from "../../items.js"
+import { shopItems, addItem, useItem, shops, Shop, stackString, itemString } from "../../items.js"
 import { getUser } from "../../users.js"
 import { format, itemResponseReply } from "../../util.js"
 export var command: Command = {
-    type: "CHAT_INPUT",
+    type: ApplicationCommandType.ChatInput,
     name: "shop",
     description: "Shop stuff",
     options: [
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "list",
             description: 'Shows a list of the items in the shop',
             options: [
                 {
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     name: "shop",
                     description: "haha funni shop",
                     choices: shops.map((el, k) => ({
@@ -25,30 +25,30 @@ export var command: Command = {
             ]
         },
         {
-            type: "SUB_COMMAND",
+            type: ApplicationCommandOptionType.Subcommand,
             name: "buy",
             description: 'Buys an item from the shop',
             options: [
                 {
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     name: "item",
                     description: "The item to buy",
                     required: true
                 },
                 {
-                    type: "INTEGER",
+                    type: ApplicationCommandOptionType.Integer,
                     name: "amount",
                     description: "The amount of items to buy",
                     required: false
                 },
                 {
-                    type: "BOOLEAN",
+                    type: ApplicationCommandOptionType.Boolean,
                     name: "auto_use",
                     description: "Whether or not to automatically use the items bought",
                     required: false
                 },
                 {
-                    type: "STRING",
+                    type: ApplicationCommandOptionType.String,
                     name: "shop",
                     description: "haha funni shop",
                     choices: shops.map((el, k) => ({
@@ -59,27 +59,27 @@ export var command: Command = {
             ]
         },
     ],
-    async run(i) {
-        var findItem = i.options.getString("item")
-        var autoDetect = shops.findKey(el => el.items.some(el => el.id == findItem))
+    async run(i: ChatInputCommandInteraction) {
+        let findItem = i.options.getString("item", true)
+        let autoDetect = shops.findKey(el => el.items.some(el => el.id == findItem))
+        let shopName = i.options.getString("shop", false) || autoDetect || getUser(i.user).lastShop
         //@ts-ignore
-        var shop: Shop = shops.get(i.options.getString("shop") || autoDetect || getUser(i.user).lastShop)
+        let shop: Shop = shops.get(shopName)
         if (!shop) {
-            
-            return
+            return await i.reply(`Unknown shop: \`${shopName}\``)
         }
-        getUser(i.user).lastShop = i.options.getString("shop") || "main"
+        getUser(i.user).lastShop = shopName || "main"
         switch (i.options.getSubcommand()) {
             case "list": {
                 var page = 0
                 var pageSize = 10
                 var pageCount = Math.ceil(shop.items.length / pageSize)
-                var components: MessageActionRow[] = [new MessageActionRow({
+                var components: APIActionRowComponent<any>[] = [new ActionRowBuilder({
                     components: [
-                        new MessageButton({ emoji: "◀️", style: "PRIMARY", customId: "prev" }),
-                        new MessageButton({ emoji: "▶️", style: "PRIMARY", customId: "next" }),
+                        new ButtonBuilder({ emoji: "◀️", style: ButtonStyle.Primary, customId: "prev" }),
+                        new ButtonBuilder({ emoji: "▶️", style: ButtonStyle.Primary, customId: "next" }),
                     ]
-                })]
+                }).toJSON()]
                 async function update(msg: Message) {
                     await msg.edit({
                         embeds: [
@@ -102,7 +102,7 @@ export var command: Command = {
                     
                 }) as Message
                 msg.createMessageComponentCollector({
-                    componentType: "BUTTON",
+                    componentType: ComponentType.Button,
                     time: 1000 * 60,
                     filter: (el) => {
                         if (el.user.id != i.user.id) {
@@ -134,10 +134,10 @@ export var command: Command = {
             }
             case "buy": {
                 var u = getUser(i.user)
-                var item = i.options.getString("item", true)
+                var item = i.options.get("item", true).value as string
                 var itm = shop.getItem(item)
                 var itemInfo = shopItems.get(item)
-                var amount = BigInt(i.options.getInteger("amount", false) || 0) || (shop.getMoney(i.user) / (itm?.cost || 1n)) || 1n
+                var amount = BigInt(i.options.get("amount", false)?.value as number || 0) || (shop.getMoney(i.user) / (itm?.cost || 1n)) || 1n
                 var autouse = i.options.getBoolean("auto_use")
                 if (itemInfo) {
                     let res = shop.buyItem(i.user, item, amount)

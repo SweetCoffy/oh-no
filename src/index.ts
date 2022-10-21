@@ -5,7 +5,7 @@ for (var a of process.argv.slice(2)) {
         if (a.slice(1) in experimental) experimental[a.slice(1)] = true
     }
 }
-import Discord from "discord.js"
+import Discord, { GatewayIntentBits } from "discord.js"
 import { commands, loadDir, addCommands } from "./command-loader.js"
 import { users, getUser, UserSaveData, data, globalData, getUserSaveData, replacer } from "./users.js"
 import { writeFileSync, readFileSync } from "fs"
@@ -28,14 +28,19 @@ settings.noSave = process.argv.includes("-nosave") || settings.experimental
 
 
 export var client = new Discord.Client({
-    intents: ["GUILDS"]
+    intents: [GatewayIntentBits.Guilds]
 })
 
 client.on("ready", async() => {
     console.log(`Ready`)
     var g = await client.guilds.fetch(GUILD_ID)
     var cmds = await loadDir("commands")
-    await addCommands(g, cmds)
+    await addCommands(g, cmds.filter(v => {
+        if (v.value.status == "fulfilled") return true;
+        console.error(`Did not add '${v.file}':`, v.value.reason)
+    })
+        //@ts-ignore
+        .map(v => v.value.value))
     console.log(`Actually ready`)
     console.log(formatString(`Let's see...\nWill n:this; work?`))
     console.log(formatString(`It does, that's [s]great[r]!`))
@@ -48,7 +53,7 @@ client.on("interactionCreate", async(i) => {
             cmd.autocomplete?.(i);
         }
     }
-    if (!i.isCommand() && !i.isContextMenu()) return
+    if (!i.isCommand() && !i.isContextMenuCommand()) return
     try {
         getUser(i.user).lastCommand = Date.now()
         console.log(`${i.user.username} /${i.commandName}`)
@@ -150,6 +155,10 @@ for (var i = 0; i <= maxlevel; i += step) {
     var v = calcDamage(power, atk, def, i || 1)
     console.log(`DMG  ${v.toString().padStart(6, " ")} | Level ${(i || 1).toString().padStart(maxlevel.toString().length, " ")}: ${"#".repeat(Math.floor(v / highest * chars))}`)
 }
+
+client.on("error", (error) => {
+    console.error(error)
+})
 
 // get real
 if (experimental.april_fools) import("./april-fools.js")
