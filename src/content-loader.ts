@@ -3,7 +3,7 @@ import { Move, moves } from "./moves.js"
 import { Dictionary } from "./util.js";
 import { readFileSync } from "fs";
 import { resolve, join, dirname, basename } from "path";
-import { locales, setupOwO } from "./locale.js";
+import { locales } from "./locale.js";
 import yaml from "js-yaml"
 type TypeString = "string" | "number" | "bigint" | "itemstack" | "boolean" | "json" | "chance"
 type ArrayTypeString = `array<${TypeString}>`

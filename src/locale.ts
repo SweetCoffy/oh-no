@@ -22,16 +22,14 @@ export type LocaleString = LocaleStringDamage | LocaleStringMove |
 type LocaleStrings = {
     [key in LocaleString]?: string
 }
-export type LocaleID = "en_US" | "es_SP"| "owo"
+export type LocaleID = "en_US" | "es_SP"
 export var locale: LocaleID = "en_US"
 export type Locales = {
     [key in LocaleID]?: LocaleStrings
 }
 export var locales: Locales = {
     en_US: {},
-    owo: {},
 }
-locales.owo = {}
 export function getString(key: LocaleString, obj: {[key: string]: any} | string[] = {}) {
     // @ts-ignore
     var str: string = locales[locale]?.[key]
@@ -47,33 +45,4 @@ export function getString(key: LocaleString, obj: {[key: string]: any} | string[
         //@ts-ignore
         return obj[k.toLowerCase()] + ""
     })
-}
-function owo(str: string) {
-    return str.replace(/[rl]/g, "w")
-        .replace(/od/g, "awd")
-        .replace(/this/g, "dis")
-        .replace(/you/g, "u")
-        .replace(/ck\b/g, "k")
-        .replace(/(.)\1/g, "$1")
-        .replace(/([^aeiou])e\b/g, "$1")
-        .replace(/y/g, "i")
-        .replace(/ct([aeiou])/g, "sh$1")
-        .replace(/([aeiou])s\b/g, "$1sh")
-        .replace(/([aeiou])d\b/g, "$1wd")
-        .replace(/s([aeiou])/g, "sh$1")
-}
-export function setupOwO() {
-    //locales.owo = {}
-    for (var k in locales.en_US) {
-        // @ts-ignore
-        if (k in locales.owo) continue
-        // @ts-ignore
-        locales.owo[k] = locales.en_US[k].replace(/(?<!\[)(?<!\$\.)\b\w+(?!\])/g, function (sub: string, str) {
-            // oh my god
-            // why did i make this
-            let s = owo(sub.toLowerCase())
-            return s
-        })
-    }
-    console.log(locales.owo)
 }

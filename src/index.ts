@@ -14,7 +14,6 @@ import { shopItems } from "./items.js"
 import { resolve } from "path"
 import { calcStat } from "./stats.js"
 import { calcDamage } from "./battle.js"
-import { setupOwO } from "./locale.js"
 
 var config = JSON.parse(readFileSync(resolve("../config.json"), "utf8"))
 
@@ -162,4 +161,3 @@ client.on("error", (error) => {
 
 // get real
 if (experimental.april_fools) import("./april-fools.js")
-setupOwO()
