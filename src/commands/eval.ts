@@ -1,4 +1,4 @@
-import { Command, loadDir, addCommands } from "../command-loader.js"
+import { Command } from "../command-loader.js"
 import { settings } from "../util.js"
 import { inspect } from "util"
 import { Worker } from "worker_threads" 

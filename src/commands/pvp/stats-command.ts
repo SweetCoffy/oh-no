@@ -3,7 +3,7 @@ import { abilities } from "../../abilities.js";
 import { Command } from "../../command-loader.js"
 import { items } from "../../helditem.js";
 import { getString } from "../../locale.js";
-import { getPresetList, makeStats, getPreset, presets, StatID } from "../../stats.js";
+import { getPresetList, makeStats, getPreset, presets, StatID, BasicStatID, limitStats } from "../../stats.js";
 import { getUser } from "../../users.js";
 import { bar, confirmation, getMaxTotal, helditemString } from "../../util.js"
 function getWeighted(weights: number[], total: number = 600) {
@@ -259,23 +259,13 @@ export let command: Command = {
                 for (let j = 0; j < o.weights.length; j++) {
                     ar[j] = o.weights[j] || 1
                 }
-                let statsAr = getWeighted(ar, getMaxTotal(o)).map(el => Math.floor(el))
-                let highestJ = 0
-                let highest = 0
-                for (let j = 0; j < statsAr.length; j++) {
-                    if (statsAr[j] > highest) {
-                        highest = statsAr[j]
-                        highestJ = statsAr[j]
-                    }
-                }
-                let total = statsAr.reduce((prev, cur) => prev + cur, 0)
-                let missing = getMaxTotal(o) - total
-                statsAr[highestJ] += missing
                 let stats = makeStats()
-                let j = 0
-                for (let k in makeStats()) {
-                    stats[k as StatID] = statsAr[j++]
+                let keys = Object.keys(stats)
+                for (let i in keys) {
+                    //@ts-ignore
+                    stats[keys[i]] = ar[i]
                 }
+                stats = limitStats(stats, getMaxTotal(o))
                 getUser(i.user).presets[id] = {
                     name: name,
                     stats: stats,
@@ -292,8 +282,8 @@ export let command: Command = {
                 if (!p) return await i.reply("Unknown preset")
                 let u = getUser(i.user)
                 let total = Object.values(p.stats).reduce((prev, cur) => prev + cur, 0)
-                if (total > getMaxTotal(p)) return await i.reply(`Illegal preset, base stat total must not exceed the maximum allowed`)
-                u.baseStats = {...p.stats}
+                if (total > getMaxTotal(p)) return await i.reply(`Illegal preset: the base stat total must not exceed the maximum allowed.`)
+                u.baseStats = limitStats(p.stats, getMaxTotal(p))
                 u.ability = p.ability
                 u.helditems = p.helditems || []
                 u.preset = id
@@ -324,20 +314,17 @@ export let command: Command = {
                     let prevtotal = Object.values(preset.stats).reduce((prev, cur) => prev + cur, 0)
                     let total = getMaxTotal({ ability: a })
                     for (let k in preset.stats) {
-                        preset.stats[k as StatID] = Math.floor(preset.stats[k as StatID] / prevtotal * total)
+                        preset.stats[k as BasicStatID] = Math.floor(preset.stats[k as BasicStatID] / prevtotal * total)
                     }
                     console.log(preset)
                     await i.reply(`Ability set to ${abilities.get(a as string)?.name || "None"}\nYou might have to do /stats use <preset> again to apply changes`)
                     return
                 }
                 if (!abilities.has(a as string ) && a) await i.reply(`Unknown ability: ${a}`)
-                
-                let prevtotal = Object.values(u.baseStats).reduce((prev, cur) => prev + cur, 0)
+
                 let total = getMaxTotal({ ability: a })
                 u.ability = a;
-                for (let k in u.baseStats) {
-                    u.baseStats[k as StatID] = Math.floor(u.baseStats[k as StatID] / prevtotal * total)
-                }
+                u.baseStats = limitStats(u.baseStats, total)
                 await i.reply(`Ability set to ${abilities.get(a as string)?.name || "None"}`)
                 break;
             }

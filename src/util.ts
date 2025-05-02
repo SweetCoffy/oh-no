@@ -1,3 +1,4 @@
+import { FG_Cyan, FG_Green, FG_Red, FG_Yellow, FG_Gray, FG_Blue, FG_Pink, Start, Reset, color2ANSIAlias, color2ANSITable, LogColor, LogColorWAccent } from "./ansi.js"
 import { ActionRowBuilder, APIActionRowComponent, ButtonBuilder, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, ContextMenuCommandInteraction, Message } from "discord.js"
 import { abilities } from "./abilities.js"
 import { formats } from "./formats.js"
@@ -6,7 +7,6 @@ import { BASE_STAT_TOTAL } from "./params.js"
 import { statSync, readdirSync } from "fs"
 import { load } from "./content-loader.js"
 import { items } from "./helditem.js"
-import { FG_Cyan, FG_Green, FG_Red, FG_Yellow, FG_Gray, FG_Blue, FG_Pink, Start, Reset } from "./ansi.js"
 import { readFileSync } from "fs"
 export const CURRENCY_ICON = "$"
 export function lexer(str: string) {
@@ -63,7 +63,7 @@ export class RNG {
     }
     get() {
         this.seed += Math.floor((this.seed % 512) + ((this.seed % 2048) * 1.535)) + 8192
-        this.seed = this.seed % (2**32 / 2)
+        this.seed = this.seed % (2 ** 32 / 2)
         return (this.seed++ % 512) + ((this.seed++) % 256) + ((this.seed++ * 1.5) % 128) + ((this.seed++ * 2) % 128)
     }
     get01() {
@@ -78,15 +78,96 @@ export function randomRange(min: number, max: number) {
 export function randomChance(chance: number) {
     return rng.get01() < chance
 }
+export function barDelta(num: number, prevNum: number, max: number, width: number = 25) {
+    let deltaFill = "🮘"
+    let c = 0
+    let fill = "█"
+    let bg = " "
+    let things = ["▉", "▊", "▋", "▌", "▍", "▎", "▏"]
+
+    let str = ""
+    if (!Number.isFinite(num)) {
+        str += "∞"
+        num = 1
+        max = 1
+    }
+    else str += "+".repeat(Math.min(Math.max(Math.floor((num - 0.01) / max), 0), width - 1))
+    width -= str.length;
+    let chars = Math.ceil((((num - 0.01) / max) * width) % (width))
+    while (c < chars) {
+        let f = fill
+        let epicVal = 1
+        if (c + 1 >= chars && num % max != 0) epicVal = num / max * width % 1
+        if (epicVal < 1) f = things[0]
+        if (epicVal < 7 / 8) f = things[1]
+        if (epicVal < 3 / 4) f = things[2]
+        if (epicVal < 5 / 8) f = things[3]
+        if (epicVal < 1 / 2) f = things[4]
+        if (epicVal < 3 / 8) f = things[5]
+        if (epicVal < 1 / 4) f = things[6]
+        c++
+        str += f
+    }
+    while (c < width) {
+        c++
+        if (c <= prevNum/max*width) {
+            str += deltaFill
+        } else {
+            str += bg
+        }
+    }
+    return str
+}
+export function dispDelta(amount: number, color = false) {
+    let str = amount < 0 ? `${amount}` : `+${amount}`
+    if (color) {
+        if (amount == 0) {
+            str = `[u]${str}[r]`
+        }
+        else if (amount > 0) {
+            str = `[s]${str}[r]`
+        } else {
+            str = `[f]${str}[r]`
+        }
+    }
+    return str
+}
+export function dispMul(mul: number, asDelta = true, color = false) {
+    let str
+    if (asDelta) {
+        let am = `${((mul - 1) * 100).toFixed(1)}%`
+        if (mul >= 1.0) {
+            am = `+${am}`
+        }
+        str = am
+    } else {
+        str = `${(mul * 100).toFixed(1)}%`
+    }
+    if (color) {
+        if (mul == 1) {
+            str = `[u]${str}[r]`
+        }
+        else if (mul > 1) {
+            str = `[s]${str}[r]`
+        } else {
+            str = `[f]${str}[r]`
+        }
+    }
+    return str
+}
 export function bar(num: number, max: number, width: number = 25) {
     let c = 0
     let fill = "█"
     let bg = " "
-
     let things = ["▉", "▊", "▋", "▌", "▍", "▎", "▏"]
 
     let str = ""
-    str += "+".repeat(Math.min(Math.max(Math.floor((num - 0.01) / max), 0), width - 1))
+    if (!Number.isFinite(num)) {
+        str += "∞"
+        num = 1
+        max = 1
+    }
+    else str += "+".repeat(Math.min(Math.max(Math.floor((num - 0.01) / max), 0), width - 1))
     width -= str.length;
     let chars = Math.ceil((((num - 0.01) / max) * width) % (width))
     while (c < chars) {
@@ -116,18 +197,18 @@ export function abs(number: bigint | number) {
 export function format(number: bigint) {
     let funi = null
     for (let f of formats) {
-      if (abs(number) >= f.min) funi = f
+        if (abs(number) >= f.min) funi = f
     }
     if (!funi) return `${number}`
     let m = number / funi.min
     let d = abs((number % funi.min) / (funi.min / 100n))
-	function yes(num: bigint) {
-		let str = num.toString()
-		let a = str.slice(0, 4)
-		let count = str.length - 4
-		return `${a}e${count}`
-	  }
-	if (abs(number) > funi.min * 1000n) return `${yes(number)}`
+    function yes(num: bigint) {
+        let str = num.toString()
+        let a = str.slice(0, 4)
+        let count = str.length - 4
+        return `${a}e${count}`
+    }
+    if (abs(number) > funi.min * 1000n) return `${yes(number)}`
     return `${m}.${d}${funi.suffix}`
 }
 export async function itemResponseReply(res: ItemResponse, i: CommandInteraction | ContextMenuCommandInteraction) {
@@ -152,7 +233,7 @@ export async function itemResponseReply(res: ItemResponse, i: CommandInteraction
     else return await i.reply(funi)
 }
 export function lerp(a: number, b: number, x: number) {
-	return a*x + b*(1-x)
+    return a * x + b * (1 - x)
 }
 let date = new Date()
 export let experimental = {
@@ -165,8 +246,8 @@ export let experimental = {
     april_fools: date.getDate() == 1 && date.getMonth() == 4,
 }
 export let settings = {
-	ownerID: "",
-  	noSave: false,
+    ownerID: "",
+    noSave: false,
     experimental: false,
     unloadTimeout: 2 * 60 * 1000,
     saveprefix: experimental.april_fools ? "fools_" : "",
@@ -174,53 +255,53 @@ export let settings = {
     accentColor: 0x15deff,
 }
 export class BitArray extends Uint8Array {
-	getBit(bit: number) {
-	 	let byte = Math.floor(bit / 8)
-	 	let b = bit % 8
-	 	let val = 0b1000_0000 >> b
-	  	return (this[byte] & val) > 0
-	}
-	setBit(bit: number, value = true) {
-	  	let byte = Math.floor(bit / 8)
-	  	let b = bit % 8
-	  	let val = 0b1000_0000 >> b
-	  	if (value) this[byte] = this[byte] | val
-	  	else this[byte] = this[byte] & ~val
-	}
-	* bits() {
-		for (let i = 0; i < this.length * 8; i++) {
-			yield this.getBit(i)
-		}
-	}
-	getBits() {
-		return [...this.bits()]
-	}
+    getBit(bit: number) {
+        let byte = Math.floor(bit / 8)
+        let b = bit % 8
+        let val = 0b1000_0000 >> b
+        return (this[byte] & val) > 0
+    }
+    setBit(bit: number, value = true) {
+        let byte = Math.floor(bit / 8)
+        let b = bit % 8
+        let val = 0b1000_0000 >> b
+        if (value) this[byte] = this[byte] | val
+        else this[byte] = this[byte] & ~val
+    }
+    * bits() {
+        for (let i = 0; i < this.length * 8; i++) {
+            yield this.getBit(i)
+        }
+    }
+    getBits() {
+        return [...this.bits()]
+    }
 }
 export class BitArray2D extends BitArray {
-	readonly width: number
-	readonly height: number
-	constructor(w: number, h: number) {
-		super(Math.ceil((w * h) / 8))
-		this.width = w
-		this.height = h
-	}
-	get2D(x: number, y: number) {
-		if (x >= this.width || x < 0) return false
-		if (y >= this.height || y < 0) return false
-		return this.getBit(x + (this.width * y))
-	}
-	set2D(x: number, y: number, value: boolean = true) {
-		if (x >= this.width || x < 0) return
-		if (y >= this.height || y < 0) return
-		this.setBit(x + (this.width * y), value)
-	}
-	setAll(func: (x: number, y: number, value: boolean, bitArray: BitArray2D) => boolean) {
-		for (let y = 0; y < this.height; y++) {
-			for (let x = 0; x < this.width; x++) {
-				this.set2D(x, y, func(x, y, this.get2D(x, y), this))
-			}
-		}
-	}
+    readonly width: number
+    readonly height: number
+    constructor(w: number, h: number) {
+        super(Math.ceil((w * h) / 8))
+        this.width = w
+        this.height = h
+    }
+    get2D(x: number, y: number) {
+        if (x >= this.width || x < 0) return false
+        if (y >= this.height || y < 0) return false
+        return this.getBit(x + (this.width * y))
+    }
+    set2D(x: number, y: number, value: boolean = true) {
+        if (x >= this.width || x < 0) return
+        if (y >= this.height || y < 0) return
+        this.setBit(x + (this.width * y), value)
+    }
+    setAll(func: (x: number, y: number, value: boolean, bitArray: BitArray2D) => boolean) {
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                this.set2D(x, y, func(x, y, this.get2D(x, y), this))
+            }
+        }
+    }
 }
 // https://blobfolio.com/2019/randomizing-weighted-choices-in-javascript/
 export function weightedRandom<T>(data: [T, number][]) {
@@ -242,7 +323,7 @@ export function weightedDistribution(weights: number[], total: number): number[]
     let totalw = weights.reduce((prev, cur) => prev + cur, 0)
     return weights.map(el => el / totalw * total)
 }
-export type Dictionary<T> = {[key: string]: T}
+export type Dictionary<T> = { [key: string]: T }
 export function max(...numbers: bigint[]): bigint {
     let m: bigint | undefined = undefined
 
@@ -287,9 +368,16 @@ export function subscriptNum(num: number | string) {
     let str = num + ""
     return [...str].map(el => String.fromCharCode((el.charCodeAt(0) - 32) + 0x2070)).join("")
 }
+function formatNumber(n: number) {
+    if (Number.isNaN(n)) return "?"
+    if (!Number.isFinite(n)) return "∞"
+    return n.toString()
+}
 export function xOutOfY(x: number, y: number, color?: boolean) {
-    let longest = Math.max(x.toString().length, y.toString().length)
-    if (color) return `${x.toString().padStart(longest, " ")}/[u]${y.toString().padEnd(longest, " ")}[r]`
+    let xstr = formatNumber(x)
+    let ystr = formatNumber(y)
+    let longest = Math.max(xstr.length, ystr.length)
+    if (color) return `${xstr.padStart(longest, " ")}/[u]${ystr.padEnd(longest, " ")}[r]`
     return `${x.toString().padStart(longest, " ")}/${y.toString().padEnd(longest, " ")}`
 }
 export function name(name: string) {
@@ -304,16 +392,16 @@ export function loadRecursive(path: string) {
             continue
         }
         if (f.endsWith(".yml")) {
-            
+
             load(`${path}/${f}`)
         }
     }
 }
 export function timeFormat(seconds: number) {
-	let secs = Math.floor(seconds % 60)
-	let minutes = Math.floor(seconds / 60) % 60
-	let hours = Math.floor(seconds / 60 / 60)
-	return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
+    let secs = Math.floor(seconds % 60)
+    let minutes = Math.floor(seconds / 60) % 60
+    let hours = Math.floor(seconds / 60 / 60)
+    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
 }
 export async function confirmation(i: CommandInteraction | ButtonInteraction, str: string) {
     let components: APIActionRowComponent<any>[] = [new ActionRowBuilder().addComponents(
@@ -331,7 +419,7 @@ export async function confirmation(i: CommandInteraction | ButtonInteraction, st
         components,
         fetchReply: true,
     }) as Message
-    try {        
+    try {
         let int = await reply.awaitMessageComponent({
             componentType: ComponentType.Button,
             filter: (interaction) => {
@@ -343,43 +431,20 @@ export async function confirmation(i: CommandInteraction | ButtonInteraction, st
             },
             time: 1000 * 60
         })
-        await int.deferUpdate()
+        console.log(int.customId)
+        await int.deferUpdate().catch(() => { })
+        console.log(int.customId)
         return int.customId == "yes"
-    } catch (_) { }
-    finally {
+    } catch (e) {
+        console.log(e)
         return false
     }
 }
 export function helditemString(id: string) {
     let type = items.get(id)
-    return `${type?.icon ? type.icon + " ": ""}${type?.name || "???"}`
+    return `${type?.icon ? type.icon + " " : ""}${type?.name || "???"}`
 }
 
-export type LogColor = "red" | "green" | "white" | "gray" | "blue" | "yellow" | "pink" | "cyan"
-export type LogColorWAccent = LogColor | "accent" | "success" | "failure" | "danger" | "unimportant"
-const color2ANSITable: { [x in LogColorWAccent]: number } = {
-    accent: FG_Cyan,
-    success: FG_Green,
-    failure: FG_Red,
-    danger: FG_Yellow,
-    unimportant: FG_Gray,
-
-    red: FG_Red,
-    green: FG_Green,
-    white: 0,
-    gray: FG_Gray,
-    blue: FG_Blue,
-    yellow: FG_Yellow,
-    pink: FG_Pink,
-    cyan: FG_Cyan,
-}
-const color2ANSIAlias: { [x: string]: LogColorWAccent } = {
-    a: "accent",
-    s: "success",
-    f: "failure",
-    d: "danger",
-    u: "unimportant"
-}
 export function colorToANSI(color: string) {
     if (color in color2ANSIAlias) color = color2ANSIAlias[color]
     return color2ANSITable[color as LogColorWAccent] ?? 0
@@ -388,7 +453,7 @@ export function formatString(str: string, color: LogColorWAccent = "white") {
     return `${Start}0;${colorToANSI(color)}m` + str.replace(/(\w):(.+?);/g, function (substr, macro: string, arg: string) {
         if (macro == "n") return name(arg)
         return arg
-    }).replace(/\[(.+?)\]/g, function(substr, format: string) {
+    }).replace(/\[(.+?)\]/g, function (substr, format: string) {
         if (format == "reset" || format == "r") return `${Start}0;${colorToANSI(color)}m`;
         return `${Start}0;${colorToANSI(format as LogColor)}m`
     }) + Reset

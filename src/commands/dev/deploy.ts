@@ -39,6 +39,7 @@ export let command: Command = {
             p.push(i.client.application?.commands.create({...v}))
         }
         await Promise.all(p)
+        console.log("deployed global commands")
         return await i.editReply(`D o n e`)
     }
 }

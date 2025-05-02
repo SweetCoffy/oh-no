@@ -1,18 +1,21 @@
 import { Collection, User } from "discord.js"
-import { LOWER_FACTOR, STAT_MUL } from "./params.js"
 import { getUser, PresetList } from "./users.js"
-import { experimental } from "./util.js"
-export type StatID = "hp" | "atk" | "def" | "spatk" | "spdef" | "spd"
+import { weightedDistribution } from "./util.js"
+export type BasicStatID = "hp" | "atk" | "def" | "spatk" | "spdef" | "spd"
+export type StatID = BasicStatID
 export type Stats = {
     [x in StatID]: number
 }
+export type BasicStats = {
+    [x in BasicStatID]: number
+}
 export interface StatPreset {
     name: string,
-    stats: Stats,
+    stats: BasicStats,
     helditems?: string[],
     ability?: string,
 }
-export const baseStats: Stats = {
+export const baseStats: BasicStats = {
     hp   :  100,
     atk  :  100,
     def  :  100,
@@ -75,6 +78,19 @@ presets.set("extreme-tonk", {
     helditems: [],
     ability: "hardening",
 })
+presets.set("rock", {
+    name: "Rock",
+    stats: {
+        hp   :   0,
+        atk  :   0,
+        def  : 300,
+        spatk:   0,
+        spdef: 300,
+        spd  :   0,
+    },
+    helditems: [],
+    ability: "hardening",
+})
 export function makeStats(obj?: {[key: string]: number}): Stats {
     let o: Stats = {
         hp: 0,
@@ -92,16 +108,14 @@ export function makeStats(obj?: {[key: string]: number}): Stats {
     return o
 }
 export function calcStat(base: number, level: number, ev: number = 0) {
-    let v = Math.floor( 
-        ((base / 1.5) + (base/5 * level/9) + (level * base/32) + level*7.5) * (1 + level/LOWER_FACTOR) * STAT_MUL)
+    let v = Math.floor(500 + base * 5 + level * (base + 10) * 10 / 100)
     return v
 }
-export function calcStats(level: number, baseStats: Stats, hpboost: number = 1): Stats {
+export function calcStats(level: number, baseStats: BasicStats, hpboost: number = 1): Stats {
     let s = makeStats()
     for (let k in baseStats) {
-        s[k as StatID] = calcStat(baseStats[k as StatID], level, 0)
+        s[k as BasicStatID] = calcStat(baseStats[k as BasicStatID], level, 0)
     }
-    s.hp = Math.floor(s.hp * 2.5 * hpboost)
     return s
 }
 export function getPreset(name: string, user?: User) {
@@ -110,6 +124,47 @@ export function getPreset(name: string, user?: User) {
         if (u.presets[name]) return u.presets[name]
     }
     return presets.get(name)
+}
+
+
+const BST_MIN_LIMIT = 0.1
+const BST_MAX_LIMIT = 0.5
+
+export function limitStats(stats: BasicStats, bst: number): BasicStats {
+    let newValues = weightedDistribution(Object.values(stats), bst)
+    let keys: StatID[] = Object.keys(stats) as BasicStatID[]
+    let max = bst * BST_MAX_LIMIT
+    let min = bst * BST_MIN_LIMIT
+    let curTotal = 0
+    let newStats = { ...stats }
+    for (let i in newValues) {
+        let v = newValues[i]
+        newValues[i] = Math.max(Math.min(v, max), min)
+        curTotal += newValues[i]
+        newStats[keys[i]] = newValues[i]
+    }
+    newValues = weightedDistribution(Object.values(newStats), bst)
+    keys = Object.keys(newStats) as BasicStatID[]
+    //@ts-ignore
+    newStats = Object.fromEntries(newValues.map((v, i) => [keys[i], v]))
+    curTotal = 0
+    for (let k in newStats) {
+        //@ts-ignore
+        newStats[k] = Math.floor(newStats[k])
+        //@ts-ignore
+        curTotal += newStats[k]
+    }
+    let needed = bst - curTotal
+    let perStat = Math.ceil(needed / newValues.length)
+    for (let k in newStats) {
+        if (needed <= 0) {
+            break
+        }
+        //@ts-ignore
+        newStats[k] += perStat
+        needed -= perStat
+    }
+    return newStats
 }
 export function getPresetList(user?: User) {
     let list: PresetList = {}

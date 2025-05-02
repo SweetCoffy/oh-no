@@ -1,11 +1,10 @@
-import { ApplicationCommandOptionType, ApplicationCommandType } from "discord.js";
+import { ApplicationCommandType } from "discord.js";
 import { Player } from "../../battle.js";
 import { Command } from "../../command-loader.js";
 import { enemies, Enemy } from "../../enemies.js";
 import { createLobby } from "../../lobby.js";
-import { getString } from "../../locale.js";
 import { calcStats, StatID } from "../../stats.js";
-import { addXP, getUser, users } from "../../users.js";
+import { addXP, getUser } from "../../users.js";
 import { money, randomRange, weightedDistribution, weightedRandom } from "../../util.js";
 
 export let command: Command = {
@@ -17,6 +16,9 @@ export let command: Command = {
         if (!i.channel) return await i.reply("what")
         let u = getUser(i.user)
         if (u.lobby) return await i.reply("You are already in a lobby")
+        if (!i.channel.isSendable()) {
+            return
+        }
         let l = createLobby(i.user, `${i.user.username}'s hunt`, 1)
         await i.reply({
             ephemeral: true,
@@ -101,10 +103,11 @@ export let command: Command = {
             lastinfo = await l.battle?.infoMessage(i.channel)
         })
         l.battle?.on("end", async(winner: string) => {
+            console.log(`winner: ${winner}`)
             if (!i.channel) return
             if (lastinfo?.deletable) lastinfo.delete()
             lastinfo = await l.battle?.infoMessage(i.channel)
-            if (winner == "players") {
+            if (winner == "Team Blue") {
                 let enemies = l.battle?.players.filter(el => !el.user) || []
                 let xp = Math.ceil(
                     enemies
@@ -113,11 +116,11 @@ export let command: Command = {
                 let oldStats = calcStats(u.level, u.baseStats)
                 let m = BigInt(Math.floor(xp * (xp * 0.075)))/100n*15n
                 getUser(i.user).money.points += m
-                await i.followUp(`You won, gained ${xp} XP and ${money(m)}`)
+                await i.channel.send(`You won, gained ${xp} XP and ${money(m)}`)
                 let levels = addXP(i.user, xp)
                 let newStats = calcStats(u.level, u.baseStats)
                 if (levels > 0) {
-                    await i.followUp(`+${levels} levels\n${
+                    await i.channel.send(`+${levels} levels\n${
                         Object.keys(oldStats)
                         //@ts-ignore
                         .map((el: StatID) => `\`${el.padEnd(6, " ")} ${oldStats[el].toString().padStart(6, " ")} + ${(newStats[el] - oldStats[el]).toString().padEnd(6, " ")}\``)
@@ -125,7 +128,7 @@ export let command: Command = {
                     }`)
                 }
             } else {
-                await i.followUp("You lost")
+                await i.channel.send("You lost")
             }
         })
     }

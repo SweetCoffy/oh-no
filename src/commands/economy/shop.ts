@@ -60,7 +60,7 @@ export let command: Command = {
         },
     ],
     async run(i: ChatInputCommandInteraction) {
-        let findItem = i.options.getString("item", true)
+        let findItem = i.options.getString("item", false)
         let autoDetect = shops.findKey(el => el.items.some(el => el.id == findItem))
         let shopName = i.options.getString("shop", false) || autoDetect || getUser(i.user).lastShop
         //@ts-ignore

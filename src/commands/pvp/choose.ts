@@ -1,11 +1,12 @@
-import { createLobby, findValidLobby, lobbies } from '../../lobby.js';
 import { Command, commands } from '../../command-loader.js'
-import { getUser, users } from '../../users.js';
-import { APIEmbedField, ApplicationCommandOptionType, ApplicationCommandType, ChatInputCommandInteraction, TextChannel } from 'discord.js';
+import { getUser } from '../../users.js';
+import { APIEmbedField, ApplicationCommandOptionType, ApplicationCommandType, ChatInputCommandInteraction, codeBlock, TextChannel } from 'discord.js';
 import { moves } from '../../moves.js';
 import { getString, LocaleString } from '../../locale.js';
 import { StatID, Stats } from "../../stats.js";
 import { items } from '../../helditem.js';
+import { abilities } from '../../abilities.js';
+import { dispDelta, formatString } from '../../util.js';
 export let command: Command = {
     name: "choose",
     description: "ur mom",
@@ -60,6 +61,20 @@ export let command: Command = {
                     choices: items.map((el, k) => ({ name: el.name, value: k }))
                 }
             ]
+        },
+        {
+            type: ApplicationCommandOptionType.Subcommand,
+            description: "Shows info about an ability",
+            name: "ability",
+            options: [
+                {
+                    name: "ability",
+                    type: ApplicationCommandOptionType.String,
+                    required: true,
+                    description: "The ability",
+                    choices: abilities.map((el, k) => ({ name: el.name, value: k }))
+                }
+            ]
         }
     ],
     async autocomplete(i) {
@@ -70,7 +85,7 @@ export let command: Command = {
 
         let focused = i.options.getFocused(true)
         if (focused.name == "move") {
-            let list = moves.filter((v, k) => v.selectable && play?.moveset.includes(k) || false).filter((v, k) => v.name.split(" ").some(el => el.toLowerCase().startsWith(focused.value as string)))
+            let list = moves.filter((v, k) => play?.moveset.includes(k) || false).filter((v, k) => v.name.split(" ").some(el => el.toLowerCase().startsWith(focused.value as string)))
             await i.respond(list.map((v, k) => ({ value: k, name: v.name })))
         } else if (focused.name == "target") {
             let c = commands.get("info")
@@ -130,49 +145,21 @@ export let command: Command = {
                 let moveId = i.options.getString("move", true);
                 let move = moves.get(moveId)
                 if (move) {
-                    let desc = `**Power**: ${move.power || "-"}\n**Accuracy**: ${move.accuracy}%\n**Category**: ${move.category}`
-                    if (move.type == "attack") desc += `\n**Damage Type**: ${move.setDamage}`
-                    function thing(num: number) {
-                        if (num > 0) return `+${num}`
-                        return `${num}`
+                    //@ts-ignore
+                    let desc = formatString(`Power: [a]${move.power || "-"}[r]\nAccuracy: [a]${move.accuracy}%[r]\nCategory: [a]${getString("move.category." + move.category)}[r]`)
+                    //@ts-ignore
+                    if (move.type == "attack") desc += formatString(`\nDamage Type: [a]${getString("move.dmgtype." + move.setDamage)}[r]`)
+                    desc += `\n\n${move.description}`
+                    if (move.requiresCharge) {
+                        desc += formatString(`\nThis move requires [a]${move.requiresCharge}[r] [red]Charge[r] to use.`)
                     }
-                    function funi(boost: Stats) {
-                        return Object.keys(boost).map(el => ({stat: el, boost: boost[el as StatID]})).filter(el => el.boost != 0)
-                    }
-                    let userStat = funi(move.userStat)
-                    let targetStat = funi(move.targetStat)
-                    let fields: APIEmbedField[] = []
-                    fields.push({
-                        name: "General info",
-                        value: `${desc}`
-                    })
-                    if (userStat.length) {
-                        fields.push({
-                            name: `User stat changes`,
-                            value: `**Chance**: ${Math.floor(move.userStatChance * 100)}%\n` + userStat.map(el => {
-                                return `**${getString("stat." + el.stat as LocaleString)}**: ${thing(el.boost)}`
-                            }).join("\n")
-                        })
-                    }
-                    if (targetStat.length) {
-                        fields.push({
-                            name: `Target stat changes`,
-                            value: `**Chance**: ${Math.floor(move.targetStatChance * 100)}%\n` + targetStat.map(el => {
-                                return `**${getString("stat." + el.stat as LocaleString)}**: ${thing(el.boost)}`
-                            }).join("\n")
-                        })
-                    }
-                    if (move.requiresMagic || move.requiresCharge) {
-                        fields.push({
-                            name: "Charge/Magic",
-                            value: `Requires ${move.requiresCharge} charge and ${move.requiresMagic} magic`
-                        })
+                    if (move.requiresMagic) {
+                        desc += formatString(`\nThis move requires [a]${move.requiresMagic}[r] [blue]Magic[r] to use.`)
                     }
                     await i.reply({
                         embeds: [{
                             title: `${move.name}`,
-                            description: `${move.description || "No description provided"}`,
-                            fields: fields
+                            description: codeBlock("ansi", desc),
                         }]
                     })
                 } else return new Error(`Unknown move: '${moveId}'`)
@@ -184,7 +171,18 @@ export let command: Command = {
                 await i.reply({
                     embeds: [{
                         title: `${item.icon || "❓"} ${item.name}`,
-                        description: `**Effect**: ${item.passiveEffect || "N/A"}\n**ID**: ${i.options.getString("item", true)}`
+                        description: codeBlock("ansi", `Item ID: ${i.options.getString("item", true)}\n${item.passiveEffect || "N/A"}`)
+                    }]
+                })
+                break;
+            }
+            case "ability": {
+                let ability = abilities.get(i.options.getString("ability", true))
+                if (!ability) return await i.reply("wh")
+                await i.reply({
+                    embeds: [{
+                        title: `${ability.name}`,
+                        description: codeBlock("ansi", `BSP ${dispDelta(-ability.cost)}\n Ability ID: ${i.options.getString("ability", true)}\n${ability.description}`)
                     }]
                 })
                 break;

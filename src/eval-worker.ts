@@ -1,3 +1,4 @@
+process.exit(1)
 import worker from "worker_threads"
 import { parentPort } from "worker_threads"
 import vm2 from "vm2"

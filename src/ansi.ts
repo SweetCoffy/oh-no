@@ -26,3 +26,29 @@ export const BG_White       = 47
 export const Normal = 0
 export const Bold = 1
 export const Underline = 4
+
+export type LogColor = "red" | "green" | "white" | "gray" | "blue" | "yellow" | "pink" | "cyan"
+export type LogColorWAccent = LogColor | "accent" | "success" | "failure" | "danger" | "unimportant"
+export const color2ANSITable: { [x in LogColorWAccent]: number } = {
+    accent: FG_Cyan,
+    success: FG_Green,
+    failure: FG_Red,
+    danger: FG_Yellow,
+    unimportant: FG_Gray,
+
+    red: FG_Red,
+    green: FG_Green,
+    white: 0,
+    gray: FG_Gray,
+    blue: FG_Blue,
+    yellow: FG_Yellow,
+    pink: FG_Pink,
+    cyan: FG_Cyan,
+}
+export const color2ANSIAlias: { [x: string]: LogColorWAccent } = {
+    a: "accent",
+    s: "success",
+    f: "failure",
+    d: "danger",
+    u: "unimportant"
+}

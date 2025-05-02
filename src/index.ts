@@ -12,10 +12,10 @@ import { writeFileSync, readFileSync } from "fs"
 import { shopItems } from "./items.js"
 
 import { resolve } from "path"
-import { calcStat } from "./stats.js"
+import { BasicStats, calcStat, limitStats } from "./stats.js"
 import { calcDamage } from "./battle.js"
 
-let config = JSON.parse(readFileSync(resolve("../config.json"), "utf8"))
+let config = JSON.parse(readFileSync(resolve("./.config.json"), "utf8"))
 
 const token = config.token
 
@@ -27,10 +27,10 @@ settings.noSave = process.argv.includes("-nosave") || settings.experimental
 
 
 export let client = new Discord.Client({
-    intents: [GatewayIntentBits.Guilds]
+    intents: [GatewayIntentBits.Guilds],
 })
 
-client.on("ready", async() => {
+client.on("ready", async () => {
     console.log(`Ready`)
     let g = await client.guilds.fetch(GUILD_ID)
     let cmds = await loadDir("commands")
@@ -45,7 +45,7 @@ client.on("ready", async() => {
     console.log(formatString(`It does, that's [s]great[r]!`))
 })
 
-client.on("interactionCreate", async(i) => {
+client.on("interactionCreate", async (i) => {
     if (i.isAutocomplete()) {
         let cmd = commands.get(i.commandName)
         if (cmd && "autocomplete" in cmd) {
@@ -93,7 +93,7 @@ function saveOther() {
             globalData.itemStock[k] = v.stock
         }
     }
-    writeFileSync("global.json", JSON.stringify(globalData, function(k, v){
+    writeFileSync("global.json", JSON.stringify(globalData, function (k, v) {
         if (typeof v == "bigint") return `BigInt:${v}`
         return v
     }, 4))
@@ -118,25 +118,25 @@ process.on("SIGINT", () => {
     saveJSON()
     process.exit(0)
 })
-client.on("messageCreate", async(m) => {
+client.on("messageCreate", async (m) => {
     if (m.author.bot) return;
     let u = getUser(m.author);
-    if (Date.now() > u.lastMessage + 5*1000) {
+    if (Date.now() > u.lastMessage + 5 * 1000) {
         u.msgLvl_xp += 10 + Math.floor(Math.cbrt(u.msgLvl_xp))
     }
     u.msgLvl_messages++
     u.lastMessage = Date.now();
 })
 
-setInterval(async() => {
+setInterval(async () => {
     for (let [k, v] of users) {
-        v.money.points += (BigInt(v.banks) * (v.multiplier/4n))*15n*5n*3n
+        v.money.points += (BigInt(v.banks) * (v.multiplier / 4n)) * 15n * 5n * 3n
     }
 }, 15000)
 loadRecursive("content")
 
 function statGraph(base = 100, maxlevel = 100) {
-    let step = maxlevel/50
+    let step = maxlevel / 50
     let highest = calcStat(base, maxlevel)
     let chars = process.stdout.columns - 30
     for (let i = 0; i <= maxlevel; i += step) {
@@ -145,7 +145,7 @@ function statGraph(base = 100, maxlevel = 100) {
     }
 }
 function damageGraph(power = 100, baseatk = 100, basedef = 100, maxlevel = 100) {
-    let step = maxlevel/50
+    let step = maxlevel / 50
     let highest = calcDamage(power, calcStat(baseatk, maxlevel), calcStat(basedef, maxlevel), maxlevel)
     let chars = process.stdout.columns - 30
     for (let i = 0; i <= maxlevel; i += step) {
@@ -156,6 +156,21 @@ function damageGraph(power = 100, baseatk = 100, basedef = 100, maxlevel = 100) 
     }
 }
 
+// statGraph(100, 100)
+// damageGraph(40, 100, 100, 100)
+
+let statTest: BasicStats = {
+    hp: 600,
+    atk: 0,
+    def: 0,
+    spatk: 0,
+    spdef: 0,
+    spd: 0,
+}
+let testBst = 600
+
+console.log(statTest)
+console.log(limitStats(statTest, testBst))
 
 client.on("error", (error) => {
     console.error(error)

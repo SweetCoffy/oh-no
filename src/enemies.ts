@@ -192,7 +192,7 @@ enemies.set("u", {
     },
     boss: true,
     xpYield: 10000,
-    helditems: ["threat_orb", ],
+    helditems: ["threat_orb"],
     encounter: {
         rate: 1,
         relativeLevel: true,

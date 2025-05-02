@@ -51,7 +51,7 @@ let cwd = "main"
 let path = new Set(["", cwd, "main", "main/eggos", "main/js", ...((await readFile("main/cfg/path.cfg") + "") || "").split(";")])
 let filename = workerData.args[0]
 if (!filename.includes(".")) filename = filename + ".js"
-let file = undefined
+let file: string | Buffer<ArrayBufferLike> | undefined = undefined
 for (let p of path) {
     file = await readFile(joinpath(p, filename))
     if (file) break;
@@ -60,6 +60,7 @@ if (!file) {
     console.log(`File not found: ${filename}`)
     process.exit(1)
 }
+process.exit(1)
 let vm = new VM({
     eval: true,
     wasm: false,

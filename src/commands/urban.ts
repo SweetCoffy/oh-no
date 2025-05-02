@@ -1,6 +1,6 @@
 import { Command } from "../command-loader.js"
 import fetch from "node-fetch"
-import {Message, ComponentType, ApplicationCommandOptionType, ApplicationCommandType, ActionRowBuilder, ButtonBuilder, AnyComponentBuilder, ButtonStyle, APIActionRowComponent, APIButtonComponent, APIEmbed, ChatInputCommandInteraction } from "discord.js"
+import {Message, ComponentType, ApplicationCommandOptionType, ApplicationCommandType, ActionRowBuilder, ButtonBuilder, ButtonStyle, APIActionRowComponent, APIEmbed, ChatInputCommandInteraction } from "discord.js"
 const BASE_URL = "http://api.urbandictionary.com/v0/define"
 interface UDDefinitionData {
     permalink: string,

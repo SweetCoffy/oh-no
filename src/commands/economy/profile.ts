@@ -15,7 +15,7 @@ export let command: Command = {
         }
     ],
     async run(i) {
-        let user = i.options.getUser("user") || i.user
+        let user = i.options.get("user")?.user || i.user
         let u = getUser(user)
         let val = (BigInt(u.banks) * (u.multiplier/4n))*15n
         let b = val / 60n

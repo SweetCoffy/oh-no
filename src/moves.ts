@@ -1,7 +1,7 @@
 import { Collection } from "discord.js"
-import { Battle, calcMul, Player } from "./battle.js"
+import { Battle, Player } from "./battle.js"
 import { makeStats, Stats } from "./stats.js"
-import { rng, lerp, weightedDistribution } from "./util.js"
+import { formatString, weightedDistribution } from "./util.js"
 
 export type MoveType = "attack" | "status" | "protect" | "heal" | "absorption" | "noop"
 export type Category = "physical" | "special" | "status"
@@ -157,55 +157,55 @@ moves.set("bonk", new Move("Bonk", "attack", 60))
 moves.set("needle", new Move("Needle", "attack", 100/20, "physical", 80).set(move => {
     move.inflictStatus.push({ status: "bleed", chance: 1 })
     move.setDamage = "percent"
-}).setDesc("A weak move that will always do the same amount of damage. Can also make the target Bleed"))
+}).setDesc(formatString("Deals fixed damage equal to [a]5%[r] of the target's [a]MAX HP[r] and inflicts them with [a]Bleed[r]")))
 moves.set("nerf_gun", new Move("Nerf Gun", "attack", 60, "special"))
 
 // Physical/Special recoil attacks
-moves.set("ping", new Move("Ping Attack", "attack", 190, "special").set(move => {
+moves.set("ping", new Move("Ping Attack", "attack", 120, "special").set(move => {
     move.requiresMagic = 30
-    move.targetStatChance = 0.5
-}).setDesc("A quite powerful move, the user's Special Attack is lowered due to the recoil"))
-moves.set("slap", new Move("Slap", "attack", 190).set(move => {
-    move.userStat.atk = -1
+}).setDesc(formatString("A strong [a]Special[r] move that requires [a]Magic[r] to use.")))
+moves.set("slap", new Move("Slap", "attack", 120).set(move => {
     move.requiresCharge = 15
-    move.targetStatChance = 0.5
-}).setDesc("A quite powerful move, the user takes an eight of their Max HP due to the recoil"))
+}).setDesc(formatString("A strong [a]Physical[r] move that requires [a]Charge[r] to use.")))
 
 // Status inflicting moves
 moves.set("twitter", new Move("Twitter", "status", 0, "status", 90).set(move => {
     move.inflictStatus.push({chance: 1, status: "poison"})
     move.userStat.def = -1
     move.userStat.spdef = -1
-}).setDesc("Inflicts the target with poison"))
+}).setDesc(formatString("Inflicts the target with [a]Poison[r]")))
 
 // Physical stat boosting moves
 moves.set("stronk", new Move("Stronk", "status", 0, "status").set(move => {
     move.targetStat.atk = 1
     move.targetSelf = true
-}).setDesc("Increases the user's Attack"))
+}).setDesc(formatString("Increases the user's [a]ATK[r] by [a]1[r] stage.")))
 
 moves.set("tonk", new Move("Tonk", "status", 0, "status").set(move => {
     move.targetStat.def = 1
     move.targetSelf = true
-}).setDesc("Increases the user's Defense"))
+}).setDesc(formatString("Increases the user's [a]DEF[r] by [a]1[r] stage.")))
 
 moves.set("reckless_rush", new Move("Reckless Rush", "status", 0, "status").set(move => {
-    move.targetStat.spdef = -2
-    move.targetStat.def = -2
-    move.targetStat.atk = 3
     move.targetSelf = true
-}).setDesc("Increases the user's Attack drastically but lowers Defense and Special Defense harshly"))
+    move.requiresCharge = 20
+    move.onUse = (b, p) => {
+        let s = b.inflictStatus(p, "rush")
+        if (!s) return
+        s.duration = 3
+    }
+}).setDesc(formatString("[a]Consumes all Charge[r] and increases the user's [a]ATK[r] by [a]1%[r] for every point of [a]Charge[r] consumed. The [a]ATK[r] boost lasts for [a]2[r] turns.")))
 
 // Special stat boosting moves
 moves.set("spstronk", new Move("Magik Sord", "status", 0, "status").set(move => {
     move.targetStat.spatk = 1
     move.targetSelf = true
-}).setDesc("Increases the user's Special Attack"))
+}).setDesc(formatString("Increases the user's [a]SPATK[r] by [a]1[r] stage.")))
 
 moves.set("sptonk", new Move("Magik Sheld", "status", 0, "status").set(move => {
     move.targetStat.spdef = 1
     move.targetSelf = true
-}).setDesc("Increases the user's Special Defense"))
+}).setDesc(formatString("Increases the user's [a]SPDEF[r] by [a]1[r] stage.")))
 
 moves.set("mind_overwork", new Move("Neuro-Overclock", "status", 0, "status").set(move => {
     move.targetStat.spatk = 3
@@ -216,7 +216,8 @@ moves.set("mind_overwork", new Move("Neuro-Overclock", "status", 0, "status").se
 }).setDesc("Increases the user's Special Attack drastically. However, it costs some HP to use"))
 
 // P R O T E C T
-moves.set("protect", new Move("Protect", "protect", 0, "status").set(move => move.priority = 4).setDesc("Protects the user from any damage for the whole turn, sucess rate lowers the more times used"))
+moves.set("protect", new Move("Protect", "protect", 0, "status").set(move => move.priority = 4)
+    .setDesc(formatString("Protects the user from [a]all damage[r] for the whole turn. [a]Repeated uses decrease the move's success rate.[r]")))
 
 // Only usable in certain conditions
 //moves.set("shield_breaker", new Move("Protect is Cringe", "attack", 500).set(move => {
@@ -237,7 +238,7 @@ moves.set("counter", new Move("Counter", "attack", 0).set(move => {
     move.getPower = function(b, p, t) {
         return p.damageBlockedInTurn * 2
     }
-}).setDesc("This move deals double the damage blocked by Protect in the previous turn"))
+}).setDesc(formatString("Deals fixed damage equal to [a]200%[r] of the damage blocked by [a]Protect[r] in the previous turn.")))
 moves.set("release", new Move("Release", "attack", 0).set(move => {
     move.accuracy = 100
     move.priority = 1
@@ -256,22 +257,19 @@ moves.set("release", new Move("Release", "attack", 0).set(move => {
         }
         b.logL(`dmg.release`, { damage: total })
     }
-}).setDesc("A different version of Counter, which deals less damage overall and is unable to do critical hits, but distributes the damage across all enemies of the same team as the target"))
+}).setDesc(formatString("Deals damage to [a]all battlers[r] on the target's team, totalling to [a]150%[r] of the damage blocked by [a]Protect[r] in the previous turn. [a]This move can't deal CRITs.[r]")))
 
 moves.set("regen", new Move("Regeneration", "status", 0, "status", 100).set(move => {
-    move.requiresMagic = 10
+    move.requiresMagic = 20
     move.targetSelf = true
     move.inflictStatus.push({
         chance: 1,
         status: "regen"
-    }, {
-        chance: 0.1,
-        status: "strong_regen"
     })
-}).setDesc("Grants the user Regeneration, slowly healing them over time"))
+}).setDesc(formatString("Grants the user [a]Regeneration[r] for [a]4[r] turns, healing them by [a]6.25%[r] of their [a]MAX HP[r] every turn while the effect is active.")))
 moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
     move.requiresMagic = 30
-}).setDesc("A basic healing move, restores 40% of the user's max hp"))
+}).setDesc(formatString("Heals the user by [a]40%[r] of their [a]MAX HP[r].")))
 moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
     move.accuracy = 100
     move.priority = 1
@@ -283,10 +281,10 @@ moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
     }
     move.onUse = function (b, p, t) {
         t.hp = 1
-        b.heal(t, t.maxhp)
+        b.heal(t, t.maxhp - 1)
         b.logL("heal.revive", { player: t.toString() })
     }
-}).setDesc("Revives the target with max HP"))
+}).setDesc(formatString("Revives the target with their full [a]HP[r] restored. [a]The target's held items and stat modifiers will be lost.[r]")))
 //moves.set("overheal", new Move("Overheal", "heal", 150, "status", 100).set(move => {
 //    move.requiresMagic = 30
 //    move.userStat.atk = -12
@@ -310,4 +308,8 @@ moves.set("pingcheck", new Move("Pingcheck", "attack", 200, "special", 100).set(
         spd: -1,
     }
     el.inflictStatus.push({ status: "bleed", chance: 1 })
-}).setDesc("ú's exclusive move. This move is guaranteed to 1-hit KO anything"))
+}).setDesc(formatString("[a]ú[r]'s exclusive move that deals [a]200%[r] of the user's [a]MAX HP[r] in damage. The user takes [a]25%[r] of their [a]MAX HP[r] in damage and their [a]ATK, DEF, SPATK, SPDEF and SPD[r] are decreased by [a]1[r] stage when used.")))
+
+moves.set("sf_slap", new Move("SF Slap", "attack", 50).set(move => {
+    move.selectable = false
+}).setDesc("Special move for the Slap Fight and Team Slap Fight battle types"))

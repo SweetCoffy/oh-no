@@ -29,6 +29,7 @@ heal.generic: "n:$.player; restored $.amount HP!"
 heal.eggs: "n:$.player; regenerated $.amount HP from Eggs!"
 heal.regeneration: "n:$.player; regenerated $.amount HP!"
 heal.revive: "n:$.player; went back to life!"
+heal.uk: "n:$.player; restored $.amount HP with blood!"
 
 # Move messages
 move.use: "n:$.player; used $.move!"
@@ -41,6 +42,14 @@ move.type: "Type: $.value"
 move.recoil: "Recoil: $.value%"
 move.userstat: "User stat changes:"
 move.targetstat: "Target stat changes:"
+
+move.category.physical: "Physical"
+move.category.special: "Special"
+move.category.status: "Status"
+move.dmgtype.regular: "Standard"
+move.dmgtype.set: "Fixed"
+move.dmgtype.percent: "Fixed %"
+move.dmgtype.set-atkdef: "Fixed (ATK/DEF)"
 
 # Move category names
 physical: "Physical"
@@ -73,6 +82,7 @@ status.toxic.start: "n:$.player; has been badly poisoned."
 status.california.start: "n:$.player; now lives in California!"
 status.bleed.start: "n:$.player; is now bleeding."
 status.opposite_day.start: "n:$.player; now lives in Australia!"
+status.rush.start: "Beware of n:$.player;."
 
 # Item messages
 item.shield.boost: "n:$.player;'s Shield is now active."
@@ -94,6 +104,8 @@ battle.ffa: "Free for All"
 battle.pve: "Players vs Enemies"
 battle.boss: "Vs. Boss"
 battle.team_match: "Team Match"
+battle.slap_fight: "Slap Fight"
+battle.team_slap_fight: "Team Slap Fight"
 
 # Other
 enemy.appears: "n:$.name; appears."

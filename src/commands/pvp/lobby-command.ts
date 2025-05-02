@@ -2,7 +2,7 @@ import { BattleLobby, createLobby, Difficulty, findValidLobby, lobbies } from '.
 import { Command } from '../../command-loader.js'
 import { getUser, users } from '../../users.js';
 import { ActionRowBuilder, APIActionRowComponent, ApplicationCommandOptionType, ApplicationCommandType, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, CommandInteraction, ComponentType, Message, MessageComponentInteraction, SelectMenuBuilder, TextChannel } from 'discord.js';
-import { BattleType, MaxTeams, MinTeams, Player, teamEmojis, teamNames } from '../../battle.js';
+import { BattleType, BattleTypeInfo, MaxTeams, MinTeams, Player, teamEmojis, teamNames } from '../../battle.js';
 import { enemies } from '../../enemies.js';
 import { getString } from '../../locale.js';
 import { confirmation } from '../../util.js';
@@ -61,6 +61,14 @@ export let command: Command = {
                         {
                             name: "Team Match",
                             value: "team_match",
+                        },
+                        {
+                            name: "Slap Fight",
+                            value: "slap_fight",
+                        },
+                        {
+                            name: "Team Slap Fight",
+                            value: "team_slap_fight",
                         }
                     ]
                 },
@@ -68,7 +76,7 @@ export let command: Command = {
                     name: "team_count",
                     required: false,
                     type: ApplicationCommandOptionType.Integer,
-                    description: "The amount of teams for Team Match",
+                    description: "The amount of teams for team-based modes",
                 },
                 {
                     name: "difficulty",
@@ -99,7 +107,7 @@ export let command: Command = {
                     required: false,
                     type: ApplicationCommandOptionType.String,
                     description: "beuhg",
-                    choices: enemies.filter(el => el.boss).map((el, k) => ({name: el.name, value: k}))
+                    choices: enemies.filter(el => el.boss).map((el, k) => ({ name: el.name, value: k }))
                 },
                 {
                     name: "flags",
@@ -112,7 +120,7 @@ export let command: Command = {
                     required: false,
                     type: ApplicationCommandOptionType.String,
                     description: "The enemy preset to use, only has an effect in lobbies with the E flag",
-                    choices: enemies.map((v, k) => ({name: v.name, value: k}))
+                    choices: enemies.map((v, k) => ({ name: v.name, value: k }))
                 }
             ]
         },
@@ -150,7 +158,7 @@ export let command: Command = {
                     required: false,
                     type: ApplicationCommandOptionType.String,
                     description: "The enemy preset to use, only has an effect in lobbies with the E flag",
-                    choices: enemies.map((v, k) => ({name: v.name, value: k}))
+                    choices: enemies.map((v, k) => ({ name: v.name, value: k }))
                 },
                 {
                     name: 'team',
@@ -178,7 +186,7 @@ export let command: Command = {
                 embeds: [
                     {
                         title: `${lobby.name}`,
-                        description: `ID: ${lobby.id}\nHas started: ${lobby.started ? "Yes" : "No"}\nPlayers: ${lobby.users.length}/${lobby.capacity}\nBot count: ${lobby.botCount}\nLevel: ${lobby.level}\nType: ${getString(`battle.${lobby.type}`)}\nFlags: ${lobby.flagsString}`
+                        description: `< **${BattleTypeInfo[lobby.type].name.toUpperCase()}** >\nID: ${lobby.id}\nHas started: ${lobby.started ? "Yes" : "No"}\nPlayers: ${lobby.users.length}\nBot count: ${lobby.botCount}\nLevel: ${lobby.level}\nFlags: ${lobby.flagsString}`
                     }
                 ],
                 components: [
@@ -186,12 +194,12 @@ export let command: Command = {
                 ],
                 fetchReply: true,
             }) as Message
-            reply.createMessageComponentCollector({time: 1000 * 60 * 5}).on("collect", async(i) => {
+            reply.createMessageComponentCollector({ time: 1000 * 60 * 5 }).on("collect", async (i) => {
                 if (i.customId == "join") {
                     try {
                         let team = undefined
                         lobby.join(i.user, { team }, i.channel || undefined)
-                        if (lobby.type == "team_match") {
+                        if (lobby.isTeamMatch()) {
                             team = await teamPrompt(i, lobby.teamCount)
                             await i.followUp({
                                 content: `${i.user.username} has joined`,
@@ -207,7 +215,7 @@ export let command: Command = {
                     }
                 }
             }).on("end", () => {
-                reply.edit({components: []})
+                reply.edit({ components: [] })
             })
         }
         async function teamPrompt(interaction: CommandInteraction | MessageComponentInteraction, teamCount: number) {
@@ -275,7 +283,7 @@ export let command: Command = {
                 let lobby = lobbies.get(i.options.getString("id", true))
                 if (!lobby) return await i.reply("uaishfuiersnvgeiurgrgerg")
                 let team = i.options.getInteger("team", false) ?? undefined
-                if (lobby.type == "team_match" && team == undefined) team = await teamPrompt(i, lobby.teamCount)
+                if (lobby.isTeamMatch() && team == undefined) team = await teamPrompt(i, lobby.teamCount)
                 lobby.join(i.user, { team, nickname: (await i.guild?.members.fetch(i.user.id))?.nickname || undefined, enemyPreset: i.options.getString("enemy_preset", false) || undefined }, i.channel)
                 await i.reply(`Joined the lobby`)
                 break;
@@ -297,7 +305,7 @@ export let command: Command = {
                 lobby.usersE[0].nickname = (await i.guild?.members.fetch(i.user.id))?.nickname || undefined
                 lobby.channels.push(i.channel)
                 await lobbyInfo(lobby, i)
-                if (lobby.type == "team_match") lobby.usersE[0].team = await teamPrompt(i, lobby.teamCount)
+                if (lobby.isTeamMatch()) lobby.usersE[0].team = await teamPrompt(i, lobby.teamCount)
                 break;
             }
             case "start": {
@@ -311,10 +319,12 @@ export let command: Command = {
                     if (battle) {
                         let lastInfos: Message[] = []
                         for (let c of lobby.channels) {
-                            lastInfos.push(await battle.infoMessage(c))
+                            if (c.isSendable()) {
+                                lastInfos.push(await battle.infoMessage(c))
+                            }
                         }
                         battle.checkActions();
-                        battle.on("newTurn", async() => {
+                        battle.on("newTurn", async () => {
                             if (!battle) return
                             if (!lobby) return
                             if (!(i.channel instanceof TextChannel)) return
@@ -323,12 +333,14 @@ export let command: Command = {
                             }
                             lastInfos = []
                             for (let c of lobby.channels) {
-                                lastInfos.push(await battle.infoMessage(c))
+                                if (c.isSendable()) {
+                                    lastInfos.push(await battle.infoMessage(c))
+                                }
                             }
                             setTimeout(() => {
                                 battle?.checkActions();
                             }, 5000)
-                        }).on("end", async(winner?: Player) => {
+                        }).on("end", async (winner?: Player) => {
                             if (!lobby) return
                             if (!battle) return
                             if (!(i.channel instanceof TextChannel)) return
@@ -349,19 +361,11 @@ export let command: Command = {
                 let lobby = getUser(i.user)?.lobby
                 if (lobby) {
                     if (lobby.host.id != i.user.id) {
-                        if (lobby.battle && !await confirmation(i, `If you leave a lobby that has already started, you will not be able to get back in. Are you sure you want to leave?`)) {
-                            await i.followUp(`Cancelled`)
-                            return
-                        }
                         lobby.leave(i.user)
                         await i.reply("Left the lobby")
                     } else {
-                        if (!await confirmation(i, `Leaving the lobby as the host will end it entirely. Are you sure you want to leave?`)) {
-                            await i.followUp(`Cancelled`)
-                            return
-                        }
                         lobby.delete()
-                        await i.followUp("Ended the lobby")
+                        await i.reply("Ended the lobby")
                     }
                 } else return i.reply("You are not in a lobby")
             }

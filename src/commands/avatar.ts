@@ -13,7 +13,7 @@ export let command: Command = {
         }
     ],
     async run(i) {
-        let user = i.options.getUser("user") || i.user
+        let user = i.options.get("user")?.user || i.user
         await i.reply({
             embeds: [
                 {

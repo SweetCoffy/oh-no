@@ -1,0 +1,3 @@
+files:
+  ls.js: js/ls.js
+depends: []

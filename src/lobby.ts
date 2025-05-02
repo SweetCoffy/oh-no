@@ -1,9 +1,9 @@
 import { Collection, TextBasedChannel, User } from "discord.js"
-import { Battle, Player, BattleType } from "./battle.js"
+import { Battle, Player, BattleType, isTeamMatch, BattleTypeInfo } from "./battle.js"
 import { enemies } from "./enemies.js"
 import { items } from "./helditem.js"
 import { presets } from "./stats.js"
-import { getUser, users } from "./users.js"
+import { getUser } from "./users.js"
 import { Dictionary, getID, settings } from "./util.js"
 export class JoinError extends Error {
     name = "JoinError"
@@ -38,6 +38,9 @@ export class BattleLobby {
     startedAt: number
     _flags: Dictionary<boolean> = { E: false, T: false, W: false }
     teamCount: number = 4
+    isTeamMatch() {
+        return isTeamMatch(this.type)
+    }
     get flagsString() {
         return Object.entries(this._flags).filter(e => e[1]).map(e => e[0])
     }
@@ -91,7 +94,7 @@ export class BattleLobby {
     difficulty: Difficulty = "medium"
     start() {
         this.battle = new Battle(this)
-        if (this.type == "team_match") this._flags.T = true
+        if (this.isTeamMatch()) this._flags.T = true
         let l = this
         if (this.battle.on("end", (winner: Player) => {
             l.delete()
@@ -113,7 +116,7 @@ export class BattleLobby {
                 }
             }
             if (this.flags.T) {
-                play.team = e.team ?? this.type == "team_match" ? Math.floor(Math.random() * 4) : 0
+                play.team = e.team ?? this.isTeamMatch() ? Math.floor(Math.random() * 4) : 0
             }
             play.updateStats()
             if (e.nickname) play._nickname = e.nickname;
@@ -143,31 +146,36 @@ export class BattleLobby {
                 bot.level = Math.ceil(bot.level * 0.46)
                 bot.team = 1;
             }
-            if (this.type == "team_match") {
+            if (this.isTeamMatch()) {
                 bot.team = teams.findIndex((v) => v < perTeam || v <= 0)
                 teams[bot.team]++
             }
             //@ts-ignore
             bot.baseStats = {...b[Math.floor(Math.random() * b.length)]}
-            if (this.bossType) {
-                let enemy = enemies.get(this.bossType);
-                if (enemy) {
-                    bot.baseStats = { ...enemy.stats }
-                    bot.ability = enemy.ability;
-                    bot.helditems = [...enemy.helditems||[]].map(el => ({ id: el }))
-                    bot._nickname = enemy.name
-                    bot.ai = enemy.ai
-                }
-            }
             bot.updateStats()
             if (this.type == "boss") {
-                bot.level *= 1 + (levelPerPlayer * this.users.length)
-                this.battle.statBoost(bot, "atk", 1);
-                this.battle.statBoost(bot, "def", 1);
-                this.battle.statBoost(bot, "spatk", 1);
-                this.battle.statBoost(bot, "spdef", 1);
-                bot.helditems.push({id: "bruh_orb"});
-                bot.team = 1;
+                if (i == 0) {
+                    bot.team = 1
+                    bot.level *= 1 + (levelPerPlayer * this.users.length)
+                    this.battle.statBoost(bot, "atk", 1)
+                    this.battle.statBoost(bot, "def", 1)
+                    this.battle.statBoost(bot, "spatk", 1)
+                    this.battle.statBoost(bot, "spdef", 1)
+                    bot.helditems.push({id: "bruh_orb"})
+                    if (this.bossType) {
+                        let enemy = enemies.get(this.bossType);
+                        if (enemy) {
+                            bot.baseStats = { ...enemy.stats }
+                            bot.ability = enemy.ability;
+                            bot.helditems = [...enemy.helditems||[]].map(el => ({ id: el }))
+                            bot._nickname = enemy.name
+                            bot.ai = enemy.ai
+                        }
+                    }
+                }
+                else {
+                    bot.team = 0
+                }
             } else {
                 for (let j = 0; j < 4; j++) {
                     bot.helditems.push({id: it[Math.floor(Math.random() * it.length)]})
@@ -185,6 +193,8 @@ export class BattleLobby {
             }
         }
         this.battle.players.sort((a, b) => a.team - b.team)
+        let start = BattleTypeInfo[this.battle.type].onStart
+        if (start) start(this.battle)
     }
     channels: TextBasedChannel[] = []
     join(user: User, e?: UserJoinData, channel?: TextBasedChannel) {

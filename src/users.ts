@@ -1,9 +1,9 @@
 import { User, Collection } from 'discord.js'
 import { BattleLobby } from './lobby.js'
-import { baseStats, Stats, getPreset, getPresetList, StatPreset } from './stats.js'
-import { ItemStack, ItemType } from "./items.js"
+import { baseStats, Stats, StatPreset, BasicStats } from './stats.js'
+import { ItemStack } from "./items.js"
 import { writeFileSync, existsSync, readFileSync, mkdirSync } from "fs"
-import { BitArray, BitArray2D, experimental, settings } from './util.js'
+import { experimental, settings } from './util.js'
 import { client } from './index.js'
 import { Enemy } from './enemies.js'
 export let data: any = {}
@@ -27,7 +27,7 @@ export interface MoneyData<T> {
 export interface UserInfo {
     user: User,
     lobby?: BattleLobby,
-    baseStats: Stats,
+    baseStats: BasicStats,
     preset: string,
     presets: PresetList,
     money: MoneyData<bigint>,

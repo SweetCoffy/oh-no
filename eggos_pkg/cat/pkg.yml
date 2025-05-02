@@ -1,0 +1,3 @@
+files:
+  cat.js: js/cat.js
+depends: []

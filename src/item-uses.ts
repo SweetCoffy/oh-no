@@ -1,8 +1,8 @@
-import { AutocompleteInteraction, User } from "discord.js";
+import { User } from "discord.js";
 import { enemies, Enemy } from "./enemies.js";
-import { addItem, addMultiplierItem, getItem, ItemResponse, ItemStack, ItemUseCallback, shopItems, stackString, summonBoss } from "./items.js";
+import { addItem, addMultiplierItem, getItem, ItemResponse, ItemStack, ItemUseCallback, stackString } from "./items.js";
 import { getRank, getUser } from "./users.js";
-import { Dictionary, lexer, max, min, weightedRandom } from "./util.js";
+import { Dictionary, min, weightedRandom } from "./util.js";
 import { Worker } from "worker_threads"
 import { readFileSync, existsSync } from "fs"
 import { load } from "js-yaml";
@@ -243,7 +243,7 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
     let _fs: PhoneFS = {main: data.items[1].data?.fs}
     if (!_fs.main) return yield { type: "fail", reason: `storage when` }
     function getFSItem(item: any) {
-        let data = item.data
+        let data = item?.data
         if (!data) return undefined;
         if (data.type == "storage") return data.fs;
         else if (item.item == "battery") return {
@@ -338,8 +338,10 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
             worker.postMessage({ id: msg.id, content: (c == undefined) ? undefined : Buffer.from(c + "") })
             console.log(`Read to ${msg.path} sent (id: ${msg.id})`)
         } else if (msg.type == "write") {
+            console.log(`Write to ${msg.path} received`)
             setPath(fs, msg.path, msg.cont)
             worker.postMessage({ id: msg.id })
+            console.log(`Write to ${msg.path} sent (id: ${msg.id})`)
         } else if (msg.type == "msg") {
             acc += msg.message + "\n"
         } else if (msg.type == "readdir") {
