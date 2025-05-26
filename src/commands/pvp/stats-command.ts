@@ -14,6 +14,24 @@ function getWeighted(weights: number[], total: number = 600) {
     }
     return ar
 }
+function statAllocationComponent(user: User, presetId: string) {
+    function statSelectComponent(cid: string, max: number, min: number = 1) {
+        let keys = Object.keys(makeStats()) as StatID[]
+        return new StringSelectMenuBuilder().setCustomId(cid)
+        .setMinValues(min)
+        .setMaxValues(max)
+        .setOptions(keys.map(k => ({ value: k, label: getString("stat." + k) })))
+    }
+    let root = new ContainerBuilder()
+    let preset = getPreset(presetId, user)
+    let presetList = getUser(user).presets
+    if (!preset) {
+        root.addTextDisplayComponents(
+            new TextDisplayBuilder().setContent("Invalid preset.")
+        )
+        return [root]
+    }
+}
 function heldItemComponent(user: User, presetId: string) {
     let root = new ContainerBuilder()
     let root2 = new ContainerBuilder()
@@ -112,6 +130,9 @@ function heldItemComponent(user: User, presetId: string) {
                 new ButtonBuilder().setLabel("Save").setCustomId("stats:save_preset").setStyle(ButtonStyle.Primary)
             )]
 }
+function normPresetName(name: string) {
+    return name.toLowerCase().replace(/[^A-Za-z_\-0-9 ]/g, "-")
+}
 export let command: Command = {
     type: ApplicationCommandType.ChatInput,
     name: "stats",
@@ -120,75 +141,26 @@ export let command: Command = {
     options: [
         {
             type: ApplicationCommandOptionType.Subcommand,
-            name: "generate",
-            description: "Generate stats from weight values",
+            name: "allocate",
+            description: "Set stat allocation for a preset",
             options: [
                 {
-                    name: "hp",
+                    name: "preset",
                     type: ApplicationCommandOptionType.Number,
-                    description: "Health",
-                    required: false,
+                    description: "Preset",
+                    required: true,
                 },
-                {
-                    name: "atk",
-                    type: ApplicationCommandOptionType.Number,
-                    description: "Attack",
-                    required: false,
-                },
-                {
-                    name: "def",
-                    type: ApplicationCommandOptionType.Number,
-                    description: "Defense",
-                    required: false,
-                },
-                {
-                    name: "spatk",
-                    type: ApplicationCommandOptionType.Number,
-                    description: "Special Attack",
-                    required: false,
-                },
-                {
-                    name: "spdef",
-                    type: ApplicationCommandOptionType.Number,
-                    description: "Special Defense",
-                    required: false,
-                },
-                {
-                    name: "spd",
-                    type: ApplicationCommandOptionType.Number,
-                    description: "Speed",
-                    required: false,
-                },
-                {
-                    name: "total",
-                    type: ApplicationCommandOptionType.Number,
-                    description: "a",
-                    required: false,
-                },
-                {
-                    name: "held_items",
-                    type: ApplicationCommandOptionType.String,
-                    description: "A comma separated list of held items",
-                    required: false
-                },
-                {
-                    name: "ability",
-                    type: ApplicationCommandOptionType.String,
-                    description: "holy sheet",
-                    required: false,
-                    autocomplete: true
-                }
             ]
         },
         {
             type: ApplicationCommandOptionType.Subcommand,
             name: "presets",
-            description: "Shows a list of presets, including both your own and default",
+            description: "Show a list of presets, including premade and custom ones.",
         },
         {
             type: ApplicationCommandOptionType.Subcommand,
             name: "held_items",
-            description: "Sets your held items",
+            description: "Set held items and ability for a preset",
             options: [
                 {
                     name: "items",
@@ -248,12 +220,6 @@ export let command: Command = {
                     description: "The name of the preset",
                     required: true
                 },
-                {
-                    name: "json",
-                    type: ApplicationCommandOptionType.String,
-                    description: "The JSON data of the preset (use /stats generate to get it)",
-                    required: true
-                },
             ]
         },
         {
@@ -289,6 +255,22 @@ export let command: Command = {
         }
         if (!i.message.interactionMetadata?.id) {
             return await i.reply({ flags: ["Ephemeral"], content: "huh?" })
+        }
+        if (i.customId.startsWith("stats:allocation_")) {
+            let tmp = getTempData(i.message.interactionMetadata?.id, "allocation", { main: [], secondary: [], tertiary: [] })
+            if (!tmp.preset) return await i.reply({ flags: ["Ephemeral"], content: "huh??" })
+            if (i.isStringSelectMenu()) {
+                switch (i.customId) {
+                    case "stats:allocation_main":
+                        tmp.main = i.values
+                    case "stats:allocation_secondary":
+                        tmp.secondary = i.values
+                    case "stats:allocation_tertiary":
+                        tmp.tertiary = i.values
+                }
+            }
+            await i.deferUpdate()
+            return
         }
         let tmp = getTempData(i.message.interactionMetadata?.id, "stats", {})
         console.log(tmp)
@@ -344,31 +326,20 @@ export let command: Command = {
     },
     async run(i: ChatInputCommandInteraction) {
         switch (i.options.getSubcommand()) {
-            case "generate": {
-                let weights: number[] = []
-                let highest = "hp"
-                let highestI = 0
-                let highestVal = 0
-                for (let k in makeStats()) {
-                    let val = i.options.getNumber(k) || 1
-                    weights.push(val)
-                    if (val > highestVal) {
-                        highestVal = val
-                        highest = k
-                        highestI = weights.length - 1
-                    }
-                }
-                let maxTotal = i.options.getNumber("total", false) || getMaxTotal({ ability: i.options.getString("ability", false) || undefined })
-                let stats = getWeighted(weights, maxTotal).map(el => Math.floor(el))
-                let total = stats.reduce((prev, cur) => prev + cur, 0)
-                let missing = maxTotal - total
-                stats[highestI] += missing
-                await i.reply(`${Object.keys(makeStats()).map((el, i) => `\`${el.padEnd(6, " ")} ${stats[i].toString().padStart(3, " ")} ${bar(stats[i], 300)}\``).join("\n")}\nJSON: \`${JSON.stringify(
-                    {
-                        weights: weights,
-                        helditems: (i.options.getString("held_items", false) || "").split(",").map(el => el.trim()), 
-                        ability: i.options.getString("ability", false)
-                    })}\``)
+            case "allocate": {
+                let presetId = i.options.getString("preset", true)
+                let u = getUser(i.user)
+                let preset = u.presets[presetId]
+                if (!preset) return await i.reply("Unknown preset")
+                let tmp = getTempData(i.id, "allocation", {
+                    preset: presetId,
+                    main: [],
+                    secondary: [],
+                    tertiary: []
+                })
+                tmp.preset = presetId
+                let components = statAllocationComponent(i.user, presetId)
+                await i.reply({components})
                 break;
             }
             case "presets": {
@@ -416,33 +387,25 @@ export let command: Command = {
             case "create": {
                 if (Object.keys(getPresetList(i.user)).length >= presets.size + 25) return await i.reply(`You can't create more than 25 presets`);
                 let name = i.options.getString("name", true)
-                let json = i.options.getString("json", true)
-                let id = name.toLowerCase().replace(/[^A-Za-z_\-0-9 ]/g, "-")
+                let id = normPresetName(name)
                 let existing = getUser(i.user).presets[id]
                 if (existing) {
-                    if (!await confirmation(i, `You are about to overwrite your existing '${existing.name}' preset. Are you sure you want to do that?`))
-                        return await i.followUp(`Cancelled preset creation`)
-                }
-                let ar = [1, 1, 1, 1, 1, 1]
-                let o = JSON.parse(json)
-                for (let j = 0; j < o.weights.length; j++) {
-                    ar[j] = o.weights[j] || 1
+                    return await i.followUp("A preset of the same name already exists.")
                 }
                 let stats = makeStats()
                 let keys = Object.keys(stats)
                 for (let i in keys) {
                     //@ts-ignore
-                    stats[keys[i]] = ar[i]
+                    stats[keys[i]] = 1
                 }
-                stats = limitStats(stats, getMaxTotal(o))
+                stats = limitStats(stats, getMaxTotal({}))
                 getUser(i.user).presets[id] = {
                     name: name,
                     stats: stats,
-                    helditems: (o.helditems || []).filter((el: string) => items.has(el)).slice(0, 4),
-                    ability: abilities.has(o.ability) ? o.ability : undefined,
+                    helditems: [],
+                    ability: undefined,
                 }
-                if (existing) await i.followUp(`Overwrote preset '${existing.name}' with '${name}' (\`${id}\`)`)
-                else await i.reply(`Created preset ${name} (\`${id}\`)`)
+                await i.reply(`Created empty preset ${name} (\`${id}\`). Use \`/stats allocate preset:${id}\` to set stat allocation and \`/stats held_item preset:${id}\` to set items and abilities.`)
                 break
             }
             case "use": {
