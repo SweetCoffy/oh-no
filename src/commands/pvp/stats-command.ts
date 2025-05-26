@@ -1,11 +1,11 @@
-import { ApplicationCommandType, ApplicationCommandOptionType, ChatInputCommandInteraction } from "discord.js";
+import { ApplicationCommandType, ApplicationCommandOptionType, ChatInputCommandInteraction, codeBlock, ModalBuilder, StringSelectMenuBuilder, ContainerBuilder, ActionRowBuilder, TextDisplayBuilder, User, ButtonBuilder, ButtonStyle, ComponentType } from "discord.js";
 import { abilities } from "../../abilities.js";
 import { Command } from "../../command-loader.js"
-import { items } from "../../helditem.js";
+import { ItemClass, items } from "../../helditem.js";
 import { getString } from "../../locale.js";
-import { getPresetList, makeStats, getPreset, presets, StatID, BasicStatID, limitStats } from "../../stats.js";
-import { getUser } from "../../users.js";
-import { bar, confirmation, getMaxTotal, helditemString } from "../../util.js"
+import { getPresetList, makeStats, getPreset, presets, StatID, limitStats, calcStat, calcStats, StatPreset } from "../../stats.js";
+import { applyPreset, getTempData, getUser } from "../../users.js";
+import { bar, confirmation, getMaxTotal, helditemString, indent } from "../../util.js"
 function getWeighted(weights: number[], total: number = 600) {
     let totalW = weights.reduce((prev, cur) => prev + cur, 0)
     let ar = []
@@ -14,10 +14,109 @@ function getWeighted(weights: number[], total: number = 600) {
     }
     return ar
 }
+function heldItemComponent(user: User, presetId: string) {
+    let root = new ContainerBuilder()
+    let root2 = new ContainerBuilder()
+    let preset = getPreset(presetId, user)
+    let presetList = getUser(user).presets
+    if (!preset) {
+        root.addTextDisplayComponents(
+            new TextDisplayBuilder().setContent("Invalid preset.")
+        )
+        return [root]
+    }
+    let defaults = new Set(preset.helditems || [])
+    function itemSelectComponent(itemClass: ItemClass) {
+        let options = [
+            { value: "none", label: "None", default: false },
+            ...items.filter(v => v.class == itemClass).map((v, k) => ({ value: k, label: v.name, emoji: v.icon, default: defaults.has(k) }))
+        ]
+        if (options.every(v => !v.default)) {
+            options[0].default = true
+        }
+        let itemSelect = new StringSelectMenuBuilder()
+            .setCustomId("stats:item_" + itemClass)
+            .setMinValues(1)
+            .setMaxValues(1)
+            .setOptions(options)
+        return itemSelect
+    }
+    root.addTextDisplayComponents(
+        new TextDisplayBuilder()
+            .setContent("# Preset"))
+    root.addActionRowComponents(
+        new ActionRowBuilder<StringSelectMenuBuilder>()
+            .addComponents(new StringSelectMenuBuilder()
+                .setCustomId("stats:preset")
+                .setMinValues(1)
+                .setMaxValues(1)
+                .setDisabled(true)
+                .setOptions(Object.keys(presetList).map(k => {
+                    let v = presetList[k]
+                    return {
+                        value: k,
+                        label: v.name,
+                        emoji: "🏷️",
+                        default: presetId == k
+                    }
+                }))))
+
+    root.addTextDisplayComponents(
+        new TextDisplayBuilder()
+            .setContent("# Ability"))
+    let abilityOptions = [
+        { value: "none", label: "None", default: false },
+        ...abilities.map((v, k) => ({ value: k, label: v.name, default: preset.ability == k }))
+    ]
+    if (abilityOptions.every(v => !v.default)) {
+        abilityOptions[0].default = true
+    }
+    root.addActionRowComponents(
+        new ActionRowBuilder<StringSelectMenuBuilder>()
+            .addComponents(new StringSelectMenuBuilder()
+                .setCustomId("stats:ability")
+                .setMinValues(1)
+                .setMaxValues(1)
+                .setOptions(abilityOptions)))
+
+    root2.addTextDisplayComponents(
+        new TextDisplayBuilder()
+            .setContent("# Items\n### Bruh Orb\nPlaceholder"))
+    root2.addActionRowComponents(
+        new ActionRowBuilder<StringSelectMenuBuilder>()
+            .addComponents(itemSelectComponent("bruh_orb")))
+
+    root2.addTextDisplayComponents(
+        new TextDisplayBuilder()
+            .setContent("### Offense\nEffects are triggered when dealing damage or using moves."))
+    root2.addActionRowComponents(
+        new ActionRowBuilder<StringSelectMenuBuilder>()
+            .addComponents(itemSelectComponent("offense")))
+
+    root2.addTextDisplayComponents(
+        new TextDisplayBuilder()
+            .setContent("### Defense\nEffects are triggered when taking damage."))
+    root2.addActionRowComponents(
+        new ActionRowBuilder<StringSelectMenuBuilder>()
+            .addComponents(itemSelectComponent("defense")))
+
+    root2.addTextDisplayComponents(
+        new TextDisplayBuilder()
+            .setContent("### Passive\nEffects are automatically triggered every turn."))
+    root2.addActionRowComponents(
+        new ActionRowBuilder<StringSelectMenuBuilder>()
+            .addComponents(itemSelectComponent("passive")))
+    return [root, root2,
+        new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(
+                new ButtonBuilder().setLabel("Save").setCustomId("stats:save_preset").setStyle(ButtonStyle.Primary)
+            )]
+}
 export let command: Command = {
     type: ApplicationCommandType.ChatInput,
     name: "stats",
     description: "Does stuff with stats",
+    associatedCustomIds: ["stats:"],
     options: [
         {
             type: ApplicationCommandOptionType.Subcommand,
@@ -184,6 +283,60 @@ export let command: Command = {
             ]
         },
     ],
+    async interaction(i) {
+        if (i.user.id != i.message.interactionMetadata?.user.id) {
+            return await i.reply({ flags: ["Ephemeral"], content: "Nope" })
+        }
+        if (!i.message.interactionMetadata?.id) {
+            return await i.reply({ flags: ["Ephemeral"], content: "huh?" })
+        }
+        let tmp = getTempData(i.message.interactionMetadata?.id, "stats", {})
+        console.log(tmp)
+        if (!tmp.preset) return await i.reply({ flags: ["Ephemeral"], content: "huh??" })
+        console.log(i)
+        if (i.isStringSelectMenu()) {
+            if (i.customId == "stats:preset") {
+                let preset = i.values[0]
+                await i.update({ components: heldItemComponent(i.user, preset) })
+                return
+            }
+            if (i.customId.startsWith("stats:item_")) {
+                let v = i.values[0]
+                let itemClass = i.customId.slice("stats:item_".length) as ItemClass
+                if (v != "none") {
+                    tmp.itemSlots[itemClass] = v
+                }
+            }
+            if (i.customId == "stats:ability") {
+                let ability = i.values[0]
+                if (ability != "none") {
+                    tmp.ability = ability
+                } else {
+                    tmp.ability = undefined
+                }
+            }
+        }
+        if (i.isButton()) {
+            if (i.customId == "stats:save_preset") {
+                let preset = getPreset(tmp.preset, i.user)
+                if (!preset) return await i.reply({ flags: ["Ephemeral"], content: "huh???" })
+                preset.ability = tmp.ability
+                //@ts-ignore
+                preset.helditems = Object.values(tmp.itemSlots).filter(el => el)
+                let total = getMaxTotal(preset)
+                preset.stats = limitStats(tmp.stats, total)
+                tmp = getTempData(i.message.interactionMetadata?.id)
+                delete tmp.data.stats
+                let u = getUser(i.user)
+                if (tmp.preset == u.preset) {
+                    applyPreset(i.user, tmp.preset)
+                }
+                return await i.reply({ flags: ["Ephemeral"], content: "Saved." })
+            }
+        }
+        console.log(tmp)
+        await i.deferUpdate()
+    },
     async autocomplete(i) {
         let focus = i.options.getFocused(true)
         if (focus.name == "ability") return await i.respond(abilities.map((v, k) => ({ value: k, name: v.name })))
@@ -230,9 +383,25 @@ export let command: Command = {
                 let p = getPreset(i.options.getString("preset", false) || getUser(i.user).preset, i.user)
                 if (!p) return await i.reply(`Preset not found`)
                 let stats = p.stats
+                let statsL50 = calcStats(50, stats)
+                let abilityInfo = p.ability ? abilities.get(p.ability) : null
                 let json = JSON.stringify({weights: Object.values(p.stats), helditems: p.helditems, ability: p.ability})
+                let maxStat = Math.max(...Object.values(stats))
+                let maxDisp = Math.ceil(maxStat / 150) * 150
+                let string = codeBlock("ansi", `${"Base".padEnd(40)}Level 50` + "\n" + Object.keys(statsL50).map((key) => {
+                    let statL50 = statsL50[key as StatID]
+                    let stat = stats[key as StatID]
+                    return `${getString("stat." + key).padEnd(12)} ${stat.toString().padStart(3)}|${bar(stat, maxDisp, 20)}|`.padEnd(40) + `${statL50}`
+                }).join("\n")
+                    + `\n\nAbility: ${abilityInfo === null ? "None" : abilityInfo?.name || "Invalid"}\n`
+                    + (abilityInfo ? `${indent(abilityInfo.description, 4)}\n` : "")
+                    + `Held Items:\n${p.helditems?.length ? p.helditems.map(v => {
+                        let iteminfo = items.get(v)
+                        if (!iteminfo) return "· Invalid"
+                        return `· ${iteminfo.name}\n${indent(iteminfo.passiveEffect, 4)}`
+                    }).join("\n") : "None"}`)
                 // @ts-ignore
-                await i.reply(`Preset: **${p.name}**\n${Object.keys(stats).map((el) => `\`${el.padEnd(6, " ")} ${stats[el].toString().padStart(3, " ")} ${bar(stats[el], 300)}\``).join("\n")}\nItems: ${(p.helditems || []).map(helditemString).join(", ") || "None"}\nAbility: ${abilities.get(p.ability)?.name || "None"}\nJSON: \`${json}\``)
+                await i.reply(`Preset: **${p.name}**\n${string}\nJSON: \`${json}\``)
                 break;
             }
             case "delete": {
@@ -280,27 +449,45 @@ export let command: Command = {
                 let id = i.options.getString("preset", true)
                 let p = getPreset(id, i.user)
                 if (!p) return await i.reply("Unknown preset")
-                let u = getUser(i.user)
-                let total = Object.values(p.stats).reduce((prev, cur) => prev + cur, 0)
-                if (total > getMaxTotal(p)) return await i.reply(`Illegal preset: the base stat total must not exceed the maximum allowed.`)
-                u.baseStats = limitStats(p.stats, getMaxTotal(p))
-                u.ability = p.ability
-                u.helditems = p.helditems || []
-                u.preset = id
+                applyPreset(i.user, id)
                 await i.reply(`Selected preset: ${p.name}`)
                 break;
             }
             case "held_items": {
                 let item = i.options.getString("items", false)
                 let u = getUser(i.user)
-                let preset = u.presets[i.options.getString("preset", false) as string]
+                let presetId = i.options.getString("preset", false) as string
+                let preset = u.presets[presetId]
                 if (!preset && i.options.getString("preset", false)) return await i.reply(`Unknown preset`)
+                let itemList
                 if (item) {
+                    itemList = item.split(",").map(el => el.trim()).filter(el => items.has(el))
+                } else {
                     if (preset) {
-                        preset.helditems = item.split(",").map(el => el.trim()).filter(el => items.has(el))
-                    } else u.helditems = item.split(",").map(el => el.trim()).filter(el => items.has(el))
+                        let roots = heldItemComponent(i.user, presetId)
+                        let tmp = getTempData(i.id)
+                        let slots: any = {}
+                        if (preset.helditems) {
+                            for (let item of preset.helditems) {
+                                let itemType = items.get(item)
+                                if (!itemType) continue
+                                slots[itemType.class] = item
+                            }
+                        }
+                        tmp.data = {
+                            stats: { preset: presetId, ability: preset.ability, itemSlots: slots, stats: preset.stats }
+                        }
+                        await i.reply({ flags: ["IsComponentsV2"], components: roots })
+                        return
+                    }
                 }
-                await i.reply(`Items: ${u.helditems.join(", ")}`)
+                if (itemList) {
+                    if (preset) {
+                        preset.helditems = itemList
+                    } else u.helditems = itemList
+                } else {
+                    await i.reply(`Items: ${u.helditems.join(", ")}`)
+                }
                 break;
             }
             case "ability": {
@@ -314,7 +501,7 @@ export let command: Command = {
                     let prevtotal = Object.values(preset.stats).reduce((prev, cur) => prev + cur, 0)
                     let total = getMaxTotal({ ability: a })
                     for (let k in preset.stats) {
-                        preset.stats[k as BasicStatID] = Math.floor(preset.stats[k as BasicStatID] / prevtotal * total)
+                        preset.stats[k as StatID] = Math.floor(preset.stats[k as StatID] / prevtotal * total)
                     }
                     console.log(preset)
                     await i.reply(`Ability set to ${abilities.get(a as string)?.name || "None"}\nYou might have to do /stats use <preset> again to apply changes`)

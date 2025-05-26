@@ -5,15 +5,15 @@ for (let a of process.argv.slice(2)) {
         if (a.slice(1) in experimental) experimental[a.slice(1)] = true
     }
 }
-import Discord, { GatewayIntentBits } from "discord.js"
-import { commands, loadDir, addCommands } from "./command-loader.js"
+import Discord, { GatewayIntentBits, InteractionType } from "discord.js"
+import { commands, loadDir, addCommands, customIds } from "./command-loader.js"
 import { users, getUser, UserSaveData, data, globalData, getUserSaveData, replacer } from "./users.js"
 import { writeFileSync, readFileSync } from "fs"
 import { shopItems } from "./items.js"
 
 import { resolve } from "path"
-import { BasicStats, calcStat, limitStats } from "./stats.js"
-import { calcDamage } from "./battle.js"
+import { Stats, calcStat, limitStats } from "./stats.js"
+import { calcMoveDamage } from "./battle.js"
 
 let config = JSON.parse(readFileSync(resolve("./.config.json"), "utf8"))
 
@@ -52,7 +52,18 @@ client.on("interactionCreate", async (i) => {
             cmd.autocomplete?.(i);
         }
     }
-    if (!i.isCommand() && !i.isContextMenuCommand()) return
+    if (!i.isCommand() && !i.isContextMenuCommand()) {
+        if (!("customId" in i)) return;
+        let splits = i.customId.split(":")
+        let cmd = customIds.get(i.customId) ?? customIds.get(splits[0])
+        if (!cmd) return
+        if (i.isModalSubmit()) {
+            await cmd.modalSubmit?.(i)
+        } else {
+            await cmd.interaction?.(i)
+        }
+        return
+    }
     try {
         getUser(i.user).lastCommand = Date.now()
         console.log(`${i.user.username} /${i.commandName}`)
@@ -113,7 +124,6 @@ function saveJSON() {
 process.on("SIGINT", () => {
     if (settings.noSave) {
         process.exit(0)
-        return
     }
     saveJSON()
     process.exit(0)
@@ -128,49 +138,12 @@ client.on("messageCreate", async (m) => {
     u.lastMessage = Date.now();
 })
 
-setInterval(async () => {
-    for (let [k, v] of users) {
-        v.money.points += (BigInt(v.banks) * (v.multiplier / 4n)) * 15n * 5n * 3n
-    }
-}, 15000)
+// setInterval(async () => {
+//     for (let [k, v] of users) {
+//         v.money.points += (BigInt(v.banks) * (v.multiplier / 4n)) * 15n * 5n * 3n
+//     }
+// }, 15000)
 loadRecursive("content")
-
-function statGraph(base = 100, maxlevel = 100) {
-    let step = maxlevel / 50
-    let highest = calcStat(base, maxlevel)
-    let chars = process.stdout.columns - 30
-    for (let i = 0; i <= maxlevel; i += step) {
-        let v = calcStat(base, i || 1)
-        console.log(`STAT ${v.toString().padStart(6, " ")} | Level ${(i || 1).toString().padStart(maxlevel.toString().length, " ")}: ${"#".repeat(Math.floor(v / highest * chars))}`)
-    }
-}
-function damageGraph(power = 100, baseatk = 100, basedef = 100, maxlevel = 100) {
-    let step = maxlevel / 50
-    let highest = calcDamage(power, calcStat(baseatk, maxlevel), calcStat(basedef, maxlevel), maxlevel)
-    let chars = process.stdout.columns - 30
-    for (let i = 0; i <= maxlevel; i += step) {
-        let atk = calcStat(baseatk, i || 1)
-        let def = calcStat(basedef, i || 1)
-        let v = calcDamage(power, atk, def, i || 1)
-        console.log(`DMG  ${v.toString().padStart(6, " ")} | Level ${(i || 1).toString().padStart(maxlevel.toString().length, " ")}: ${"#".repeat(Math.floor(v / highest * chars))}`)
-    }
-}
-
-// statGraph(100, 100)
-// damageGraph(40, 100, 100, 100)
-
-let statTest: BasicStats = {
-    hp: 600,
-    atk: 0,
-    def: 0,
-    spatk: 0,
-    spdef: 0,
-    spd: 0,
-}
-let testBst = 600
-
-console.log(statTest)
-console.log(limitStats(statTest, testBst))
 
 client.on("error", (error) => {
     console.error(error)

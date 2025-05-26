@@ -1,12 +1,20 @@
 import { User, Collection } from 'discord.js'
 import { BattleLobby } from './lobby.js'
-import { baseStats, Stats, StatPreset, BasicStats } from './stats.js'
+import { baseStats, Stats, StatPreset, getPreset, limitStats } from './stats.js'
 import { ItemStack } from "./items.js"
 import { writeFileSync, existsSync, readFileSync, mkdirSync } from "fs"
-import { experimental, settings } from './util.js'
+import { experimental, getMaxTotal, settings } from './util.js'
 import { client } from './index.js'
 import { Enemy } from './enemies.js'
 export let data: any = {}
+
+type TempData = {
+    timeout: NodeJS.Timeout,
+    expired: boolean,
+    data: { [k: string]: any }
+}
+
+const tempData = new Collection<string, TempData>()
 
 function reviver(k: string, v: any) {
     if (typeof v == "string" && v.startsWith("BigInt(") && v.endsWith(")")) return BigInt(v.slice("BigInt(".length, -1))
@@ -27,7 +35,7 @@ export interface MoneyData<T> {
 export interface UserInfo {
     user: User,
     lobby?: BattleLobby,
-    baseStats: BasicStats,
+    baseStats: Stats,
     preset: string,
     presets: PresetList,
     money: MoneyData<bigint>,
@@ -70,6 +78,41 @@ export interface UserSaveData {
     moveset: string[],
     ability?: string,
     [key: string]: any,
+}
+export function applyPreset(user: User, presetId: string) {
+    let u = getUser(user)
+    let preset = getPreset(presetId, user)
+    if (!preset) {
+        return
+    }
+    u.baseStats = limitStats(preset.stats, getMaxTotal(preset))
+    u.ability = preset.ability
+    u.helditems = preset.helditems || []
+    u.preset = presetId
+}
+export function getTempData(id: string, key?: string, defaultValue?: any) {
+    if (!tempData.has(id)) {
+        tempData.set(id, {
+            data: {},
+            expired: false,
+            timeout: setTimeout(() => {
+                clearTempData(id)
+            }, 5 * 60 * 1000)
+        })
+        console.log(`created temp data ${id}`)
+    }
+    let data = tempData.get(id) as TempData;
+    data.timeout.refresh()
+    if (!key) return data;
+    if (!data.data[key]) data.data[key] = defaultValue
+    return data.data[key]
+}
+function clearTempData(id: string) {
+    let d = tempData.get(id);
+    if (!d) return;
+    console.log(`cleared temp data ${id}`)
+    tempData.delete(id)
+    d.expired = true
 }
 export function getUserSaveData(info: UserInfo) {
     let m: any = {}

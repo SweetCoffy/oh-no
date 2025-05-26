@@ -78,6 +78,10 @@ export function randomRange(min: number, max: number) {
 export function randomChance(chance: number) {
     return rng.get01() < chance
 }
+export function snapTo(num: number, mult = 100) {
+    let snapped = Math.abs(Math.round(num * mult) / mult)
+    return snapped
+}
 export function barDelta(num: number, prevNum: number, max: number, width: number = 25) {
     let deltaFill = "🮘"
     let c = 0
@@ -91,7 +95,11 @@ export function barDelta(num: number, prevNum: number, max: number, width: numbe
         num = 1
         max = 1
     }
-    else str += "+".repeat(Math.min(Math.max(Math.floor((num - 0.01) / max), 0), width - 1))
+    else {
+        if (num - 0.01 > max) {
+            str += `${Math.floor(num / max * 100)}%`
+        }
+    }
     width -= str.length;
     let chars = Math.ceil((((num - 0.01) / max) * width) % (width))
     while (c < chars) {
@@ -132,6 +140,10 @@ export function dispDelta(amount: number, color = false) {
     }
     return str
 }
+export function indent(str: string, amount: number = 1) {
+    let indent = " ".repeat(amount)
+    return str.split("\n").map(line => indent + line).join("\n")
+}
 export function dispMul(mul: number, asDelta = true, color = false) {
     let str
     if (asDelta) {
@@ -141,7 +153,7 @@ export function dispMul(mul: number, asDelta = true, color = false) {
         }
         str = am
     } else {
-        str = `${(mul * 100).toFixed(1)}%`
+        str = `×${(mul * 100).toFixed(1)}%`
     }
     if (color) {
         if (mul == 1) {
@@ -156,39 +168,7 @@ export function dispMul(mul: number, asDelta = true, color = false) {
     return str
 }
 export function bar(num: number, max: number, width: number = 25) {
-    let c = 0
-    let fill = "█"
-    let bg = " "
-    let things = ["▉", "▊", "▋", "▌", "▍", "▎", "▏"]
-
-    let str = ""
-    if (!Number.isFinite(num)) {
-        str += "∞"
-        num = 1
-        max = 1
-    }
-    else str += "+".repeat(Math.min(Math.max(Math.floor((num - 0.01) / max), 0), width - 1))
-    width -= str.length;
-    let chars = Math.ceil((((num - 0.01) / max) * width) % (width))
-    while (c < chars) {
-        let f = fill
-        let epicVal = 1
-        if (c + 1 >= chars && num % max != 0) epicVal = num / max * width % 1
-        if (epicVal < 1) f = things[0]
-        if (epicVal < 7 / 8) f = things[1]
-        if (epicVal < 3 / 4) f = things[2]
-        if (epicVal < 5 / 8) f = things[3]
-        if (epicVal < 1 / 2) f = things[4]
-        if (epicVal < 3 / 8) f = things[5]
-        if (epicVal < 1 / 4) f = things[6]
-        c++
-        str += f
-    }
-    while (c < width) {
-        c++
-        str += bg
-    }
-    return str
+    return barDelta(num, 0, max, width)
 }
 export function abs(number: bigint | number) {
     if (number < 0n) return -number

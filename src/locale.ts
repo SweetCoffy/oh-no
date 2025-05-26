@@ -2,7 +2,7 @@ import { BattleType } from "./battle"
 import { Category, DamageType, MoveType } from "./moves"
 import { StatID } from "./stats"
 
-type LocaleStringDamage = "dmg.release" | "dmg.generic" | "dmg.recoil" | "dmg.death" | "dmg.block" | "dmg.breakthrough" | "dmg.poison" | "dmg.overkill" | "dmg.none" | "dmg.rng" | "dmg.bleed"
+type LocaleStringDamage = "dmg.crit" | "dmg.plotarmor" | "dmg.release" | "dmg.generic" | "dmg.recoil" | "dmg.death" | "dmg.block" | "dmg.breakthrough" | "dmg.poison" | "dmg.overkill" | "dmg.none" | "dmg.rng" | "dmg.bleed"
 type LocaleStringMove = "move.use" | "move.miss" | "move.power" | "move.accuracy" | "move.category" | "move.type" | "move.recoil" | "move.userstat" | "move.targetstat" | "move.fail"
 type LocaleStringMoveInfo = `move.category.${Category}` | `move.dmgtype.${DamageType}`
 type LocaleStringStat = `stat.${StatID}`
@@ -13,7 +13,7 @@ type LocaleStringHeal = "heal.generic" | "heal.eggs" | "heal.regeneration" | "he
 type LocaleStringItem = "item.shield.boost" | "item.shield.unboost" | "item.mirror.perfect" | "item.mirror.reflect" | "item.mirror.shatter" | "item.mirror.shards"
 type LocaleStringHunt = "hunt.threatening"
 type LocaleStringOther = "enemy.appears"
-type LocaleStringAbility = "ability.massive_health_bar"
+type LocaleStringAbility = "ability.massive_health_bar" | "ability.beserker_soul"
 type LocaleStringBattleType = `battle.${BattleType}`
 export type LocaleString = LocaleStringDamage | LocaleStringMove |
     LocaleStringStat | LocaleStringStatChange | LocaleStringStatus |

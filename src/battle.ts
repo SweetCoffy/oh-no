@@ -1,19 +1,26 @@
 import { EventEmitter } from "events"
 import { User, Collection, TextChannel, Message, TextBasedChannel, APIEmbedField, AttachmentBuilder, SendableChannels } from "discord.js"
 import { setKeys, rng, randomRange, bar, experimental, Dictionary, getID, subscriptNum, xOutOfY, name, colorToANSI, formatString, format, getName, barDelta, dispDelta } from "./util.js"
-import { makeStats, calcStats, Stats, baseStats, StatID, BasicStats } from "./stats.js"
+import { makeStats, calcStats, Stats, baseStats, StatID, calcStat, ExtendedStatID, ExtendedStats, makeExtendedStats } from "./stats.js"
 import { moves, Category, DamageType } from "./moves.js"
 import { lobbies, BattleLobby } from "./lobby.js"
 import { getString, LocaleID, Locales, LocaleString } from "./locale.js"
 import { getUser } from "./users.js"
-import { bruhOrbBoosts, HeldItem, items } from "./helditem.js"
+import { bruhOrbBoosts, HeldItem, ItemClass, items } from "./helditem.js"
 import { enemies } from "./enemies.js"
 import { FG_Blue, FG_Gray, FG_Green, FG_Red, FG_White, FG_Yellow, Start, Reset, End, FG_Pink, FG_Cyan, LogColor, LogColorWAccent } from "./ansi.js"
 import { abilities } from "./abilities.js"
 
-export function calcDamage(pow: number, atk: number, def: number, level: number) {
-    let lf = 250 + level * 5
-    return Math.ceil((atk * pow / 33.5) * (lf / (def + lf)))
+export const BASELINE_DEF = 250
+export const MOVE_POWER_ATK_MULT = 1.0 / 33.5
+
+
+export function calcDamage(dmg: number, def: number, level: number) {
+    let lf = calcStat(BASELINE_DEF, level)
+    return Math.ceil(dmg * (lf / (def + lf)))
+}
+export function calcMoveDamage(pow: number, atk: number, def: number, level: number) {
+    return calcDamage((atk * pow * MOVE_POWER_ATK_MULT), def, level)
 }
 export interface CategoryStats {
     atk: string,
@@ -83,15 +90,16 @@ function dummyEndCondition() {
     return false
 }
 function sfStart(b: Battle) {
-    // This is a very roundabout way of dealing with this
-    // Maximum HP is decreased in order to decrease the damage dealt by status effects
-    // Plot armor is increased to an absurd amount to make the player extremely hard to kill
     for (let player of b.players) {
-        player.plotArmor = player.maxhp * 100
-        player.statStages.hp = -6
+        let baselineHp = calcStat(1000, player.level)
+        let addAmount = baselineHp - player.maxhp
+        player.addModifier("hp", {
+            label: "Slap Fight",
+            value: addAmount,
+            type: "add",
+        })
+        player.plotArmor = player.maxhp
         player.hp = player.maxhp
-        if (player.moveset.includes("slap")) player.moveset.splice(player.moveset.indexOf("slap"))
-        if (!player.moveset.includes("sf_slap")) player.moveset.push("sf_slap")
     }
 }
 export const BattleTypeInfo: { [x in BattleType]: TypeInfo } = {
@@ -193,62 +201,38 @@ function statusDamageEffect(percent: number, silent = false, message: LocaleStri
         b.takeDamage(p, p.maxhp * percent, silent, message)
     }
 }
+export function isDamageDirect(opts: TakeDamageOptions) {
+    return opts.inflictor != null && (opts.type == "special" || opts.type == "physical" || opts.type == "none")
+}
 function statusMessageEffect(message: LocaleString): StatusCallback {
     return function (b, p, s) {
         b.log(getString(message, { player: p.toString(), inf: s.inflictor?.toString() }))
     }
 }
 export let statusTypes: Collection<string, StatusType> = new Collection()
-statusTypes.set("poison", new StatusType("Poison", "Poisn", statusMessageEffect("status.poison.start"),
+statusTypes.set("poison", new StatusType("Poison", "Poison", statusMessageEffect("status.poison.start"),
     function (b, p, s) {
         let base = 1 / 64
         if (b.type == "pve" && p.team == 0) {
             base /= 2
         }
-        b.takeDamage(p, p.maxhp * base, false, "dmg.poison")
-    }, undefined, "toxic"))
-statusTypes.set("toxic", new StatusType("Toxic", "Toxic", statusMessageEffect("status.toxic.start"),
-    function (b, p, s) {
-        let base = 1 / 32
-        if (b.type == "pve" && p.team == 0) {
-            base /= 2
-        }
-        if (p.status.some(el => el.type == "poison")) {
-            base += 1 / 96
-        }
-        let percent = base * (1 + (s.turns / 5))
-        b.takeDamage(p, p.maxhp * percent, false, "dmg.poison")
-    }, undefined, "california"))
-statusTypes.set("california", new StatusType("California", "Calif", statusMessageEffect("status.california.start"),
-    function (b, p, s) {
-        let base = 1 / 24
-        if (b.type == "pve" && p.team == 0) {
-            base /= 2
-        }
-        if (p.status.some(el => el.type == "poison")) {
-            base += 1 / 48
-        }
-        if (p.status.some(el => el.type == "toxic")) {
-            base += 1 / 48
-        }
-        let percent = base * (1 + (s.turns / 5))
-        b.takeDamage(p, p.maxhp * percent, false, "dmg.poison")
+        b.takeDamageO(p, p.maxhp * base, {
+            silent: false,
+            message: "dmg.poison",
+            inflictor: s.inflictor,
+            type: "status",
+        })
     }, undefined))
 statusTypes.set("regen", new StatusType("Regeneration", "Regen", undefined, function (b, p, s) {
-    if (p.status.some(el => el.type == "strong_regen")) {
-        return
-    }
     let base = 1 / 16
-    b.heal(p, Math.ceil(p.maxhp * base), false, "heal.regeneration")
-}, undefined, "strong_regen"))
-statusTypes.set("strong_regen", new StatusType("Strong Regeneration", "Regen+", undefined, function (b, p, s) {
-    let base = 1 / 10
     b.heal(p, Math.ceil(p.maxhp * base), false, "heal.regeneration")
 }, undefined))
 statusTypes.set("bleed", new StatusType("Bleeding", "Bleed", (b, p) => b.logL("status.bleed.start", { player: p.toString() }), (b, p, s) => {
     b.takeDamageO(p, p.maxhp * 1 / 32, {
         silent: false,
-        inflictor: s.inflictor
+        inflictor: s.inflictor,
+        message: "dmg.bleed",
+        type: "status",
     })
 }))
 type StatusModifierData = {
@@ -307,11 +291,23 @@ export interface Status {
 }
 export interface StatModifier {
     type?: "add" | "multiply",
+    multCombine?: "add" | "multiply",
     value: number,
     disabled?: boolean,
     label?: string,
 }
-export type StatModifierID = StatModifier & { id: string }
+export type StatModifierWithID = StatModifier & { id: string }
+const defaultStats: ExtendedStats = {
+    hp: 0,
+    atk: 0,
+    def: 0,
+    spatk: 0,
+    spdef: 0,
+    spd: 0,
+    dr: 0,
+    crit: 10,
+    critdmg: 50,
+}
 /**
  * Represents an in-battle player
  */
@@ -321,7 +317,7 @@ export class Player {
     prevHp: number = 0
     /** The player's Max HP */
     get maxhp() {
-        return Math.max(Math.ceil(this.getModifierValue(this.stats.hp, this.modifiers.hp)), 1);
+        return this.cstats.hp;
     }
     /** HP can reach up to`overheal` × `maxhp` */
     overheal: number = 1
@@ -357,28 +353,39 @@ export class Player {
     plotArmor: number = 0
     /** The list of usable moves for the player, only used for user-controlled players */
     moveset: string[] = ["bonk", "nerf_gun", "stronk", "spstronk"]
-    modifiers: { [x in StatID]: (StatModifier & { id: string })[] } = {
+    modifiers: { [x in ExtendedStatID]: (StatModifier & { id: string })[] } = {
         hp: [],
         atk: [],
         def: [],
         spatk: [],
         spdef: [],
         spd: [],
+        dr: [],
+        crit: [],
+        critdmg: [],
     }
     abilityData: any = {}
     ability?: string
     toString() {
         return `[${teamColors[this.team] || "a"}]${this.name}[r]`
     }
-    getModifierValue(value: number, mods: StatModifier[]) {
+    getModifierValue(value: number, mods: StatModifierWithID[], exclude: string[] = []) {
         let addAccumulator = 0
         let multAccumulator = 1
+        let multAddAccumulator = 0
         for (let mod of mods) {
             if (mod.disabled) continue;
+            if (exclude.includes(mod.id)) continue;
             if (mod.type == "add") addAccumulator += mod.value;
-            else multAccumulator *= mod.value;
+            else {
+                if (mod.multCombine == "add") {
+                    multAddAccumulator += mod.value - 1
+                } else {
+                    multAccumulator *= mod.value
+                }
+            }
         }
-        return (value * multAccumulator) + addAccumulator
+        return Math.max(Math.round(((value + value * multAddAccumulator) * multAccumulator) + addAccumulator), 0)
     }
     addModifier(stat: StatID, mod: StatModifier) {
         let id = getID();
@@ -394,6 +401,7 @@ export class Player {
             if (b.type == "add") return 1;
             return 0;
         })
+        this.recalculateStats()
         return e;
     }
     removeModifier(stat: StatID, id: string) {
@@ -420,9 +428,9 @@ export class Player {
         return this.hp <= -this.plotArmor
     }
     /** The player's true (unmodified) stats */
-    stats: Stats = makeStats()
+    stats: ExtendedStats = makeExtendedStats()
     /** The player's base stats, usually taken from their preset */
-    baseStats: BasicStats = { ...baseStats }
+    baseStats: Stats = { ...baseStats }
     /** The Discord user the player belongs to, used to get the current name and other stuff that needs a Discord user */
     user?: User
     /** The player's status conditions */
@@ -434,25 +442,32 @@ export class Player {
     id: string
     /** The player's current held items */
     helditems: HeldItem[] = []
+    itemSlots: { [x in ItemClass]?: HeldItem } = {}
     /** The type of AI the player uses if `user` is not present */
     ai: BotAIType = "normal"
     /** The base XP yield, only used in hunt */
     xpYield: number = 0
 
     /** The player's current Attack stat, but with stat modifiers taken into account */
-    get atk() { return this.getModifierValue(this.stats.atk, this.modifiers.atk) }
+    get atk() { return this.cstats.atk }
     /** The player's current Defense stat, but with stat modifiers taken into account */
-    get def() { return this.getModifierValue(this.stats.def, this.modifiers.def) }
+    get def() { return this.cstats.def }
     /** The player's current Special Attack stat, but with stat modifiers taken into account */
-    get spatk() { return this.getModifierValue(this.stats.spatk, this.modifiers.spatk) }
+    get spatk() { return this.cstats.spatk }
     /** The player's current Special Defense stat, but with stat modifiers taken into account */
-    get spdef() { return this.getModifierValue(this.stats.spdef, this.modifiers.spdef) }
+    get spdef() { return this.cstats.spdef }
     /** The player's current Speed stat, but with stat modifiers taken into account */
-    get spd() { return this.getModifierValue(this.stats.spd, this.modifiers.spd) }
+    get spd() { return this.cstats.spd }
+    get dr() { return this.cstats.dr }
+
+    cstats: ExtendedStats = {
+        ...makeStats(),
+        dr: 0,
+        crit: 0,
+        critdmg: 0,
+    }
+
     _tempname = ""
-    /**
-     * The display name of the player
-     */
     get name() {
         if (this._nickname) return this._nickname
         if (this.user) return this.user.username
@@ -473,34 +488,55 @@ export class Player {
         if (!(turn in this.events)) this.events[turn] = []
         this.events[turn].push(event)
     }
-    getFinalStats(): Stats {
+    getFinalStats(): ExtendedStats {
         return {
-            hp: this.maxhp,
-            atk: this.atk,
-            def: this.def,
-            spatk: this.spatk,
-            spdef: this.spdef,
-            spd: this.spd,
+            ...this.cstats
         }
+    }
+    recalculateStats() {
+        setKeys(this.stats, this.cstats)
+        for (let k in this.stats) {
+            let stat = k as ExtendedStatID
+            this.cstats[stat] = this.getModifierValue(this.stats[stat], this.modifiers[stat])
+        }
+        this.cstats.hp = Math.max(this.cstats.hp, 1)
+        this.cstats.dr = Math.min(this.cstats.dr, 100)
+        this.cstats.crit = Math.min(this.cstats.crit, 100)
     }
     /**
      * Updates the player's current stats to match what they should be according to level and base stats
-     * @param changeHp Whether or not to increase or decrease current HP if Max HP is different
+     * @param updateHp Whether or not to increase or decrease current HP if Max HP is different
      */
-    updateStats(changeHp: boolean = true) {
+    updateStats(updateHp: boolean = true) {
         let lastmax = this.maxhp
+        setKeys(defaultStats, this.stats)
         setKeys(calcStats(this.level, this.baseStats), this.stats)
         this.maxCharge = Math.max(100 + Math.floor(this.baseStats.atk) - 100, 75)
         this.maxMagic = Math.max(100 + Math.floor(this.baseStats.spatk) - 100, 75)
+        this.recalculateStats()
         let max = this.maxhp
-        if (changeHp) this.hp += max - lastmax
+        if (updateHp) this.hp = Math.ceil(this.hp * (max / lastmax))
     }
     updateStatStages() {
         for (let k in this.statStages) {
             let mod = this.statStageModifiers[k as StatID]
             let stages = this.statStages[k as StatID]
             mod.label = `Stage Modifier (${dispDelta(stages)})`
-            mod.value = Math.ceil((calcMul(stages) - 1) * this.stats[k as StatID])
+            mod.value = calcMul(stages)
+        }
+        this.recalculateStats()
+    }
+    updateItems() {
+        this.helditems = this.helditems.filter(el => !el.remove)
+        for (let k in this.itemSlots) {
+            this.itemSlots[k as ItemClass] = undefined
+        }
+        for (let item of this.helditems) {
+            let itemType = items.get(item.id)
+            if (!itemType) continue
+            if (itemType.class != "passive") {
+                if (!this.itemSlots[itemType.class]) this.itemSlots[itemType.class] = item
+            }
         }
     }
     constructor(user?: User) {
@@ -509,13 +545,14 @@ export class Player {
             this.baseStats = { ...getUser(user).baseStats }
         }
         this.id = getID()
-        this.stats = makeStats()
+        this.stats = makeExtendedStats()
         let stageModifiers = {}
         for (let k in this.statStages) {
             //@ts-ignore
             stageModifiers[k] = this.addModifier(k, {
                 label: "Stage Modifier",
-                type: "add",
+                type: "multiply",
+                multCombine: "add",
                 value: 0,
             })
         }
@@ -824,13 +861,24 @@ class BotAI {
         this.battle = battle
     }
 }
-type TakeDamageType = "none" | Category
-interface TakeDamageOptions {
+export type MoveCastOpts = {
+    category: Category,
+    requiresCharge: number,
+    requiresMagic: number,
+    accuracy: number,
+    pow: number,
+    critMul: number,
+}
+type TakeDamageType = "none" | Category | "ability"
+export interface TakeDamageOptions {
     silent?: boolean,
     message?: LocaleString,
     inflictor?: Player,
     breakshield?: boolean,
     type?: TakeDamageType,
+    defStat?: StatID,
+    defPen?: number
+    atkLvl?: number
 }
 export function isTeamMatch(type: BattleType) {
     return type == "team_match" || type == "team_slap_fight"
@@ -843,6 +891,19 @@ export class Battle extends EventEmitter {
     logs: string[] = []
     ended: boolean = false
     botAI: BotAI
+    start() {
+        this.players.sort((a, b) => a.team - b.team)
+        for (let p of this.players) {
+            p.helditems = [...new Set(p.helditems.map(el => el.id))].map(el => ({ id: el }))
+            p.updateItems()
+            for (let item of p.helditems) {
+                let itemType = items.get(item.id)
+                if (!itemType) continue
+                itemType.onBattleStart?.(this, p, item)
+
+            }
+        }
+    }
     isTeamMatch() {
         return isTeamMatch(this.type)
     }
@@ -872,10 +933,15 @@ export class Battle extends EventEmitter {
             let barColor = "green"
             if (p.hp <= p.maxhp / 2) barColor = "yellow"
             if (p.hp <= p.maxhp / 4) barColor = "red"
+            let hpString = xOutOfY(Math.floor(p.hp), p.maxhp, true)
+            if (p.maxhp != p.stats.hp) {
+                hpString += formatString(`[u]/${Math.floor(p.stats.hp)}[r]`)
+            }
+            let barW = Math.min(Math.max(Math.floor(10 * p.maxhp / p.stats.hp), 1), 20)
             let str = `${Start}0;${FG_Gray}m${icons}${Reset}${p.name}` + "\n" +
-                formatString(`[${barColor}]${barDelta(p.hp, p.prevHp, p.maxhp, 10)}| ${xOutOfY(Math.floor(p.hp), Math.floor(p.maxhp), true)}`)
+                formatString(`[${barColor}]${barDelta(p.hp, p.prevHp, p.maxhp, barW)}| ${hpString}`)
+            str += "\n"
             if (p.charge || p.magic) {
-                str += " "
                 if (p.charge) {
                     str += formatString(`[red]C ${xOutOfY(p.charge, p.maxCharge, true)} `)
                 }
@@ -884,35 +950,11 @@ export class Battle extends EventEmitter {
                 }
             }
             if (p.status.length > 0) {
-                str += "\n" + p.status.map(v => statusTypes.get(v.type)?.short || "UNKN").join(" ")
+                str += p.status.map(v => statusTypes.get(v.type)?.short || "UNKN").join(" ")
             }
-            return str
+            return str.trimEnd()
         }
         let str = ""
-        // if (!this.isTeamMatch()) {
-        //     str = (this.isPve ? humans : b.players).map((el, i) => {
-        //         let icons = getIcons(el)
-        //         let str = `${icons}**${el.name}** \`${el.status.map(el => `${statusTypes.get(el.type)?.short}${el.duration.toString().padStart(2, " ")}`).join(" ") || "no"}\`` + `\n` +
-        //             `\`${bar(el.hp, el.maxhp, 15)}${el.absorption > 0 ? `| T${el.absorptionTier} ${Math.floor(el.absorption / el.maxhp * 100).toString().padEnd(3)}% ${bar(el.absorption, el.maxhp, 5)}` : ""}\`` + `\n` +
-        //             `\`${xOutOfY(Math.floor(el.hp), Math.floor(el.maxhp))}\``
-        //         if (!el.dead) {
-        //             if (el.charge || el.magic) {
-        //                 str += "\n"
-        //                 if (el.charge) {
-        //                     str += `\`CHG ${xOutOfY(el.charge, el.maxCharge)}\` `
-        //                 }
-        //                 if (el.magic) {
-        //                     str += `\`MAG ${xOutOfY(el.magic, el.maxMagic)}\` `
-        //                 }
-        //             }
-        //             let a = Object.entries(el.statStages).filter((el) => el[1] != 0).map(([k, v]) => `${k.toUpperCase().padEnd(6, " ")}×${calcMul(v).toFixed(1)}`)
-        //             if (a.length) {
-        //                 str += `\n${a.join(" ")}`
-        //             }
-        //         } else str = "||" + str + "||"
-        //         return str
-        //     }).join("\n\n") || "Empty"
-        // } else 
         if (true) {
             let teams: Player[][] = []
             for (let p of this.players) {
@@ -940,10 +982,12 @@ export class Battle extends EventEmitter {
                     let hpColor = "red"
                     if (totalHealth > totalMaxHealth / 5) hpColor = "yellow"
                     if (totalHealth > totalMaxHealth / 2) hpColor = "green"
-    
+
                     str += "\n"
-                    str += formatString(`[${teamColors[i]}]Team Health[r]\n`)
-                    str += formatString(`[${teamColors[i]}]${bar(totalHealth, totalMaxHealth, 25)}|\n[${hpColor}]${xOutOfY(Math.ceil(totalHealth), totalMaxHealth, true)}\n`)
+                    if (players.length > 1) {
+                        str += formatString(`[${teamColors[i]}]Team Health[r]\n`)
+                        str += formatString(`[${teamColors[i]}]${bar(totalHealth, totalMaxHealth, 25)}|\n[${hpColor}]${xOutOfY(Math.ceil(totalHealth), totalMaxHealth, true)}\n`)
+                    }
                     str += "—————————————————————\n"
                 }
             } else {
@@ -954,44 +998,6 @@ export class Battle extends EventEmitter {
             str = `\`\`\`ansi\n${str}\n\`\`\``
         }
         let fields: APIEmbedField[] = []
-        // if (this.isPve) {
-        //     if (this.type == "boss") {
-        //         fields.push({
-        //             name: "Boss",
-        //             value: bots.map((el, i) => {
-        //                 let bossstr = `\`${getIcons(el)}${el.name.padEnd(7, " ")}` + "\n" +
-        //                     `${bar(el.hp, el.maxhp, 45)}` + "\n" +
-        //                     `${(el.hp / el.maxhp * 100).toFixed(1)}%` + "\n" +
-        //                     `${el.status.map(el => `${statusTypes.get(el.type)?.short}`).join(" ") || ""}\``
-        //                 let a = Object.entries(el.statStages).filter((el) => el[1] != 0).map(([k, v]) => `${k.toUpperCase().padEnd(6, " ")} x${calcMul(v).toFixed(1)}`)
-        //                 if (a.length) {
-        //                     bossstr += `\n${a.join(" ")}`
-        //                 }
-        //                 return bossstr
-        //             }).join("\n\n") || "what",
-        //             inline: false,
-        //         })
-        //         fields.push({
-        //             name: "Players",
-        //             value: str,
-        //             inline: false,
-        //         })
-        //     } else {
-        //         fields.push({
-        //             name: "Players",
-        //             value: str,
-        //             inline: true,
-        //         })
-        //         fields.push({
-        //             name: "Bots",
-        //             value: bots.map((el, i) => {
-        //                 let str = `${getIcons(el)}\`${el.name.padEnd(8, " ")} ${xOutOfY(el.hp, el.maxhp)} (${Math.ceil(el.hp / el.maxhp * 100).toString().padEnd(3)}%) ${el.status.map(el => `${statusTypes.get(el.type)?.short}`).join(" ") || ""}\``
-        //                 return str
-        //             }).join("\n") || "what",
-        //             inline: true
-        //         })
-        //     }
-        // }
         let msg = await channel.send({
             content: this.lobby?.users.map(el => el.toString()).join(" "),
             embeds: [
@@ -1060,7 +1066,6 @@ export class Battle extends EventEmitter {
     }
     fullLog: string[] = []
     log(str: string, color: LogColorWAccent = "white") {
-        let prefix = " "
         this.fullLog.push(str)
         this.logs.push(formatString(str, color))
         this.emit("log", str)
@@ -1085,7 +1090,7 @@ export class Battle extends EventEmitter {
             return true
         } else return false
     }
-    takeDamage(user: Player, damage: number, silent: boolean = false, message: LocaleString = "dmg.generic", breakshield: boolean = false, inflictor?: Player, type?: TakeDamageType) {
+    takeDamage(user: Player, damage: number, silent: boolean = false, message: LocaleString = "dmg.generic", breakshield: boolean = false, inflictor?: Player, opts: TakeDamageOptions = {}) {
         if (user.dead) return false
         if (damage < 0) return this.heal(user, -damage, silent);
         if (breakshield && user.protect) {
@@ -1104,7 +1109,7 @@ export class Battle extends EventEmitter {
                 let reflect = (mirror.durability ?? (mirror.durability = 100)) / 100 * 0.25
                 if (mirror.durability >= 100) {
                     this.logL("item.mirror.perfect", { player: user.toString() })
-                    reflect = 1
+                    reflect = 0.6
                 }
                 let dmg = Math.floor(Math.min(damage, user.maxhp * 0.75) * reflect)
                 mirror.durability -= (damage / user.maxhp) * 200
@@ -1126,8 +1131,47 @@ export class Battle extends EventEmitter {
                 this.inflictStatus(inflictor, "bleed")
             }
         }
+        if (inflictor) {
+            if (inflictor.itemSlots.offense) {
+                let item = inflictor.itemSlots.offense
+                let itemType = items.get(item.id)
+                let newDmg = itemType?.onDamageDealt?.(this, inflictor, item, damage, user, opts)
+                if (typeof newDmg == "number") {
+                    damage = newDmg
+                }
+            }
+        }
+        if (user.itemSlots.defense) {
+            let item = user.itemSlots.defense
+            let itemType = items.get(item.id)
+            let newDmg = itemType?.onDamage?.(this, user, item, damage, opts)
+            if (typeof newDmg == "number") {
+                damage = newDmg
+            }
+        }
+        if (opts.atkLvl && opts.defStat) {
+            let pen = (opts.defPen || 0)
+            let lvl = opts.atkLvl
+            let def = Math.max(user[opts.defStat] * (1 - pen), 1)
+            damage = calcDamage(damage, def, lvl)
+        }
+        opts.inflictor = inflictor
+        opts.silent = silent
+        opts.breakshield = breakshield
+        opts.message = message
+        let ab = abilities.get(user.ability ?? "")
+        let infAb = abilities.get(inflictor?.ability ?? "")
+        if (ab?.damage) {
+            let dmgOverride = ab.damage(this, user, damage, inflictor, opts)
+            if (dmgOverride != null) {
+                damage = dmgOverride
+            }
+        }
         user.addEvent({ type: "damage", amount: damage, inflictor }, this.turn)
-        if (damage == 0 && !silent) return this.logL("dmg.none", { player: user.toString() }, "unimportant")
+        if (damage == 0) {
+            if (!silent) this.logL("dmg.none", { player: user.toString() }, "unimportant")
+            return
+        }
         if (user.absorption > 0) {
             let reduction = Math.min(user.absorptionTier, 9) * 0.1
             user.absorption -= damage * reduction;
@@ -1137,12 +1181,8 @@ export class Battle extends EventEmitter {
                 user.absorption = 0
             };
         }
-        let ab = abilities.get(user.ability ?? "")
-        let infAb = abilities.get(inflictor?.ability ?? "")
-        if (ab?.damage)
-            ab.damage(this, user, damage, inflictor)
         if (inflictor && infAb?.damageDealt) {
-            infAb.damageDealt(this, inflictor, damage, user)
+            infAb.damageDealt(this, inflictor, damage, user, opts)
         }
         if (isNaN(damage)) return this.log(`Tried to deal NaN damage to ${user.name}`, "yellow")
         if (inflictor) inflictor.damageDealt += damage
@@ -1161,12 +1201,16 @@ export class Battle extends EventEmitter {
             if (user.hp < -user.maxhp + death) this.logL("dmg.overkill", { player: user.toString() }, "red")
             else this.log(getString("dmg.death", { player: user.toString() }), "red")
             user.hp = death
+            return true
+        }
+        if (user.hp + damage > 0 && user.hp <= 0 && user.hp > death) {
+            this.logL("dmg.plotarmor", { player: user.toString() }, "accent")
         }
 
         return true
     }
     takeDamageO(user: Player, damage: number, options: TakeDamageOptions = {}) {
-        return this.takeDamage(user, damage, options.silent, (options.message || "dmg.generic") as LocaleString, options.breakshield, options.inflictor, options.type)
+        return this.takeDamage(user, damage, options.silent, (options.message || "dmg.generic") as LocaleString, options.breakshield, options.inflictor, options)
     }
     heal(user: Player, amount: number, silent: boolean = false, message: LocaleString = "heal.generic", overheal: boolean = false) {
         if (user.status.some((s) => s.type == "bleed")) return false
@@ -1200,61 +1244,77 @@ export class Battle extends EventEmitter {
     doAction(action: TurnAction) {
         switch (action.type) {
             case "move": {
+                let user = action.player
                 let move = moves.get(action.move)
                 if (!move) return this.log(`What`)
                 if (move.type != "protect") {
                     action.player.protectTurns = 0
                 }
                 this.log(getString("move.use", { player: action.player.toString(), MOVE: move.name }))
-                let missed = rng.get01() > move.accuracy / 100
-                if (missed) this.log(getString("move.miss"))
-                let failed = !move.checkFail(this, action.player, action.target) || action.player.magic < move.requiresMagic || action.player.charge < move.requiresCharge
-                if (failed && !missed) this.log(getString("move.fail"))
-                action.player.magic -= move.requiresMagic
-                action.player.charge -= move.requiresCharge
+                let mOpts: MoveCastOpts = {
+                    category: move.category,
+                    requiresCharge: move.requiresCharge,
+                    requiresMagic: move.requiresMagic,
+                    accuracy: move.accuracy,
+                    pow: move.power || 0,
+                    critMul: move.critMul,
+                }
                 let supportTarget = action.player
                 if (this.hasTeams) supportTarget = action.target
                 if (move.targetSelf && (!this.hasTeams || action.target.team != action.player.team)) {
                     action.target = action.player
                 }
+                mOpts.pow = move.getPower(this, action.player, action.target)
+                if (user.itemSlots.offense) {
+                    let item = user.itemSlots.offense
+                    let itemType = items.get(item.id)
+                    itemType?.onMoveUse?.(this, user, item, action.move, mOpts)
+                }
+                let missed = rng.get01() > mOpts.accuracy / 100
+                if (missed) this.log(getString("move.miss"))
+                let failed = !move.checkFail(this, action.player, action.target) || action.player.magic < mOpts.requiresMagic || action.player.charge < mOpts.requiresCharge
+                if (failed && !missed) this.log(getString("move.fail"))
+                action.player.magic -= mOpts.requiresMagic
+                action.player.charge -= mOpts.requiresCharge
                 action.player.addEvent({ type: "move", move: action.move, failed: failed || missed, target: action.target }, this.turn)
                 if (failed || missed) return
                 let onUse = move.onUse
                 if (onUse) {
                     onUse(this, action.player, action.target)
                 } else if (move.type == "attack") {
-                    let cat = move.category
-                    let pow = move.getPower(this, action.player, action.target)
-                    if (action.player.helditems.some(el => el.id == "category_swap")) {
-                        if (cat == "physical") cat = "special"
-                        else if (cat == "special") cat = "physical"
-                        this.log(`The move is now ${cat} thanks to Category Swap`)
-                    }
-                    let damageMul = 1.5
-                    let critChance = ((0.15 + Math.max(Math.min((action.player.spd - action.target.spd) / 100, 0.25), 0)) + (Math.random() / 10)) * move.critMul
-                    if (cat == "physical") critChance *= 1.1
+                    let cat = mOpts.category
+                    let requiresCharge = mOpts.requiresCharge
+                    let requiresMagic = mOpts.requiresMagic
+                    let pow = mOpts.pow
+                    let critDmg = 1 + action.player.cstats.critdmg / 100
+                    let critChance = action.player.cstats.crit / 100 * mOpts.critMul
                     let atk = getATK(action.player, cat)
-                    let def = getDEF(action.target, cat)
-                    if (cat == "physical" && !move.requiresCharge) {
+
+
+
+                    if (cat == "physical" && !requiresCharge) {
                         action.player.charge += Math.floor(pow / 60 * 10)
-                    } else if (cat == "special" && !move.requiresMagic) action.player.magic += Math.floor(pow / 40 * 5)
-                    let dmg = Math.ceil(calcDamage(pow, atk, def, action.player.level) * (0.85 + (Math.random() * (1 - 0.85))))
+                    } else if (cat == "special" && !requiresMagic) action.player.magic += Math.floor(pow / 40 * 5)
+                    let dmg = MOVE_POWER_ATK_MULT * pow * atk
+                    let opts: TakeDamageOptions = {
+                        silent: false,
+                        atkLvl: action.player.level,
+                        inflictor: action.player,
+                        type: cat,
+                        defStat: cat == "physical" ? "def" : "spdef",
+                        defPen: 0,
+                        breakshield: move.breakshield,
+                    }
                     if (move.setDamage == "set") {
                         dmg = Math.floor(pow)
-                    } else if (move.setDamage == "set-atkdef") {
-                        dmg = Math.floor(pow * atk / def)
                     } else if (move.setDamage == "percent") {
                         dmg = Math.ceil(pow / 100 * action.target.maxhp)
                     }
-                    if (Math.random() < critChance) {
-                        this.log(`A critical hit!`, "red")
-                        dmg = Math.floor(dmg * damageMul)
+                    if (rng.get01() < critChance) {
+                        this.logL("dmg.crit", {}, "red")
+                        dmg = Math.floor(dmg * critDmg)
                     }
-                    this.takeDamageO(action.target, dmg, {
-                        breakshield: move.breakshield,
-                        inflictor: action.player,
-                        type: cat,
-                    })
+                    this.takeDamageO(action.target, dmg, opts)
                 } else if (move.type == "protect") {
                     if (rng.get01() > (1 / (action.player.protectTurns / 3 + 1))) return this.log(getString("move.fail"))
                     action.player.protectTurns++
@@ -1338,39 +1398,18 @@ export class Battle extends EventEmitter {
         }
         for (let p of this.players) {
             if (p.dead) continue;
+            p.updateItems()
             let ab = abilities.get(p.ability || "")
             if (ab) {
                 ab.turn(this, p)
             }
             for (let it of p.helditems) {
-                if (it.id.startsWith("bruh_orb")) {
-                    if (!p.bruh) {
-                        p.bruh = it.id
-
-                        let stat = it.id.slice("bruh_orb_".length)
-                        let boosts = bruhOrbBoosts[stat]
-                        for (let k in boosts) {
-                            let v = boosts[k as StatID]
-                            if (v && v != 1) {
-                                p.addModifier(k as StatID, {
-                                    type: "add",
-                                    value: Math.ceil(p.stats[k as StatID] * (v - 1)),
-                                    label: "Bruh Orb"
-                                })
-                            }
-                        }
-                        p.updateStats(false)
-                        this.log(`${p.toString()}'s Bruh Orb is now active`, "red")
-                        p.helditems = p.helditems.filter(el => !el.id.startsWith("bruh_orb"))
-                    }
-                    break
-                }
                 let type = items.get(it.id)
                 if (type) {
                     type.turn(this, p, it)
                 }
             }
-            p.helditems = p.helditems.filter(el => !el.remove)
+            p.updateItems()
         }
         for (let a of this.actions) {
             try {

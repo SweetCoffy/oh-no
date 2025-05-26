@@ -6,7 +6,8 @@ import { getString, LocaleString } from '../../locale.js';
 import { StatID, Stats } from "../../stats.js";
 import { items } from '../../helditem.js';
 import { abilities } from '../../abilities.js';
-import { dispDelta, formatString } from '../../util.js';
+import { dispDelta, formatString, snapTo } from '../../util.js';
+import { MOVE_POWER_ATK_MULT } from '../../battle.js';
 export let command: Command = {
     name: "choose",
     description: "ur mom",
@@ -146,9 +147,27 @@ export let command: Command = {
                 let move = moves.get(moveId)
                 if (move) {
                     //@ts-ignore
-                    let desc = formatString(`Power: [a]${move.power || "-"}[r]\nAccuracy: [a]${move.accuracy}%[r]\nCategory: [a]${getString("move.category." + move.category)}[r]`)
-                    //@ts-ignore
-                    if (move.type == "attack") desc += formatString(`\nDamage Type: [a]${getString("move.dmgtype." + move.setDamage)}[r]`)
+                    let desc = formatString(`Accuracy: [a]${move.accuracy}%[r]\nCategory: [a]${getString("move.category." + move.category)}[r]`)
+                    if (move.type == "attack") {
+                        //@ts-ignore
+                        desc += formatString(`\nDamage Type: [a]${getString("move.dmgtype." + move.setDamage)}[r]`)
+                        if (move.power != null) {
+                            let atkStat = move.category == "physical" ? "atk" : "spatk"
+                            let dispMult = ""
+                            let dispMultSuffix = ""
+                            if (move.setDamage == "percent") {
+                                dispMult = `${snapTo(move.power * 100)}%`
+                                dispMultSuffix = ` of target's [a]MAX HP[r] stat, ignoring target's [a]DEF[r]`
+                            }
+                            if (move.setDamage == "regular") {
+                                dispMult = `${snapTo(move.power * 100 * MOVE_POWER_ATK_MULT)}%`
+                                dispMultSuffix = ` of user's [a]${getString("stat." + atkStat)}[r] stat`
+                            }
+                            desc += formatString(`\nDamage Multiplier: [a]${dispMult}[r]${dispMultSuffix}`)
+                        } else {
+                            desc += formatString(`\nDamage Multiplier: [a]Varies[r]`)
+                        }
+                    }
                     desc += `\n\n${move.description}`
                     if (move.requiresCharge) {
                         desc += formatString(`\nThis move requires [a]${move.requiresCharge}[r] [red]Charge[r] to use.`)

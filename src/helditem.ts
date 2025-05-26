@@ -1,5 +1,5 @@
 import { Collection } from "discord.js";
-import { Battle, calcDamage, Player } from "./battle.js";
+import { Battle, calcMoveDamage, MoveCastOpts, Player, TakeDamageOptions } from "./battle.js";
 import { getString, LocaleString } from "./locale.js";
 import { StatID } from "./stats.js";
 import { formatString, rng } from "./util.js"
@@ -9,88 +9,50 @@ export interface HeldItem {
     remove?: boolean,
     durability?: number,
 }
+export type ItemClass = "bruh_orb" | "defense" | "offense" | "passive"
 type HeldItemCallback = (battle: Battle, player: Player, item: HeldItem) => any
-function healEffect(percent: number, silent: boolean = false, message: LocaleString = "heal.generic"): HeldItemCallback {
-    return function (b, p, it) {
-        let amt = p.maxhp * percent
-        b.heal(p, amt, silent, message)
-    }
-}
-function everyXTurnsEffect(interval: number, effect: HeldItemCallback, elseEffect?: HeldItemCallback): HeldItemCallback {
-    return function (b, p, it) {
-        if (b.turn % interval == 0) {
-            effect(b, p, it)
-        } else {
-            if (elseEffect) elseEffect(b, p, it)
-        }
-    }
-}
-function protectEffect(): HeldItemCallback {
-    return function (b, p, it) {
-        p.protect = true
-    }
-}
-function chanceEffect(effect: HeldItemCallback, chance: number): HeldItemCallback {
-    return function (b, p, it) {
-        if (rng.get01() < chance) {
-            effect(b, p, it)
-        }
-    }
-}
-function multiEffect(...effects: HeldItemCallback[]): HeldItemCallback {
-    return function (b, p, it) {
-        for (let e of effects) {
-            e(b, p, it)
-        }
-    }
-}
-function statEffect(stat: StatID, stages: number, silent = false): HeldItemCallback {
-    return function (b, p, it) {
-        b.statBoost(p, stat, stages, silent)
-    }
-}
-function messageEffect(message: LocaleString): HeldItemCallback {
-    return function (b, p, it) {
-        b.log(getString(message, { player: p.toString() }))
-    }
-}
 export class HeldItemType {
     name: string
     passiveEffect: string = "None"
-    activeEffect: string = "None"
     removeUse: boolean = true
+    class: ItemClass = "passive"
     onTurn?: HeldItemCallback
-    onUse?: HeldItemCallback
+    onBattleStart?: HeldItemCallback
+    onDamage?: (battle: Battle, player: Player, item: HeldItem, dmg: number, opts: TakeDamageOptions) => number | void
+    onDamageDealt?: (battle: Battle, player: Player, item: HeldItem, dmg: number, target: Player, opts: TakeDamageOptions) => number | void
+    onMoveUse?: (battle: Battle, player: Player, item: HeldItem, move: string, opts: MoveCastOpts) => void
     icon?: string
-    constructor(name: string, onTurn?: HeldItemCallback, onUse?: HeldItemCallback) {
+    constructor(name: string, onTurn: typeof this.onTurn = undefined) {
         this.name = name
         this.onTurn = onTurn
-        this.onUse = onUse
+    }
+    setClass(c: ItemClass) {
+        this.class = c
+        return this
     }
     setIcon(icon: string) {
         this.icon = icon;
         return this
     }
-    setEffect(passive?: string, active?: string) {
+    set(fn: ((v: typeof this) => void)) {
+        fn(this)
+        return this
+    }
+    setEffect(passive?: string) {
         if (passive) this.passiveEffect = passive
-        if (active) this.activeEffect = active
         return this
     }
     turn(p: Battle, player: Player, it: HeldItem) {
         if (this.onTurn) this.onTurn(p, player, it)
-    }
-    use(p: Battle, player: Player, it: HeldItem) {
-        if (this.removeUse) it.remove = true
-        if (this.onUse) this.onUse(p, player, it)
     }
 }
 export let items: Collection<string, HeldItemType> = new Collection()
 items.set("eggs",
     new HeldItemType("Eggs", (b, p, item) => {
         if (p.dead) return
-        b.heal(p, Math.floor(p.maxhp / 16), false, "heal.eggs")
-    }, multiEffect(healEffect(1), statEffect("def", 1), statEffect("spdef", 1)))
-        .setEffect(formatString("Every turn:\nHeals the user by [a]6.25%[r] of their [a]MAX HP[r].")).setIcon("🥚"))
+        b.heal(p, Math.floor(p.maxhp * 0.05), false, "heal.eggs")
+    })
+        .setEffect(formatString("Every turn:\nHeals the user by [a]5%[r] of their [a]MAX HP[r].")).setIcon("🥚"))
 
 items.set("shield",
     new HeldItemType("Shield", function (b, p, i) {
@@ -105,7 +67,7 @@ items.set("shield",
 
             d.used = true;
         }
-    }, multiEffect(statEffect("def", 6), statEffect("spdef", 6))).setIcon("🛡️")
+    }).setIcon("🛡️")
         .setEffect(DescriptionBuilder.new()
             .line("At the start of battle, grants [a]Tier 2 Absorption[r] equivalent to [a]30%[r] to the user's [a]MAX HP[r], and:")
             .mod({
@@ -117,7 +79,15 @@ items.set("shield",
             })
             .build()))
 items.set("category_swap",
-    new HeldItemType("Category Swap").setEffect("Swaps the damage category of all moves used").setIcon("🔄"))
+    new HeldItemType("Category Swap").setEffect("Swaps the damage category of all moves used").setClass("offense").set((v) => {
+        v.onMoveUse = (_0, _1, _2, _3, opts) => {
+            if (opts.category == "physical") {
+                opts.category = "special"
+            } else if (opts.category == "special") {
+                opts.category = "physical"
+            }
+        }
+    }).setIcon("🔄"))
 
 export const bruhOrbBoosts: { [key: string]: { [x in StatID]?: number } } = {
     "": {
@@ -158,26 +128,52 @@ export const bruhOrbBoosts: { [key: string]: { [x in StatID]?: number } } = {
     }
 }
 
+function bruhOrbEffect(boost: { [x in StatID]?: number }) {
+    return function (b: Battle, p: Player, item: HeldItem) {
+        for (let k in boost) {
+            if (!boost[k as StatID]) continue
+            p.addModifier(k as StatID, {
+                value: boost[k as StatID] ?? 0,
+                label: "Bruh Orb",
+                type: "multiply",
+                multCombine: "add"
+            })
+        }
+    }
+}
 
 items.set("bruh_orb",
-    new HeldItemType("Bruh Orb").setEffect(DescriptionBuilder.new().line("At the start of battle, removes all held items and:")
-        .mod(bruhOrbBoosts[""]).build()).setIcon("🔴"))
+    new HeldItemType("Bruh Orb").set((v) => {
+        v.onBattleStart = bruhOrbEffect(bruhOrbBoosts[""])
+    }).setEffect(DescriptionBuilder.new()
+        .mod(bruhOrbBoosts[""]).build()).setIcon("🔴").setClass("bruh_orb"))
 
 items.set("bruh_orb_attack",
-    new HeldItemType("Bruh Orb (Attack)").setEffect(DescriptionBuilder.new().line("At the start of battle, removes all held items and:")
-        .mod(bruhOrbBoosts.attack).build()).setIcon("🗡️"))
+    new HeldItemType("Bruh Orb (Attack)").set((v) => {
+        v.onBattleStart = bruhOrbEffect(bruhOrbBoosts.attack)
+    }).setEffect(DescriptionBuilder.new()
+        .mod(bruhOrbBoosts.attack).build()).setIcon("🗡️").setClass("bruh_orb"))
 
 items.set("bruh_orb_speed",
-    new HeldItemType("Bruh Orb (Speed)").setEffect(DescriptionBuilder.new().line("At the start of battle, removes all held items and:")
-        .mod(bruhOrbBoosts.speed).build()).setIcon("👟"))
+    new HeldItemType("Bruh Orb (Speed)").set((v) => {
+        v.onBattleStart = bruhOrbEffect(bruhOrbBoosts.speed)
+    }).setEffect(DescriptionBuilder.new()
+        .mod(bruhOrbBoosts.speed).build()).setIcon("👟").setClass("bruh_orb"))
 
 items.set("bruh_orb_defense",
-    new HeldItemType("Bruh Orb (Defense)").setEffect(DescriptionBuilder.new().line("At the start of battle, removes all held items and:")
-        .mod(bruhOrbBoosts.defense).build()).setIcon("🛡️"))
+    new HeldItemType("Bruh Orb (Defense)").set((v) => {
+        v.onBattleStart = bruhOrbEffect(bruhOrbBoosts.defense)
+    }).setEffect(DescriptionBuilder.new()
+        .mod(bruhOrbBoosts.defense).build()).setIcon("🛡️").setClass("bruh_orb"))
 
 items.set("bruh_orb_hp",
-    new HeldItemType("Bruh Orb (HP)").setEffect(DescriptionBuilder.new().line("At the start of battle, removes all held items and:")
-        .mod(bruhOrbBoosts.hp).build()).setIcon("❤️"))
+    new HeldItemType("Bruh Orb (HP)").set((v) => {
+        v.onBattleStart = bruhOrbEffect(bruhOrbBoosts.hp)
+    }).setEffect(DescriptionBuilder.new()
+        .mod(bruhOrbBoosts.hp).build()).setIcon("❤️").setClass("bruh_orb"))
 
 items.set("mirror",
-    new HeldItemType("Mirror").setEffect(formatString("When the user is attacked:\nReflects [a]up to 25%[r] of damage taken, decreasing as [a]durability[r] is lost. The first hit taken triggers [a]Perfect Mirror[r], reflecting [a]100%[r] of the damage. Once shattered, the [a]user[r] [f]takes 12.5% damage[r], and both the [a]user[r] and the [a]attacker[r] are inflicted with [a]Bleed[r].")).setIcon("🪞"))
+    new HeldItemType("Mirror").setEffect(
+        formatString("When the user is attacked:\nReflects [a]up to 25%[r] of damage taken, decreasing as [a]durability[r] is lost. The first hit taken triggers [a]Perfect Mirror[r], reflecting [a]60%[r] of the damage. Once shattered, the [a]user[r] [f]takes 12.5% damage[r], and both the [a]user[r] and the [a]attacker[r] are inflicted with [a]Bleed[r]."))
+        .setIcon("🪞")
+        .setClass("defense"))

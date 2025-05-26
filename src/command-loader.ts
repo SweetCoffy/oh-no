@@ -1,17 +1,33 @@
-import { CommandInteraction, Collection, Guild, ContextMenuCommandInteraction, ChatInputApplicationCommandData, UserApplicationCommandData, AutocompleteInteraction } from "discord.js";
+import { CommandInteraction, Collection, Guild, ContextMenuCommandInteraction, ChatInputApplicationCommandData, UserApplicationCommandData, AutocompleteInteraction, ModalSubmitInteraction, AnySelectMenuInteraction, ButtonInteraction } from "discord.js";
 import { statSync, readdirSync } from "fs"
 import { resolve, join } from "path"
 import { settings } from "./util.js"
 export type ChatInputCommand = ChatInputApplicationCommandData & { run(i: CommandInteraction): any}
 export type UserCommand = UserApplicationCommandData & { run(i: ContextMenuCommandInteraction): any }
 
-export type Command = (ChatInputCommand | UserCommand) & {dev?: boolean, autocomplete?(i: AutocompleteInteraction): any}
+export type Command = (ChatInputCommand | UserCommand) &
+{
+    dev?: boolean,
+    associatedCustomIds?: string[],
+    autocomplete?(i: AutocompleteInteraction): any,
+    modalSubmit?(i: ModalSubmitInteraction): any,
+    // selectMenu?(i: AnySelectMenuInteraction): any,
+    // button?(i: ButtonInteraction): any,
+    interaction?(i: ButtonInteraction | AnySelectMenuInteraction): any,
+}
 
 export let commands: Collection<string, Command> = new Collection()
+export let customIds: Collection<string, Command> = new Collection()
 
 export async function load(file: string) {
     let h: Command = (await import(file)).command
     commands.set(h.name, h)
+    if (h.associatedCustomIds) {
+        for (let id of h.associatedCustomIds) {
+            if (id.endsWith(":")) id = id.slice(0, id.length - 1)
+            customIds.set(id, h)
+        }
+    }
     return h
 }
 

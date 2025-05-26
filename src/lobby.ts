@@ -183,16 +183,13 @@ export class BattleLobby {
             }
             this.battle.players.push(bot)
         }
-        for (let p of this.battle.players) {
-            p.helditems = [...new Set(p.helditems.map(el => el.id))].map(el => ({id: el}))
-        }
         if (this.flags.W) {
             for (let p of this.battle.players) {
                 if (p.team == 0) p.team = 1;
                 else if (p.team == 1) p.team = 0;
             }
         }
-        this.battle.players.sort((a, b) => a.team - b.team)
+        this.battle.start()
         let start = BattleTypeInfo[this.battle.type].onStart
         if (start) start(this.battle)
     }

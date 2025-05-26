@@ -1,11 +1,11 @@
 import { Collection } from "discord.js"
-import { Battle, Player } from "./battle.js"
+import { Battle, calcDamage, Player } from "./battle.js"
 import { makeStats, Stats } from "./stats.js"
 import { formatString, weightedDistribution } from "./util.js"
 
 export type MoveType = "attack" | "status" | "protect" | "heal" | "absorption" | "noop"
 export type Category = "physical" | "special" | "status"
-export type DamageType = "regular" | "set" | "set-atkdef" | "percent"
+export type DamageType = "regular" | "set" | "percent"
 export interface InflictStatus {
     status: string,
     chance: number,
@@ -17,13 +17,11 @@ export class Move {
     /**
      * The damage calculation type
      * 
-     * `regular` Regular damage calculations
+     * `regular` Damage is equal to `power` times the user's appropiate ATK stat times the `MOVE_POWER_ATK_MULT` constant
      * 
-     * `set` No damage calculations, fixed damage
+     * `set` Damage is equal to `power`
      * 
-     * `set-atkdef` No damage calculations, fixed damage multiplied by `def/atk`
-     * 
-     * `percent` No damage calculations, damage is `power` % of the target's max hp
+     * `percent` Damage is equal `power` % of the target's max HP
      */
     setDamage: DamageType = "regular"
     /**
@@ -37,7 +35,7 @@ export class Move {
      * 
      * `special` Uses the user's Special Attack stat and the target's Special Defense stat
      * 
-     * `status` Doesn't use damage calculations as it is meant for moves that only inflict a status condition or change stats
+     * `status` For moves that don't deal damage or ignore DEF stats.
      */
     category: Category = "physical"
     /**
@@ -231,6 +229,7 @@ moves.set("protect", new Move("Protect", "protect", 0, "status").set(move => mov
 moves.set("counter", new Move("Counter", "attack", 0).set(move => {
     move.accuracy = 100
     move.priority = 1
+    move.critMul = 0.5
     move.setDamage = "set"
     move.checkFail = function(b, p, t) {
         return p.damageBlockedInTurn > 0
@@ -238,11 +237,12 @@ moves.set("counter", new Move("Counter", "attack", 0).set(move => {
     move.getPower = function(b, p, t) {
         return p.damageBlockedInTurn * 2
     }
-}).setDesc(formatString("Deals fixed damage equal to [a]200%[r] of the damage blocked by [a]Protect[r] in the previous turn.")))
+}).setDesc(formatString("Deals damage equal to [a]200%[r] of the damage blocked by [a]Protect[r] in the previous turn. The target's [a]DEF[r] stat is taken into account.\nThis move has a [a]50%[r] [f]reduced[r] [a]CRIT rate[r].")))
 moves.set("release", new Move("Release", "attack", 0).set(move => {
     move.accuracy = 100
     move.priority = 1
     move.setDamage = "set"
+    move.critMul = 0
     move.checkFail = function (b, p, t) {
         return p.damageBlockedInTurn > 0
     }
@@ -252,12 +252,12 @@ moves.set("release", new Move("Release", "attack", 0).set(move => {
         let dist = weightedDistribution(enemies.map(e => e.hp), damage)
         let total = 0
         for (let i = 0; i < dist.length; i++) {
-            b.takeDamage(enemies[i], Math.ceil(dist[i]))
+            b.takeDamageO(enemies[i], Math.ceil(dist[i]), { defStat: "def" })
             total += Math.ceil(dist[i])
         }
         b.logL(`dmg.release`, { damage: total })
     }
-}).setDesc(formatString("Deals damage to [a]all battlers[r] on the target's team, totalling to [a]150%[r] of the damage blocked by [a]Protect[r] in the previous turn. [a]This move can't deal CRITs.[r]")))
+}).setDesc(formatString("Deals damage to [a]all enemies[r] on the target's team, totalling to [a]150%[r] of the damage blocked by [a]Protect[r] in the previous turn. The [a]DEF[r] stats of the targets are taken into account.\nThis move [f]cannot[r] deal [a]CRIT[r] damage.")))
 
 moves.set("regen", new Move("Regeneration", "status", 0, "status", 100).set(move => {
     move.requiresMagic = 20

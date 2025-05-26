@@ -1,21 +1,21 @@
 import { Collection, User } from "discord.js"
 import { getUser, PresetList } from "./users.js"
 import { weightedDistribution } from "./util.js"
-export type BasicStatID = "hp" | "atk" | "def" | "spatk" | "spdef" | "spd"
-export type StatID = BasicStatID
+export type StatID = "hp" | "atk" | "def" | "spatk" | "spdef" | "spd"
+export type ExtendedStatID = StatID | "dr" | "crit" | "critdmg"
 export type Stats = {
     [x in StatID]: number
 }
-export type BasicStats = {
-    [x in BasicStatID]: number
+export type ExtendedStats = {
+    [x in ExtendedStatID]: number
 }
 export interface StatPreset {
     name: string,
-    stats: BasicStats,
+    stats: Stats,
     helditems?: string[],
     ability?: string,
 }
-export const baseStats: BasicStats = {
+export const baseStats: Stats = {
     hp   :  100,
     atk  :  100,
     def  :  100,
@@ -107,15 +107,35 @@ export function makeStats(obj?: {[key: string]: number}): Stats {
     }
     return o
 }
+export function makeExtendedStats(obj?: { [key: string]: number }): ExtendedStats {
+    let o: ExtendedStats = {
+        hp: 0,
+        atk: 0,
+        def: 0,
+        spatk: 0,
+        spdef: 0,
+        spd: 0,
+        dr: 0,
+        crit: 0,
+        critdmg: 0,
+    }
+    if (obj) {
+        for (let k in obj) {
+            o[k as StatID] = obj[k]
+        }
+    }
+    return o
+}
 export function calcStat(base: number, level: number, ev: number = 0) {
     let v = Math.floor(500 + base * 5 + level * (base + 10) * 10 / 100)
     return v
 }
-export function calcStats(level: number, baseStats: BasicStats, hpboost: number = 1): Stats {
+export function calcStats(level: number, baseStats: Stats, hpboost: number = 1): Stats {
     let s = makeStats()
     for (let k in baseStats) {
-        s[k as BasicStatID] = calcStat(baseStats[k as BasicStatID], level, 0)
+        s[k as StatID] = calcStat(baseStats[k as StatID], level, 0)
     }
+    s.hp = Math.floor(s.hp * 3.25)
     return s
 }
 export function getPreset(name: string, user?: User) {
@@ -130,9 +150,9 @@ export function getPreset(name: string, user?: User) {
 const BST_MIN_LIMIT = 0.1
 const BST_MAX_LIMIT = 0.5
 
-export function limitStats(stats: BasicStats, bst: number): BasicStats {
+export function limitStats(stats: Stats, bst: number): Stats {
     let newValues = weightedDistribution(Object.values(stats), bst)
-    let keys: StatID[] = Object.keys(stats) as BasicStatID[]
+    let keys: StatID[] = Object.keys(stats) as StatID[]
     let max = bst * BST_MAX_LIMIT
     let min = bst * BST_MIN_LIMIT
     let curTotal = 0
@@ -144,7 +164,7 @@ export function limitStats(stats: BasicStats, bst: number): BasicStats {
         newStats[keys[i]] = newValues[i]
     }
     newValues = weightedDistribution(Object.values(newStats), bst)
-    keys = Object.keys(newStats) as BasicStatID[]
+    keys = Object.keys(newStats) as StatID[]
     //@ts-ignore
     newStats = Object.fromEntries(newValues.map((v, i) => [keys[i], v]))
     curTotal = 0
