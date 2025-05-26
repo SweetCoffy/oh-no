@@ -99,7 +99,6 @@ export function getTempData(id: string, key?: string, defaultValue?: any) {
                 clearTempData(id)
             }, 5 * 60 * 1000)
         })
-        console.log(`created temp data ${id}`)
     }
     let data = tempData.get(id) as TempData;
     data.timeout.refresh()
@@ -110,7 +109,6 @@ export function getTempData(id: string, key?: string, defaultValue?: any) {
 function clearTempData(id: string) {
     let d = tempData.get(id);
     if (!d) return;
-    console.log(`cleared temp data ${id}`)
     tempData.delete(id)
     d.expired = true
 }

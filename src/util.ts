@@ -411,12 +411,9 @@ export async function confirmation(i: CommandInteraction | ButtonInteraction, st
             },
             time: 1000 * 60
         })
-        console.log(int.customId)
         await int.deferUpdate().catch(() => { })
-        console.log(int.customId)
         return int.customId == "yes"
     } catch (e) {
-        console.log(e)
         return false
     }
 }

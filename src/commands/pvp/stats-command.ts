@@ -327,9 +327,7 @@ export let command: Command = {
             return
         }
         let tmp = getTempData(i.message.interactionMetadata?.id, "stats", {})
-        console.log(tmp)
         if (!tmp.preset) return await i.reply({ flags: ["Ephemeral"], content: "huh??" })
-        console.log(i)
         if (i.isStringSelectMenu()) {
             if (i.customId == "stats:preset") {
                 let preset = i.values[0]
@@ -370,7 +368,6 @@ export let command: Command = {
                 return await i.reply({ flags: ["Ephemeral"], content: "Saved." })
             }
         }
-        console.log(tmp)
         await i.deferUpdate()
     },
     async autocomplete(i) {
@@ -514,13 +511,11 @@ export let command: Command = {
                 if (!preset && i.options.getString("preset", false)) return await i.reply(`Unknown preset`)
                 if (preset) {
                     preset.ability = a
-                    console.log(preset)
                     let prevtotal = Object.values(preset.stats).reduce((prev, cur) => prev + cur, 0)
                     let total = getMaxTotal({ ability: a })
                     for (let k in preset.stats) {
                         preset.stats[k as StatID] = Math.floor(preset.stats[k as StatID] / prevtotal * total)
                     }
-                    console.log(preset)
                     await i.reply(`Ability set to ${abilities.get(a as string)?.name || "None"}\nYou might have to do /stats use <preset> again to apply changes`)
                     return
                 }

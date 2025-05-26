@@ -105,8 +105,7 @@ export let command: Command = {
             if (lastinfo?.deletable) lastinfo.delete()
             lastinfo = await l.battle?.infoMessage(channel)
         })
-        l.battle?.on("end", async(winner: string) => {
-            console.log(`winner: ${winner}`)
+        l.battle?.on("end", async (winner: string) => {
             if (!i.channel) return
             if (lastinfo?.deletable) lastinfo.delete()
             lastinfo = await l.battle?.infoMessage(channel)

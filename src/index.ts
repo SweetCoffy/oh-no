@@ -41,8 +41,6 @@ client.on("ready", async () => {
         //@ts-ignore
         .map(v => v.value.value))
     console.log(`Actually ready`)
-    console.log(formatString(`Let's see...\nWill n:this; work?`))
-    console.log(formatString(`It does, that's [s]great[r]!`))
 })
 
 client.on("interactionCreate", async (i) => {
@@ -66,7 +64,6 @@ client.on("interactionCreate", async (i) => {
     }
     try {
         getUser(i.user).lastCommand = Date.now()
-        console.log(`${i.user.username} /${i.commandName}`)
         let cmd = commands.get(i.commandName)
         if (!cmd) return void await i.reply("Unknown command")
         //@ts-ignore

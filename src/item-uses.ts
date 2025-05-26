@@ -276,8 +276,6 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
         },
         ownKeys(t) {
             let ar = [...data.items.map((el, i) => `dev${i}_${el.item}`), ...Reflect.ownKeys(t)]
-            console.log(data.items)
-            console.log(ar)
             return ar
         },
         
@@ -289,14 +287,12 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
         let installpath = "main"
         function query(name: string): Pkg | undefined {
             let path = `eggos_pkg/${name}`
-            console.log(`Querying '${name}' (${path})`)
             if (!existsSync(`${path}/pkg.yml`)) return
             return load(readFileSync(`${path}/pkg.yml`, "utf8")) as Pkg
         }
         function add(name: string): Pkg | undefined {
             let path = `eggos_pkg/${name}`
             let p = query(name)
-            console.log(`Adding '${name}'`)
             if (!p) return
             for (let k in p.files) {
                 setPath(fs, `${installpath}/${p.files[k]}`, readFileSync(`${path}/${k}`, "utf8"))
@@ -333,15 +329,11 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
         | { type: "msg", message: string, edit: boolean } 
         | { type: "readdir", cont: string[], path: string })) => {
         if (msg.type == "read") {
-            console.log(`Read to ${msg.path} received`)
             let c = getPath(fs, msg.path)
             worker.postMessage({ id: msg.id, content: (c == undefined) ? undefined : Buffer.from(c + "") })
-            console.log(`Read to ${msg.path} sent (id: ${msg.id})`)
         } else if (msg.type == "write") {
-            console.log(`Write to ${msg.path} received`)
             setPath(fs, msg.path, msg.cont)
             worker.postMessage({ id: msg.id })
-            console.log(`Write to ${msg.path} sent (id: ${msg.id})`)
         } else if (msg.type == "msg") {
             acc += msg.message + "\n"
         } else if (msg.type == "readdir") {
@@ -351,11 +343,10 @@ export async function* phone(user: User, stack: ItemStack, amount: bigint, ...ar
         }
     })
     worker.on("error", (er) => {
-        console.log(er)
+
     })
     worker.stdout.on("data", (chunk) => {
         acc += chunk
-        console.log(chunk + "")
     })
     let timeout = setTimeout(() => {
         worker.terminate()
