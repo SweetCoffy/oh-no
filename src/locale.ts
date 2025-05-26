@@ -31,9 +31,11 @@ export type Locales = {
 export let locales: Locales = {
     en_US: {},
 }
-export function getString(key: LocaleString, obj: { [key: string]: any } | string[] = {}) {
+export function getString(key: string, obj: { [key: string]: any } | string[] = {}) {
     // @ts-ignore
     let str: string = locales[locale]?.[key]
+    // @ts-ignore
+    if (!str) str = locales.en_US?.[key]
     if (!str) return key
     if (!Array.isArray(obj)) {
         for (let k in obj) {
