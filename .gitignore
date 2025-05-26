@@ -112,6 +112,7 @@ global.json
 map.txt
 userdata.bin
 data/
+package-lock.json
 
 # Nor this test content folder
 content/exp_test
