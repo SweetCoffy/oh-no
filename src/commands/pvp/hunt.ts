@@ -97,16 +97,19 @@ export let command: Command = {
         
         
         let lastinfo = await l.battle?.infoMessage(i.channel)
+
+        let channel = i.channel
+
         l.battle?.on("newTurn", async() => {
             if (!i.channel) return
             if (lastinfo?.deletable) lastinfo.delete()
-            lastinfo = await l.battle?.infoMessage(i.channel)
+            lastinfo = await l.battle?.infoMessage(channel)
         })
         l.battle?.on("end", async(winner: string) => {
             console.log(`winner: ${winner}`)
             if (!i.channel) return
             if (lastinfo?.deletable) lastinfo.delete()
-            lastinfo = await l.battle?.infoMessage(i.channel)
+            lastinfo = await l.battle?.infoMessage(channel)
             if (winner == "Team Blue") {
                 let enemies = l.battle?.players.filter(el => !el.user) || []
                 let xp = Math.ceil(
@@ -116,11 +119,11 @@ export let command: Command = {
                 let oldStats = calcStats(u.level, u.baseStats)
                 let m = BigInt(Math.floor(xp * (xp * 0.075)))/100n*15n
                 getUser(i.user).money.points += m
-                await i.channel.send(`You won, gained ${xp} XP and ${money(m)}`)
+                await channel.send(`You won, gained ${xp} XP and ${money(m)}`)
                 let levels = addXP(i.user, xp)
                 let newStats = calcStats(u.level, u.baseStats)
                 if (levels > 0) {
-                    await i.channel.send(`+${levels} levels\n${
+                    await channel.send(`+${levels} levels\n${
                         Object.keys(oldStats)
                         //@ts-ignore
                         .map((el: StatID) => `\`${el.padEnd(6, " ")} ${oldStats[el].toString().padStart(6, " ")} + ${(newStats[el] - oldStats[el]).toString().padEnd(6, " ")}\``)
@@ -128,7 +131,7 @@ export let command: Command = {
                     }`)
                 }
             } else {
-                await i.channel.send("You lost")
+                await channel.send("You lost")
             }
         })
     }
