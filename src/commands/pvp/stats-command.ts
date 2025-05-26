@@ -15,7 +15,7 @@ function getWeighted(weights: number[], total: number = 600) {
     return ar
 }
 function statAllocationComponent(user: User, presetId: string) {
-    function statSelectComponent(cid: string, max: number, min: number = 1) {
+    function statSelectComponent(cid: string, min: number, max: number) {
         let keys = Object.keys(makeStats()) as StatID[]
         return new StringSelectMenuBuilder().setCustomId(cid)
         .setMinValues(min)
@@ -23,14 +23,37 @@ function statAllocationComponent(user: User, presetId: string) {
         .setOptions(keys.map(k => ({ value: k, label: getString("stat." + k) })))
     }
     let root = new ContainerBuilder()
-    let preset = getPreset(presetId, user)
     let presetList = getUser(user).presets
+    let preset = presetList[presetId]
     if (!preset) {
         root.addTextDisplayComponents(
             new TextDisplayBuilder().setContent("Invalid preset.")
         )
         return [root]
     }
+    root.addTextDisplayComponents(
+        new TextDisplayBuilder()
+            .setContent("## Primary Stat"))
+    root.addActionRowComponents(
+        new ActionRowBuilder<StringSelectMenuBuilder>()
+            .addComponents(statSelectComponent("stats:allocation_main", 1, 1)))
+    root.addTextDisplayComponents(
+        new TextDisplayBuilder()
+            .setContent("## Secondary Stats"))
+    root.addActionRowComponents(
+        new ActionRowBuilder<StringSelectMenuBuilder>()
+            .addComponents(statSelectComponent("stats:allocation_secondary", 0, 2)))
+    root.addTextDisplayComponents(
+        new TextDisplayBuilder()
+            .setContent("## Tertiary Stats"))
+    root.addActionRowComponents(
+        new ActionRowBuilder<StringSelectMenuBuilder>()
+            .addComponents(statSelectComponent("stats:allocation_tertiary", 0, 2)))
+
+    return [root, new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+            new ButtonBuilder().setLabel("Save").setCustomId("stats:allocation_save").setStyle(ButtonStyle.Primary)
+        )]
 }
 function heldItemComponent(user: User, presetId: string) {
     let root = new ContainerBuilder()
@@ -146,7 +169,7 @@ export let command: Command = {
             options: [
                 {
                     name: "preset",
-                    type: ApplicationCommandOptionType.Number,
+                    type: ApplicationCommandOptionType.String,
                     description: "Preset",
                     required: true,
                 },
@@ -256,18 +279,49 @@ export let command: Command = {
         if (!i.message.interactionMetadata?.id) {
             return await i.reply({ flags: ["Ephemeral"], content: "huh?" })
         }
-        if (i.customId.startsWith("stats:allocation_")) {
+        if (i.customId.startsWith("stats:allocation")) {
+            let u = getUser(i.user)
             let tmp = getTempData(i.message.interactionMetadata?.id, "allocation", { main: [], secondary: [], tertiary: [] })
-            if (!tmp.preset) return await i.reply({ flags: ["Ephemeral"], content: "huh??" })
+            let preset = u.presets[tmp.preset]
+            if (!preset) return await i.reply({ flags: ["Ephemeral"], content: "huh??" })
             if (i.isStringSelectMenu()) {
                 switch (i.customId) {
                     case "stats:allocation_main":
                         tmp.main = i.values
+                        break
                     case "stats:allocation_secondary":
                         tmp.secondary = i.values
+                        break
                     case "stats:allocation_tertiary":
                         tmp.tertiary = i.values
+                        break
                 }
+            }
+            if (i.customId == "stats:allocation_save") {
+                let stats = makeStats()
+                let primaryWeight = 100 / tmp.main.length
+                let secondaryWeight = 60 / tmp.secondary.length
+                let tertiaryWeight = 30 / tmp.tertiary.length
+                for (let k of tmp.main) {
+                    stats[k as StatID] += primaryWeight
+                }
+                for (let k of tmp.secondary) {
+                    stats[k as StatID] += secondaryWeight
+                }
+                for (let k of tmp.tertiary) {
+                    stats[k as StatID] += tertiaryWeight
+                }
+                stats = limitStats(stats, getMaxTotal(preset))
+                preset.stats = stats
+                if (tmp.preset == u.preset) {
+                    applyPreset(i.user, tmp.preset)
+                }
+                await i.reply({
+                    flags: ["Ephemeral"],
+                    content: `## Final Base Stats:\n` + codeBlock("ansi", Object.keys(stats).map(k => {
+                        return `${getString("stat." + k).padEnd(12)} ${stats[k as StatID]}`
+                    }).join("\n"))
+                })
             }
             await i.deferUpdate()
             return
@@ -339,7 +393,7 @@ export let command: Command = {
                 })
                 tmp.preset = presetId
                 let components = statAllocationComponent(i.user, presetId)
-                await i.reply({components})
+                await i.reply({ flags: ["IsComponentsV2"], components })
                 break;
             }
             case "presets": {
