@@ -50,6 +50,9 @@ export let command: Command = {
             l.type = "boss"
             e = e.filter(el => el?.boss)
         }
+        if (e.length > 8) {
+            e.length = 8
+        }
         l.usersE[0].nickname = (await i.guild?.members.fetch(i.user.id))?.nickname || undefined
         l.start()
         u.lobby = l;
