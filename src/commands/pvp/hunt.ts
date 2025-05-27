@@ -55,6 +55,11 @@ export let command: Command = {
         }
         l.usersE[0].nickname = (await i.guild?.members.fetch(i.user.id))?.nickname || undefined
         l.start()
+        // dead code but it makes typescript shut up
+        if (!l.battle) {
+            return
+        }
+        let battle = l.battle
         u.lobby = l;
         let threateningBonus = 1
         for (let enemy of e) {
@@ -77,10 +82,10 @@ export let command: Command = {
                 p.level = Math.ceil(randomRange(0.9, 1) * u.level)
             }
             if (enemy.name == "The Skeleton") {
-                l.battle?.logL("enemy.appears", {name: enemy.name}, "yellow")
+                battle.logL("enemy.appears", { name: enemy.name }, "yellow")
             }
             if (Math.random() < 1/16 * threateningBonus) {
-                l.battle?.logL("hunt.threatening", {name: enemy.name}, "red")
+                battle.logL("hunt.threatening", { name: enemy.name }, "red")
                 p.level = Math.floor(p.level * 1.5)
                 p.xpYield *= 3
                 threateningBonus *= 1.1
@@ -88,32 +93,33 @@ export let command: Command = {
             p.updateStats()
             if (enemy.boss) {
                 if (enemy.boost) {
+                    battle.multiStatBoost(p, enemy.boost)
                     for (let k in enemy.boost) {
                         //@ts-ignore
-                        l.battle?.statBoost(p, k, enemy.boost[k] || 0)
+                        battle.statBoost(p, k, enemy.boost[k] || 0)
                     }
                 }
             }
-            l.battle?.players.push(p)
+            battle.players.push(p)
         }
         //if (l.battle) l.battle.type = "pve"
         
         
-        let lastinfo = await l.battle?.infoMessage(i.channel)
+        let lastinfo = await battle.infoMessage(i.channel)
 
         let channel = i.channel
 
-        l.battle?.on("newTurn", async() => {
+        battle.on("newTurn", async () => {
             if (!i.channel) return
             if (lastinfo?.deletable) lastinfo.delete()
-            lastinfo = await l.battle?.infoMessage(channel)
+            lastinfo = await battle.infoMessage(channel)
         })
-        l.battle?.on("end", async (winner: string) => {
+        battle.on("end", async (winner: string) => {
             if (!i.channel) return
             if (lastinfo?.deletable) lastinfo.delete()
-            lastinfo = await l.battle?.infoMessage(channel)
+            lastinfo = await battle.infoMessage(channel)
             if (winner == "Team Blue") {
-                let enemies = l.battle?.players.filter(el => !el.user) || []
+                let enemies = battle.players.filter(el => !el.user) || []
                 let xp = Math.ceil(
                     enemies
                     .map(el => (el.level * el.xpYield) / 5)
