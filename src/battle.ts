@@ -163,8 +163,7 @@ export type BotAIType = "normal" | "egg_lord" | "the_cat" | "u";
 export class StatusType {
     name: string
     short: string
-    minDuration = 4
-    maxDuration = 4
+    duration = 4
     upgradeTo?: string
     icon?: string
     negative: boolean = true
@@ -254,8 +253,7 @@ let rush = new StatusType("Reckless Rush", "Rush", (b, p, s) => {
         p.removeModifier(mod.stat, mod.id)
     }
 })
-rush.minDuration = 2
-rush.maxDuration = 2
+rush.duration = 2
 statusTypes.set("rush", rush)
 let categories: { [key: string]: CategoryStats } = {
     "physical": {
@@ -282,8 +280,9 @@ export function getATK(player: Player, category: Category) {
 }
 export interface Status {
     duration: number,
-    inflictor?: Player,
     turns: number,
+    turnsLeft: number,
+    inflictor?: Player,
     type: string,
     data?: object,
 }
@@ -447,15 +446,11 @@ export class Player {
     /** The base XP yield, only used in hunt */
     xpYield: number = 0
 
-    /** The player's current Attack stat, but with stat modifiers taken into account */
+    // for compatibility
     get atk() { return this.cstats.atk }
-    /** The player's current Defense stat, but with stat modifiers taken into account */
     get def() { return this.cstats.def }
-    /** The player's current Special Attack stat, but with stat modifiers taken into account */
     get spatk() { return this.cstats.spatk }
-    /** The player's current Special Defense stat, but with stat modifiers taken into account */
     get spdef() { return this.cstats.spdef }
-    /** The player's current Speed stat, but with stat modifiers taken into account */
     get spd() { return this.cstats.spd }
     get dr() { return this.cstats.dr }
 
@@ -1356,11 +1351,12 @@ export class Battle extends EventEmitter {
         let sType = statusTypes.get(s)
         if (sType) {
             let a = u.status.find(el => el.type == s)
-            let o = {
+            let o: Status = {
                 type: s,
                 turns: 0,
                 inflictor: inf,
-                duration: Math.floor(randomRange(sType.minDuration, sType.maxDuration))
+                turnsLeft: sType.duration,
+                duration: sType.duration
             }
             if (a) {
                 if (sType.upgradeTo) {
@@ -1381,7 +1377,7 @@ export class Battle extends EventEmitter {
         if (sType) {
             sType.turn(this, u, s)
         }
-        s.duration--
+        s.turnsLeft--
         s.turns++
     }
     lengthPunishmentsStart = 30
@@ -1428,10 +1424,10 @@ export class Battle extends EventEmitter {
                 this.doStatusUpdate(u, s)
             }
             u.status = u.status.filter(el => {
-                if (el.duration <= 0) {
+                if (el.turnsLeft <= 0) {
                     statusTypes.get(el.type)?.end(this, u, el)
                 }
-                return el.duration > 0
+                return el.turnsLeft > 0
             })
         }
         // Discourage stalling until the heat death of the universe by doing some stuff
