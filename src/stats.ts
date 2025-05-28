@@ -126,16 +126,16 @@ export function makeExtendedStats(obj?: { [key: string]: number }): ExtendedStat
     }
     return o
 }
-export function calcStat(base: number, level: number, ev: number = 0) {
-    let v = Math.floor(500 + base * 5 + level * (base + 10) * 10 / 100)
+export function calcStat(base: number, level: number) {
+    let v = Math.ceil(50 + level * base * 0.25)
     return v
 }
-export function calcStats(level: number, baseStats: Stats, hpboost: number = 1): Stats {
+export function calcStats(level: number, baseStats: Stats): Stats {
     let s = makeStats()
     for (let k in baseStats) {
-        s[k as StatID] = calcStat(baseStats[k as StatID], level, 0)
+        s[k as StatID] = calcStat(baseStats[k as StatID], level)
     }
-    s.hp = Math.floor(s.hp * 3.25)
+    s.hp += level*50 + Math.ceil(s.hp * 0.5)
     return s
 }
 export function getPreset(name: string, user?: User) {
@@ -147,8 +147,8 @@ export function getPreset(name: string, user?: User) {
 }
 
 
-const BST_MIN_LIMIT = 0.1
-const BST_MAX_LIMIT = 0.5
+const BST_MIN_LIMIT = 0.05
+const BST_MAX_LIMIT = 0.6
 
 export function limitStats(stats: Stats, bst: number): Stats {
     let newValues = weightedDistribution(Object.values(stats), bst)
