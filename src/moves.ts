@@ -151,26 +151,25 @@ export class Move {
 export let moves: Collection<string, Move> = new Collection()
 
 // Physical/Special basic attacks
-moves.set("bonk", new Move("Bonk", "attack", 180))
+moves.set("bonk", new Move("Bonk", "attack", 110))
 moves.set("needle", new Move("Needle", "attack", 100/20, "physical", 80).set(move => {
     move.inflictStatus.push({ status: "bleed", chance: 1 })
     move.setDamage = "percent"
 }).setDesc(formatString("Deals fixed damage equal to [a]5%[r] of the target's [a]MAX HP[r] and inflicts them with [a]Bleed[r]")))
-moves.set("nerf_gun", new Move("Nerf Gun", "attack", 180, "special"))
+moves.set("nerf_gun", new Move("Nerf Gun", "attack", 90, "special"))
 
 // Physical/Special recoil attacks
-moves.set("ping", new Move("Ping Attack", "attack", 375, "special").set(move => {
+moves.set("ping", new Move("Ping Attack", "attack", 290, "special").set(move => {
     move.requiresMagic = 30
 }).setDesc(formatString("A strong [a]Special[r] move that requires [a]Magic[r] to use.")))
-moves.set("slap", new Move("Slap", "attack", 375).set(move => {
+moves.set("slap", new Move("Slap", "attack", 300).set(move => {
     move.requiresCharge = 15
 }).setDesc(formatString("A strong [a]Physical[r] move that requires [a]Charge[r] to use.")))
 
 // Status inflicting moves
 moves.set("twitter", new Move("Twitter", "status", 0, "status", 90).set(move => {
     move.inflictStatus.push({chance: 1, status: "poison"})
-    move.userStat.def = -1
-    move.userStat.spdef = -1
+    move.requiresMagic = 20
 }).setDesc(formatString("Inflicts the target with [a]Poison[r]")))
 
 // Physical stat boosting moves
