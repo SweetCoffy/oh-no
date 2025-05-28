@@ -660,6 +660,8 @@ export class Battle extends EventEmitter {
             }
             p.aiState = new BotAI(this, p)
         }
+        let start = BattleTypeInfo[this.type].onStart
+        if (start) start(this)
     }
     isTeamMatch() {
         return isTeamMatch(this.type)

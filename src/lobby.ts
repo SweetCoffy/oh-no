@@ -92,7 +92,7 @@ export class BattleLobby {
         }
     }
     difficulty: Difficulty = "medium"
-    start() {
+    start(callStart = true) {
         this.battle = new Battle(this)
         if (this.isTeamMatch()) this._flags.T = true
         let l = this
@@ -189,9 +189,9 @@ export class BattleLobby {
                 else if (p.team == 1) p.team = 0;
             }
         }
-        this.battle.start()
-        let start = BattleTypeInfo[this.battle.type].onStart
-        if (start) start(this.battle)
+        if (callStart) {
+            this.battle.start()
+        }
     }
     channels: TextBasedChannel[] = []
     join(user: User, e?: UserJoinData, channel?: TextBasedChannel) {

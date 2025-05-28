@@ -54,7 +54,7 @@ export let command: Command = {
             e.length = 8
         }
         l.usersE[0].nickname = (await i.guild?.members.fetch(i.user.id))?.nickname || undefined
-        l.start()
+        l.start(false)
         // dead code but it makes typescript shut up
         if (!l.battle) {
             return
