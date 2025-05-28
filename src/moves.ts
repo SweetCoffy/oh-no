@@ -1,5 +1,5 @@
 import { Collection } from "discord.js"
-import { Battle, calcDamage, Player } from "./battle.js"
+import { Battle, calcDamage, getATK, Player } from "./battle.js"
 import { makeStats, Stats } from "./stats.js"
 import { formatString, weightedDistribution } from "./util.js"
 
@@ -137,7 +137,33 @@ export class Move {
         this.accuracy = accuracy
         this.name = name
         this.category = category
-        this.description = `${name} ${category} ${type} ${power}`
+        this.description = `N/A`
+    }
+    getDamage(power: number, atk: number, target: Player) {
+        if (this.setDamage == "regular") {
+            return atk * power / 100
+        }
+        if (this.setDamage == "percent") {
+            return power / 100 * target.maxhp
+        }
+        if (this.setDamage == "set") {
+            return power
+        }
+        return 0
+    }
+    getAiAttackRank(b: Battle, p: Player, t: Player) {
+        if (this.type != "attack") return 0
+        if (!this.checkFail(b, p, t)) return 0
+        let pow = this.getPower(b, p, t)
+        let atk = getATK(p, this.category)
+        let dmg = this.getDamage(pow, atk, t)
+        let dmgRank = Math.min(dmg/t.hp, 1)
+        return dmgRank*100 - (this.requiresCharge + this.requiresMagic)/100
+    }
+    getAiSupportRank(b: Battle, p: Player, t: Player) {
+        if (!this.checkFail(b, p, t)) return 0
+        if (this.type == "attack") return 0
+        return 0
     }
     set(func: (move: Move) => any) {
         func(this)
@@ -170,6 +196,12 @@ moves.set("slap", new Move("Slap", "attack", 300).set(move => {
 moves.set("twitter", new Move("Twitter", "status", 0, "status", 90).set(move => {
     move.inflictStatus.push({chance: 1, status: "poison"})
     move.requiresMagic = 20
+    move.getAiAttackRank = (b, p, t) => {
+        let s = t.status.find(v => v.type == "poison")
+        if (s && s.turnsLeft > 1) return -1
+        let dmg = p.spatk / 5 * 4
+        return Math.min(t.hp / dmg, 1) * 100
+    }
 }).setDesc(formatString("Inflicts the target with [a]Poison[r]")))
 
 // Physical stat boosting moves
@@ -190,6 +222,11 @@ moves.set("reckless_rush", new Move("Reckless Rush", "status", 0, "status").set(
         let s = b.inflictStatus(p, "rush")
         if (!s) return
         s.turnsLeft = s.duration = 3
+    }
+    move.getAiSupportRank = (b, p, t) => {
+        if (t != p) return 0
+        if (p.status.some(v => v.type == "rush")) return 0
+        return p.atk / p.spatk * p.charge
     }
 }).setDesc(formatString("[a]Consumes all Charge[r] and increases the user's [a]ATK[r] by [a]1%[r] for every point of [a]Charge[r] consumed. The [a]ATK[r] boost lasts for [a]2[r] turns.")))
 
@@ -219,6 +256,11 @@ moves.set("mind_overwork", new Move("Neuro-Overclock", "status", 0, "status").se
         s = b.inflictStatus(p, "mind_overwork")
         if (!s) return
         s.turnsLeft = s.duration = 3
+    }
+    move.getAiSupportRank = (b, p, t) => {
+        if (t != p) return 0
+        if (p.status.some(v => v.type == "mind_overwork")) return 0
+        return p.spatk / p.atk * p.magic * 0.5 + 10
     }
 }).setDesc(
     formatString(
@@ -260,6 +302,9 @@ moves.set("release", new Move("Release", "attack", 0).set(move => {
     move.checkFail = function (b, p, t) {
         return p.damageBlockedInTurn > 0
     }
+    move.getPower = (b, u, t) => {
+        return Math.ceil(u.damageBlockedInTurn*1.5)
+    }
     move.onUse = function(b, p, t) {
         let damage = Math.ceil(p.damageBlockedInTurn * 1.5)
         let enemies = b.players.filter(e => !e.dead && b.isEnemy(p, e) && e.team == t.team)
@@ -280,9 +325,24 @@ moves.set("regen", new Move("Regeneration", "status", 0, "status", 100).set(move
         chance: 1,
         status: "regen"
     })
+    move.getAiSupportRank = (b, p, t) => {
+        if (t.dead) return -99
+        let healAmt = t.maxhp * 0.0625
+        let missingHp = t.maxhp - t.hp
+        if (missingHp/t.maxhp < 0.1) return -1
+        return Math.max((missingHp - healAmt) / t.maxhp * 100, 0)
+    }
 }).setDesc(formatString("Grants the user [a]Regeneration[r] for [a]4[r] turns, healing them by [a]6.25%[r] of their [a]MAX HP[r] every turn while the effect is active.")))
 moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
     move.requiresMagic = 30
+    move.targetSelf = true
+    move.getAiSupportRank = (b, p, t) => {
+        if (t.dead) return -99
+        let healAmt = t.maxhp * 0.4
+        let missingHp = t.maxhp - t.hp
+        if (missingHp/t.maxhp < 0.1) return -1
+        return Math.max((missingHp - healAmt) / t.maxhp * 100, 0)
+    }
 }).setDesc(formatString("Heals the user by [a]40%[r] of their [a]MAX HP[r].")))
 moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
     move.accuracy = 100

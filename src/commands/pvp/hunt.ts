@@ -103,7 +103,7 @@ export let command: Command = {
             battle.players.push(p)
         }
         //if (l.battle) l.battle.type = "pve"
-        
+        battle.start()
         
         let lastinfo = await battle.infoMessage(i.channel)
 
