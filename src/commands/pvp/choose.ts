@@ -155,8 +155,8 @@ export let command: Command = {
                             let dispMult = ""
                             let dispMultSuffix = ""
                             if (move.setDamage == "percent") {
-                                dispMult = `${snapTo(move.power * 100)}%`
-                                dispMultSuffix = ` of target's [a]MAX HP[r] stat, ignoring target's [a]DEF[r]`
+                                dispMult = `${snapTo(move.power)}%`
+                                dispMultSuffix = ` of target's [a]MAX HP[r]`
                             }
                             if (move.setDamage == "regular") {
                                 dispMult = `${snapTo(move.power)}%`
