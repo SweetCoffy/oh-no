@@ -10,6 +10,7 @@ import { bruhOrbBoosts, HeldItem, ItemClass, items } from "./helditem.js"
 import { enemies } from "./enemies.js"
 import { FG_Blue, FG_Gray, FG_Green, FG_Red, FG_White, FG_Yellow, Start, Reset, End, FG_Pink, FG_Cyan, LogColor, LogColorWAccent } from "./ansi.js"
 import { abilities } from "./abilities.js"
+import { BotAI } from "./battle-ai.js"
 
 export const BASELINE_DEF = 250
 
@@ -474,7 +475,8 @@ export class Player {
     helditems: HeldItem[] = []
     itemSlots: { [x in ItemClass]?: HeldItem } = {}
     /** The type of AI the player uses if `user` is not present */
-    ai: BotAIType = "normal"
+    aiType: BotAIType = "normal"
+    aiState!: BotAI
     /** The base XP yield, only used in hunt */
     xpYield: number = 0
 
@@ -618,275 +620,6 @@ type HealPlayerEvent = { type: "heal", amount: number }
 type DamagePlayerEvent = { type: "damage", amount: number, inflictor?: Player }
 type BasePlayerEvent = { type: string }
 type PlayerEvent = HealPlayerEvent | DamagePlayerEvent | MovePlayerEvent
-class BotAI {
-    battle: Battle
-    target?: Player
-    update() {
-        let target = this.battle.players.find(el => !el.dead && el.user)
-        if (!target) target = this.battle.players.find(el => !el.dead)
-        this.target = target
-    }
-    getAction(player: Player): TurnAction {
-        let b = this.battle
-        if (player.hp < player.maxhp / 4 && player.helditems.some(el => el.id == "eggs")) {
-            return {
-                type: "item",
-                item: "eggs",
-                player: player,
-            }
-        }
-        let targets = this.battle.players.filter(el => this.battle.isEnemy(player, el) && el.hp > -el.plotArmor)
-        let allies = this.battle.players.filter(el => !this.battle.isEnemy(player, el) && el != player && el.hp > -el.plotArmor)
-
-        let target = targets[Math.floor(targets.length * Math.random())]
-        let ally = allies[Math.floor(allies.length * Math.random())]
-        let revenge = false
-
-        if (player.events[b.turn]) {
-            // If someone attacked, attack them back
-            let inf = (player.events[b.turn].find(ev => ev.type == "damage" && ev.inflictor) as DamagePlayerEvent)?.inflictor
-            if (inf) {
-                target = inf
-                revenge = true
-            }
-        }
-
-        let bestboost = player.atk > player.spatk ? "stronk" : "spstronk"
-        let bestriskboost = player.atk > player.spatk ? "reckless_rush" : "mind_overwork"
-        let beststat = player.atk > player.spatk ? "atk" : "spatk"
-        let bestmove = player.atk > player.spatk ? "bonk" : "nerf_gun"
-        let bestrecoilmove = player.atk > player.spatk ? "slap" : "ping"
-        function getBest() {
-            return Math.max(player.atk, player.spatk)
-        }
-        function getBestStages() {
-            return player.atk > player.spatk ? player.statStages.atk : player.statStages.spatk
-        }
-        if (this.battle.isTeamMatch() && !revenge) {
-            if (player.magic < 30) return {
-                type: "move",
-                move: bestboost,
-                target: ally || player,
-                player,
-            }
-            if (player.magic < player.maxMagic && Math.random() < 0.4) return {
-                type: "move",
-                move: bestboost,
-                target: ally || player,
-                player,
-            }
-            if (ally) {
-                if (ally.hp > -ally.plotArmor && ally.hp < ally.maxhp / 2 && player.magic >= 30) return {
-                    type: "move",
-                    move: "heal",
-                    target: ally,
-                    player,
-                }
-            }
-            if (player.hp < player.maxhp / 2 && player.magic >= 30) return {
-                type: "move",
-                move: "heal",
-                target: player,
-                player
-            }
-        }
-        switch (player.ai) {
-            case "u": {
-                if (this.battle.turn == 0 || player.hp < player.maxhp / 4) return {
-                    type: "move",
-                    move: "pingcheck",
-                    target: target,
-                    player,
-                }
-                if (player.hp < player.maxhp / 3 * 4 && player.magic >= 20) {
-                    return {
-                        type: "move",
-                        move: "regen",
-                        target: player,
-                        player,
-                    }
-                }
-                if (player.hp < player.maxhp / 2 && player.magic >= 30) {
-                    return {
-                        type: "move",
-                        move: "heal",
-                        target: player,
-                        player,
-                    }
-                } else if (player.magic < 30 && Math.random() < 0.1) {
-                    return {
-                        type: "move",
-                        move: bestmove,
-                        target: target,
-                        player,
-                    }
-                }
-                return {
-                    type: "move",
-                    move: bestboost,
-                    target: player,
-                    player,
-                }
-                break;
-            }
-            case "the_cat": {
-                let attackChance = 1 - (1 / calcMul(getBestStages()))
-                if (player.damageBlockedInTurn) return {
-                    type: "move",
-                    move: "counter",
-                    target: target,
-                    player,
-                }
-                if (Math.random() < attackChance) {
-                    if (Math.random() < 0.25) {
-                        return {
-                            type: "move",
-                            move: bestrecoilmove,
-                            target: target,
-                            player,
-                        }
-                    }
-                    return {
-                        type: "move",
-                        move: bestmove,
-                        target: target,
-                        player,
-                    }
-                }
-                if (getBestStages() < 6) return {
-                    type: "move",
-                    move: bestriskboost,
-                    target: player,
-                    player,
-                }
-                return {
-                    type: "move",
-                    move: "protect",
-                    target: player,
-                    player,
-                }
-                break;
-            }
-            case "egg_lord": {
-                if (!target.status.some(el => el.type == "toxic")) return {
-                    type: "move",
-                    move: "twitter",
-                    target: target,
-                    player,
-                }
-                let bestdefense = target.atk > target.spatk ? "def" : "spdef"
-                let bestdefenseboost = (bestdefense == "def") ? "tonk" : "sptonk"
-                if (getBestStages() < 2) {
-                    return {
-                        type: "move",
-                        move: bestboost,
-                        target: player,
-                        player,
-                    }
-                } else {
-                    let chance = 0.5
-                    if (Math.max(player.statStages.atk, player.statStages.spatk)) chance = 0.75
-                    if (Math.random() < chance) {
-                        return {
-                            type: "move",
-                            move: bestmove,
-                            target: target,
-                            player,
-                        }
-                    }
-                }
-                return {
-                    type: "move",
-                    move: bestdefenseboost,
-                    target: player,
-                    player,
-                }
-                break;
-            }
-            default: {
-                if (target) {
-                    if (player.damageBlockedInTurn > player.maxhp / 6) {
-                        return {
-                            type: "move",
-                            move: this.battle.isPve ? "release" : "counter",
-                            target: target,
-                            player,
-                        }
-                    }
-                    if (Math.random() < 0.5 && !target.status.some(el => el.type == "poison")) return {
-                        type: "move",
-                        move: "twitter",
-                        target: target,
-                        player,
-                    }
-                    if (Math.random() < 0.75 && getBestStages() < 3) {
-                        return {
-                            type: "move",
-                            move: bestboost,
-                            target: player,
-                            player: player,
-                        }
-                    }
-                    if (Math.max(target.statStages.atk, target.statStages.spatk) > 2 && Math.random() < 0.4 && !player.protectTurns) {
-                        return {
-                            type: "move",
-                            move: "protect",
-                            target: player,
-                            player: player,
-                        }
-                    }
-                    if (getBestStages() < 0 && Math.random() < 0.75) {
-                        if (Math.random() < 0.5) {
-                            return {
-                                type: "move",
-                                move: bestboost,
-                                target: player,
-                                player: player,
-                            }
-                        }
-                        return {
-                            type: "move",
-                            move: "protect",
-                            target: player,
-                            player: player,
-                        }
-                    }
-                    if (getBestStages() < 3 || (getBestStages() < 3 && Math.random() < 0.25)) return {
-                        type: "move",
-                        move: bestriskboost,
-                        target: player,
-                        player: player,
-                    }
-                    if (getBestStages() > 1 && Math.random() < 0.25 && player.hp > player.maxhp * 0.75) {
-                        return {
-                            type: "move",
-                            move: bestrecoilmove,
-                            player: player,
-                            target: target,
-                        }
-                    }
-                    return {
-                        type: "move",
-                        move: bestmove,
-                        player: player,
-                        target: target,
-                    }
-                }
-                return {
-                    type: "move",
-                    move: bestboost,
-                    target: player,
-                    player: player,
-                }
-                break;
-            }
-        }
-
-    }
-    constructor(battle: Battle) {
-        this.battle = battle
-    }
-}
 export type MoveCastOpts = {
     category: Category,
     requiresCharge: number,
@@ -916,7 +649,6 @@ export class Battle extends EventEmitter {
     actions: TurnAction[] = []
     logs: string[] = []
     ended: boolean = false
-    botAI: BotAI
     start() {
         this.players.sort((a, b) => a.team - b.team)
         for (let p of this.players) {
@@ -926,8 +658,8 @@ export class Battle extends EventEmitter {
                 let itemType = items.get(item.id)
                 if (!itemType) continue
                 itemType.onBattleStart?.(this, p, item)
-
             }
+            p.aiState = new BotAI(this, p)
         }
     }
     isTeamMatch() {
@@ -1050,7 +782,6 @@ export class Battle extends EventEmitter {
         super()
         this.lobby = lobby
         this.type = lobby.type
-        this.botAI = new BotAI(this)
         this.turnLimit = BattleTypeInfo[this.type].turnLimit ?? 50
     }
     /**
@@ -1103,10 +834,13 @@ export class Battle extends EventEmitter {
         return this.actions.sort((a, b) => b.player.stats.spd - a.player.stats.spd).sort((a, b) => getPriority(b) - getPriority(a))
     }
     checkActions() {
-        this.botAI.update()
         for (let p of this.players) {
             if (!p.user) {
-                this.addAction(this.botAI.getAction(p))
+                this.addAction({
+                    type: "move",
+                    player: p,
+                    ...p.aiState.getAction()
+                })
             }
         }
         let a = this.actions

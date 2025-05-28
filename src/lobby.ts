@@ -169,7 +169,7 @@ export class BattleLobby {
                             bot.ability = enemy.ability;
                             bot.helditems = [...enemy.helditems||[]].map(el => ({ id: el }))
                             bot._nickname = enemy.name
-                            bot.ai = enemy.ai
+                            bot.aiType = enemy.ai
                         }
                     }
                 }
