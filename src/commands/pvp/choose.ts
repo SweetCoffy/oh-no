@@ -7,7 +7,6 @@ import { StatID, Stats } from "../../stats.js";
 import { items } from '../../helditem.js';
 import { abilities } from '../../abilities.js';
 import { dispDelta, formatString, snapTo } from '../../util.js';
-import { MOVE_POWER_ATK_MULT } from '../../battle.js';
 export let command: Command = {
     name: "choose",
     description: "ur mom",
@@ -151,7 +150,7 @@ export let command: Command = {
                     if (move.type == "attack") {
                         //@ts-ignore
                         desc += formatString(`\nDamage Type: [a]${getString("move.dmgtype." + move.setDamage)}[r]`)
-                        if (move.power != null) {
+                        if (move.power) {
                             let atkStat = move.category == "physical" ? "atk" : "spatk"
                             let dispMult = ""
                             let dispMultSuffix = ""
@@ -160,7 +159,7 @@ export let command: Command = {
                                 dispMultSuffix = ` of target's [a]MAX HP[r] stat, ignoring target's [a]DEF[r]`
                             }
                             if (move.setDamage == "regular") {
-                                dispMult = `${snapTo(move.power * 100 * MOVE_POWER_ATK_MULT)}%`
+                                dispMult = `${snapTo(move.power)}%`
                                 dispMultSuffix = ` of user's [a]${getString("stat." + atkStat)}[r] stat`
                             }
                             desc += formatString(`\nDamage Multiplier: [a]${dispMult}[r]${dispMultSuffix}`)

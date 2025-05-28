@@ -12,15 +12,13 @@ import { FG_Blue, FG_Gray, FG_Green, FG_Red, FG_White, FG_Yellow, Start, Reset, 
 import { abilities } from "./abilities.js"
 
 export const BASELINE_DEF = 250
-export const MOVE_POWER_ATK_MULT = 1.0 / 33.5
-
 
 export function calcDamage(dmg: number, def: number, level: number) {
     let lf = calcStat(BASELINE_DEF, level)
     return Math.ceil(dmg * (lf / (def + lf)))
 }
 export function calcMoveDamage(pow: number, atk: number, def: number, level: number) {
-    return calcDamage((atk * pow * MOVE_POWER_ATK_MULT), def, level)
+    return calcDamage((atk * pow / 100), def, level)
 }
 export interface CategoryStats {
     atk: string,
@@ -1295,7 +1293,7 @@ export class Battle extends EventEmitter {
                     if (cat == "physical" && !requiresCharge) {
                         action.player.charge += Math.floor(pow / 60 * 10)
                     } else if (cat == "special" && !requiresMagic) action.player.magic += Math.floor(pow / 40 * 5)
-                    let dmg = MOVE_POWER_ATK_MULT * pow * atk
+                    let dmg = pow / 100 * atk
                     let opts: TakeDamageOptions = {
                         silent: false,
                         atkLvl: action.player.level,

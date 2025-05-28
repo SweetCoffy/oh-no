@@ -151,18 +151,18 @@ export class Move {
 export let moves: Collection<string, Move> = new Collection()
 
 // Physical/Special basic attacks
-moves.set("bonk", new Move("Bonk", "attack", 60))
+moves.set("bonk", new Move("Bonk", "attack", 180))
 moves.set("needle", new Move("Needle", "attack", 100/20, "physical", 80).set(move => {
     move.inflictStatus.push({ status: "bleed", chance: 1 })
     move.setDamage = "percent"
 }).setDesc(formatString("Deals fixed damage equal to [a]5%[r] of the target's [a]MAX HP[r] and inflicts them with [a]Bleed[r]")))
-moves.set("nerf_gun", new Move("Nerf Gun", "attack", 60, "special"))
+moves.set("nerf_gun", new Move("Nerf Gun", "attack", 180, "special"))
 
 // Physical/Special recoil attacks
-moves.set("ping", new Move("Ping Attack", "attack", 120, "special").set(move => {
+moves.set("ping", new Move("Ping Attack", "attack", 375, "special").set(move => {
     move.requiresMagic = 30
 }).setDesc(formatString("A strong [a]Special[r] move that requires [a]Magic[r] to use.")))
-moves.set("slap", new Move("Slap", "attack", 120).set(move => {
+moves.set("slap", new Move("Slap", "attack", 375).set(move => {
     move.requiresCharge = 15
 }).setDesc(formatString("A strong [a]Physical[r] move that requires [a]Charge[r] to use.")))
 
