@@ -69,7 +69,7 @@ export let command: Command = {
             ephemeral: true,
             content: "```ansi\n" +
                 `${player.name.padEnd(32, " ")} Lv ${player.level}\nHP [${barDelta(player.hp, player.prevHp, player.maxhp, 32)}]\n${Math.floor(player.hp)}/${Math.floor(player.maxhp)}${player.absorption > 0 ? `\n\nT${player.absorptionTier} [${bar(player.absorption, player.maxhp, 20)}]\n${Math.floor(player.absorption / player.maxhp * 100)}%\n` : ``}\nCHG ${player.charge.toString().padStart(3, " ")}  MAG ${player.magic.toString().padStart(3, " ")}\nDeath Point: ${-player.plotArmor} HP (effectively ${Math.ceil(player.hp + player.plotArmor)} HP)\n${player.status.map(el => {
-                return `${statusTypes.get(el.type)?.name} [${el.duration.toString().padEnd(2, " ")} Turns]`
+                    return `${statusTypes.get(el.type)?.name} — ${el.turnsLeft.toString().padEnd(2, " ")} turns left`
                 }).join("\n") || "No status effects."}\n` + 
                 `Stats:\n${statsString()}\n`
                 + "\n```",
