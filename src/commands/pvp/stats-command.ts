@@ -390,7 +390,7 @@ export let command: Command = {
                 })
                 tmp.preset = presetId
                 let components = statAllocationComponent(i.user, presetId)
-                await i.reply({ flags: ["IsComponentsV2"], components })
+                await i.reply({ flags: ["IsComponentsV2", "Ephemeral"], components })
                 break;
             }
             case "presets": {
@@ -491,7 +491,7 @@ export let command: Command = {
                         tmp.data = {
                             stats: { preset: presetId, ability: preset.ability, itemSlots: slots, stats: preset.stats }
                         }
-                        await i.reply({ flags: ["IsComponentsV2"], components: roots })
+                        await i.reply({ flags: ["IsComponentsV2", "Ephemeral"], components: roots })
                         return
                     }
                 }
