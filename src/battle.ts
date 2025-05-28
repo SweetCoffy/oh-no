@@ -406,6 +406,7 @@ export class Player {
         let i = this.modifiers[stat].findIndex(el => el.id == id)
         if (i == -1) return
         this.modifiers[stat].splice(i, 1)
+        this.recalculateStats()
     }
     getModifier(stat: StatID, id: string) {
         return this.modifiers[stat].find(el => el.id == id);
