@@ -207,29 +207,38 @@ function statusMessageEffect(message: LocaleString): StatusCallback {
     }
 }
 export let statusTypes: Collection<string, StatusType> = new Collection()
+const STATUS_BASELINE_SPATK = 50
 statusTypes.set("poison", new StatusType("Poison", "Poison", statusMessageEffect("status.poison.start"),
     function (b, p, s) {
-        let base = 1 / 64
+        let base = s.infStats?.spatk ?? calcStat(STATUS_BASELINE_SPATK, p.level)
+        let mult = 1 / 5
         if (b.type == "pve" && p.team == 0) {
-            base /= 2
+            mult /= 2
         }
-        b.takeDamageO(p, p.maxhp * base, {
+        b.takeDamageO(p, base * mult, {
             silent: false,
             message: "dmg.poison",
             inflictor: s.inflictor,
             type: "status",
+            defStat: "spdef",
         })
     }, undefined))
-statusTypes.set("regen", new StatusType("Regeneration", "Regen", undefined, function (b, p, s) {
-    let base = 1 / 16
-    b.heal(p, Math.ceil(p.maxhp * base), false, "heal.regeneration")
+statusTypes.set("regen", new StatusType("Regeneration", "Regen", (b, p, s) => {
+    statusTypes.get(s.type)?.onTurn?.(b, p, s)
+}, function (b, p, s) {
+    let base = p.maxhp
+    let mult = 1 / 16
+    b.heal(p, Math.ceil(base * mult), false, "heal.regeneration")
 }, undefined))
 statusTypes.set("bleed", new StatusType("Bleeding", "Bleed", (b, p) => b.logL("status.bleed.start", { player: p.toString() }), (b, p, s) => {
-    b.takeDamageO(p, p.maxhp * 1 / 32, {
+    let base = s.infStats?.atk ?? calcStat(STATUS_BASELINE_SPATK, p.level)
+    let mult = 1 / 5
+    b.takeDamageO(p, base * mult, {
         silent: false,
         inflictor: s.inflictor,
         message: "dmg.bleed",
         type: "status",
+        defStat: "def",
     })
 }))
 type StatusModifierData = {
@@ -283,6 +292,7 @@ export interface Status {
     turns: number,
     turnsLeft: number,
     inflictor?: Player,
+    infStats?: ExtendedStats
     type: string,
     data?: object,
 }
@@ -1355,8 +1365,9 @@ export class Battle extends EventEmitter {
                 type: s,
                 turns: 0,
                 inflictor: inf,
+                infStats: inf?.getFinalStats(),
                 turnsLeft: sType.duration,
-                duration: sType.duration
+                duration: sType.duration,
             }
             if (a) {
                 if (sType.upgradeTo) {
@@ -1365,6 +1376,10 @@ export class Battle extends EventEmitter {
                     return this.inflictStatus(u, sType.upgradeTo, inf)
                 }
                 a.duration = Math.max(a.duration, o.duration)
+                if (inf) {
+                    a.inflictor = inf
+                    a.infStats = inf.getFinalStats()
+                }
                 return a
             }
             u.status.push(o)
