@@ -190,7 +190,7 @@ moves.set("reckless_rush", new Move("Reckless Rush", "status", 0, "status").set(
     move.onUse = (b, p) => {
         let s = b.inflictStatus(p, "rush")
         if (!s) return
-        s.duration = 3
+        s.turnsLeft = s.duration = 3
     }
 }).setDesc(formatString("[a]Consumes all Charge[r] and increases the user's [a]ATK[r] by [a]1%[r] for every point of [a]Charge[r] consumed. The [a]ATK[r] boost lasts for [a]2[r] turns.")))
 
@@ -206,12 +206,27 @@ moves.set("sptonk", new Move("Magik Sheld", "status", 0, "status").set(move => {
 }).setDesc(formatString("Increases the user's [a]SPDEF[r] by [a]1[r] stage.")))
 
 moves.set("mind_overwork", new Move("Neuro-Overclock", "status", 0, "status").set(move => {
-    move.targetStat.spatk = 3
-    move.recoil = 0.15
-    move.userStat.spdef = -1
-    move.userStat.def = -1
     move.targetSelf = true
-}).setDesc("Increases the user's Special Attack drastically. However, it costs some HP to use"))
+    move.requiresMagic = 25
+    move.onUse = (b, p) => {
+
+        let s = p.status.find(v => v.type == "mind_overwork")
+        if (s) {
+            s.turnsLeft = s.duration
+            let dmg = Math.min(Math.ceil(p.maxhp / 4), p.hp + p.plotArmor - 1)
+            b.takeDamageO(p, dmg)
+            return
+        }
+        s = b.inflictStatus(p, "mind_overwork")
+        if (!s) return
+        s.turnsLeft = s.duration = 3
+    }
+}).setDesc(
+    formatString(
+        "[a]Consumes all Magic[r] and applies the [a]Overclock[r] effect, increasing [a]Special ATK[r] by [a]0.5%[r] for every point of [a]Magic[r] consumed and granting [a]infinite Magic[r] for the duration of the effect. The [a]Overclock[r] effect lasts for [a]2[r] turns.\n" +
+        "If the move is used while the [a]Overclock[r] effect is active, the user will [f]take damage[r] equal to [a]25%[r] of their [a]MAX HP[r] to extend the effect's duration."
+    )
+))
 
 // P R O T E C T
 moves.set("protect", new Move("Protect", "protect", 0, "status").set(move => move.priority = 4)

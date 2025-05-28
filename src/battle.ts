@@ -262,8 +262,30 @@ let rush = new StatusType("Reckless Rush", "Rush", (b, p, s) => {
         p.removeModifier(mod.stat, mod.id)
     }
 })
-rush.duration = 2
+let overclock = new StatusType("Overclock", "Overclock", (b, p, s) => {
+    let magic = p.magic
+    p.magic = p.maxMagic
+    let mods = []
+    mods.push(p.addModifier("spatk", {
+        label: "Overclock",
+        type: "multiply",
+        value: 1 + Math.min((magic + 25) / 200, 1),
+    }))
+    let data: StatusModifierData = { mods }
+    s.data = data
+    b.logL("status.overclock.start", { player: p.toString() })
+}, (b, p, s) => {
+    p.magic = p.maxMagic
+}, (b, p, s) => {
+    let data = s.data as StatusModifierData
+    for (let mod of data.mods) {
+        p.removeModifier(mod.stat, mod.id)
+    }
+    p.magic = 0
+})
+
 statusTypes.set("rush", rush)
+statusTypes.set("mind_overwork", overclock)
 let categories: { [key: string]: CategoryStats } = {
     "physical": {
         atk: "atk",
@@ -1074,7 +1096,7 @@ export class Battle extends EventEmitter {
         this.logs.push(formatString(str, color))
         this.emit("log", str)
     }
-    logL(str: LocaleString, vars: Dictionary<any> | any[], color: LogColorWAccent = "white") {
+    logL(str: string, vars: Dictionary<any> | any[], color: LogColorWAccent = "white") {
         this.log(getString(str, vars), color)
     }
     sortActions() {
