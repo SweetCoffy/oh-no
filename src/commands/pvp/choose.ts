@@ -1,16 +1,18 @@
 import { Command, commands } from '../../command-loader.js'
-import { getUser } from '../../users.js';
-import { APIEmbedField, ApplicationCommandOptionType, ApplicationCommandType, ChatInputCommandInteraction, codeBlock, TextChannel } from 'discord.js';
+import { getTempData, getUser } from '../../users.js';
+import { ActionRowBuilder, APIEmbedField, ApplicationCommandOptionType, ApplicationCommandType, ChatInputCommandInteraction, codeBlock, StringSelectMenuBuilder, TextChannel } from 'discord.js';
 import { moves } from '../../moves.js';
 import { getString, LocaleString } from '../../locale.js';
 import { StatID, Stats } from "../../stats.js";
 import { items } from '../../helditem.js';
 import { abilities } from '../../abilities.js';
 import { dispDelta, formatString, snapTo } from '../../util.js';
+import { teamEmojis } from '../../battle.js';
 export let command: Command = {
     name: "choose",
     description: "ur mom",
     type: ApplicationCommandType.ChatInput,
+    associatedCustomIds: ["choose:"],
     options: [
 
         {
@@ -77,6 +79,92 @@ export let command: Command = {
             ]
         }
     ],
+    async interaction(i) {
+        let u = getUser(i.user)
+        let battle = u.lobby?.battle
+        if (!battle)
+            return await i.reply({ flags: ["Ephemeral"], content: "What are you even doing." })
+        let player = battle.players.find(el => el.user?.id == i.user.id)
+        if (!player)
+            return await i.reply({ flags: ["Ephemeral"], content: "????" })
+        let tmp = getTempData(i.user.id, "choose", { move: null, target: null })
+        let moveset = player.moveset
+        if (i.isButton()) {
+            if (i.customId == "choose:open_selector") {
+                tmp.move = null
+                return await i.reply({
+                    flags: ["Ephemeral"], components: [
+                        new ActionRowBuilder<StringSelectMenuBuilder>()
+                            .setComponents(new StringSelectMenuBuilder()
+                                .setCustomId("choose:move")
+                                .setMaxValues(1)
+                                .setMinValues(1)
+                                .setPlaceholder("Select a move.")
+                                .setOptions(moveset.map(k => {
+                                    let info = moves.get(k)
+                                    return {
+                                        label: info?.name ?? "????",
+                                        value: k,
+                                        description: k,
+                                    }
+                                })))
+                    ]
+                })
+            }
+        }
+        if (i.isStringSelectMenu()) {
+            if (i.customId == "choose:move") {
+                tmp.move = i.values[0]
+                let moveInfo = moves.get(tmp.move)
+                if (!moveInfo)
+                    return await i.reply({ flags: ["Ephemeral"], content: "What." })
+                let targets = battle.players
+                await i.update({
+                    content: `Chosen move: **${moveInfo.name}**`,
+                    components: [
+                        new ActionRowBuilder<StringSelectMenuBuilder>()
+                            .setComponents(new StringSelectMenuBuilder()
+                                .setCustomId("choose:target")
+                                .setMaxValues(1)
+                                .setMinValues(1)
+                                .setPlaceholder("Select a target.")
+                                .setOptions(targets.map(v => {
+                                    return {
+                                        label: v == player ? v.name + " (You)" : (v.name + (battle.isEnemy(player, v) ? " 🔴" : " 🔵")),
+                                        emoji: teamEmojis[v.team],
+                                        value: v.id,
+                                        description: `HP: ${v.hp}/${v.maxhp} (${Math.ceil(v.hp / v.maxhp * 100)}%)`,
+                                    }
+                                })))
+                    ]
+                })
+                return
+            }
+            if (i.customId == "choose:target") {
+                if (!tmp.move)
+                    return await i.reply({ flags: ["Ephemeral"], content: "????" })
+                tmp.target = i.values[0]
+                let moveInfo = moves.get(tmp.move)
+                if (!moveInfo) return
+                let target = battle.players.find(v => v.id == tmp.target)
+                if (!target) return
+                let p
+                if (battle.isPve && u.lobby && u.lobby.users.length > 1) {
+                    p = i.reply({
+                        content: `${i.user.displayName} has chosen the move ${moveInfo.name} targeted at ${target.name}`
+                    })
+                } else {
+                    p = i.update({
+                        content: "Move selected.",
+                        components: []
+                    })
+                }
+                battle.moveAction(player, tmp.move, target)
+                await p
+                return
+            }
+        }
+    },
     async autocomplete(i) {
         let u = getUser(i.user)
         if (!u.lobby?.battle) return await i.respond([])

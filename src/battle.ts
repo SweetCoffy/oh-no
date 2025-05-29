@@ -1,5 +1,5 @@
 import { EventEmitter } from "events"
-import { User, Collection, APIEmbedField, AttachmentBuilder, SendableChannels } from "discord.js"
+import { User, Collection, APIEmbedField, AttachmentBuilder, SendableChannels, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js"
 import { setKeys, rng, bar, Dictionary, getID, xOutOfY, formatString, getName, barDelta, dispDelta } from "./util.js"
 import { makeStats, calcStats, Stats, baseStats, StatID, calcStat, ExtendedStatID, ExtendedStats, makeExtendedStats } from "./stats.js"
 import { moves, Category } from "./moves.js"
@@ -760,20 +760,23 @@ export class Battle extends EventEmitter {
             content: this.lobby?.users.map(el => el.toString()).join(" "),
             embeds: [
                 {
-
-                    title: `funni`,
-                    //description: (this.isPve) ? `${bots.filter(el => !el.dead).length} Bots left` : str,
                     description: str,
                     fields: [
                         ...fields,
                     ]
                 },
                 {
-                    title: `Log`,
                     description: "```ansi" + "\n" + b.logs.slice(-35).join("\n").slice(-1900) + "\n```"
                 }
             ],
-            files: [new AttachmentBuilder(Buffer.from(b.logs.join("\n"))).setName("log.ansi")]
+            //files: [new AttachmentBuilder(Buffer.from(b.logs.join("\n"))).setName("log.ansi")],
+            components: [
+                new ActionRowBuilder<ButtonBuilder>()
+                    .setComponents(new ButtonBuilder()
+                        .setLabel("ATTACK")
+                        .setStyle(ButtonStyle.Primary)
+                        .setCustomId("choose:open_selector"))
+            ]
         })
         return msg
     }
