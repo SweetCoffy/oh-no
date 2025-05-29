@@ -128,17 +128,20 @@ export let command: Command = {
                         content: `You don't have enough charge to use this move (required: ${move.requiresCharge}, have: ${play.charge})`
                     })
                 }
-                u.lobby.battle.moveAction(play, moveId, player)
-                if (u.lobby.battle.isPve && u.lobby.users.length > 1) {
-                    await i.reply({
-                        content: `${i.user.username} has chosen the move ${move?.name} targeted at \`#${idx}\` ${player.name}`
+                let battle = u.lobby.battle
+                let p
+                if (battle.isPve && u.lobby.users.length > 1) {
+                    p = i.reply({
+                        content: `${i.user.displayName} has chosen the move ${move?.name} targeted at \`#${idx}\` ${player.name}`
                     })
                 } else {
-                    await i.reply({
+                    p = i.reply({
                         ephemeral: true,
                         content: "k"
                     })
                 }
+                battle.moveAction(play, moveId, player)
+                await p
                 break;
             }
             case "help": {
