@@ -3,8 +3,9 @@ import { BotAIType } from "./battle.js";
 import { ItemStack } from "./items.js";
 import { StatID, Stats } from "./stats.js";
 import { BotAISettings } from "./battle-ai.js";
+import { AbilityID, HeldItemID, ItemID, MoveID } from "./gen.js";
 
-export type ItemDrop = ItemStack & { chance: number }
+export type ItemDrop = ItemStack & { chance: number, item: ItemID }
 export interface EncounterData {
     minPlayerLevel: number,
     maxPlayerLevel: number,
@@ -23,9 +24,10 @@ export interface Enemy {
     boost?: {[x in StatID]?: number},
     aiSettings?: BotAISettings
     encounter?: EncounterData,
-    helditems?: string[],
-    ability?: string,
+    helditems?: HeldItemID[],
+    ability?: AbilityID,
     drops?: ItemDrop[],
+    moveset: MoveID[],
 }
 
 export let enemies: Collection<string, Enemy> = new Collection()
@@ -42,6 +44,7 @@ enemies.set("egg_hater", {
     },
     boss: false,
     xpYield: 100,
+    moveset: ["bonk", "reckless_rush"],
     encounter: {
         minPlayerLevel: 0,
         maxPlayerLevel: Infinity,
@@ -64,6 +67,10 @@ enemies.set("otsid", {
     },
     boss: false,
     xpYield: 250,
+    moveset: ["nerf_gun", "twitter", "mind_overwork"],
+    aiSettings: {
+        attackMult: 0.5
+    },
     encounter: {
         minPlayerLevel: 10,
         maxPlayerLevel: Infinity,
@@ -77,15 +84,17 @@ enemies.set("egg", {
     name: "Egg",
     description: "Egg",
     stats: {
-        hp   :    1,
+        hp: 10,
         atk  :    1,
         def  :    1,
         spatk:    1,
         spdef:    1,
         spd  :    1,
     },
-    boost: {
-        atk: -6
+    moveset: ["nerf_gun", "twitter", "mind_overwork", "heal"],
+    aiSettings: {
+        supportMult: 2.0,
+        selfSupportMult: 0.5,
     },
     encounter: {
         minPlayerLevel: 10,
@@ -109,6 +118,11 @@ enemies.set("the_skeleton", {
         spdef:    350,
         spd  :    25,
     },
+    moveset: ["bonk", "slap", "reckless_rush"],
+    aiSettings: {
+        selfSupportMult: 1.5,
+        supportMult: 0.0,
+    },
     encounter: {
         minPlayerLevel: 25,
         maxPlayerLevel: Infinity,
@@ -116,10 +130,6 @@ enemies.set("the_skeleton", {
         minLevel: 1,
         maxLevel: 1.1,
         relativeLevel: true,
-    },
-    boost: {
-        atk: 6,
-        def: 6,
     },
     boss: true,
     xpYield: 2000,
@@ -135,10 +145,7 @@ enemies.set("egg_lord", {
         spdef:  148,
         spd  :   83,
     },
-    boost: {
-        def: 2,
-        spdef: 2,
-    },
+    moveset: ["nerf_gun", "twitter", "mind_overwork"],
     boss: true,
     the: true,
     xpYield: 300,
@@ -154,13 +161,9 @@ enemies.set("the_cat", {
         spdef:   69,
         spd  :  256,
     },
-    boost: {
-        hp: 0,
-        atk: 0,
-        def: 1,
-        spatk: 0,
-        spdef: 1,
-        spd: 0,
+    moveset: ["slap", "reckless_rush", "bonk"],
+    aiSettings: {
+        attackMult: 2.0
     },
     boss: true,
     the: true,
@@ -177,23 +180,20 @@ enemies.set("u", {
         spdef:   99,
         spd  :  232,
     },
-    boost: {
-        atk: 3,
-        def: 3,
-        spatk: 3,
-        spdef: 3,
-        spd: 3,
+    moveset: ["slap", "reckless_rush", "bonk", "pingcheck"],
+    aiSettings: {
+        attackMult: 2.0
     },
     boss: true,
     xpYield: 10000,
-    helditems: ["threat_orb"],
+    helditems: [],
     encounter: {
         rate: 1,
         relativeLevel: true,
         minPlayerLevel: 30,
         maxPlayerLevel: Infinity,
-        minLevel: 3,
-        maxLevel: 5,
+        minLevel: 1.0,
+        maxLevel: 1.2,
     }
 })
 enemies.set("o", {
@@ -207,23 +207,21 @@ enemies.set("o", {
         spdef:  201,
         spd  :    0,
     },
-    boost: {
-        atk: 3,
-        def: 3,
-        spatk: 3,
-        spdef: 3,
-        spd: 3,
+    moveset: ["mind_overwork", "nerf_gun", "twitter", "heal"],
+    aiSettings: {
+        selfSupportMult: 1.2,
+        supportMult: 1.5,
+        attackMult: 0.9,
     },
     boss: true,
     xpYield: 10000,
-    helditems: ["eggs", "shield"],
     encounter: {
         rate: 1,
         relativeLevel: true,
         minPlayerLevel: 30,
         maxPlayerLevel: Infinity,
-        minLevel: 3,
-        maxLevel: 5,
+        minLevel: 1.0,
+        maxLevel: 1.2,
     }
 })
 enemies.set("y", {
@@ -237,23 +235,19 @@ enemies.set("y", {
         spdef:  201,
         spd  :  232,
     },
-    boost: {
-        atk: 3,
-        def: 3,
-        spatk: 3,
-        spdef: 3,
-        spd: 3,
+    moveset: ["reckless_rush", "bonk", "nerf_gun", "twitter"],
+    aiSettings: {
+        attackMult: 2.0
     },
     boss: true,
     xpYield: 10000,
-    helditems: ["eggs", "shield"],
     encounter: {
         rate: 1,
         relativeLevel: true,
         minPlayerLevel: 30,
         maxPlayerLevel: Infinity,
-        minLevel: 3,
-        maxLevel: 5,
+        minLevel: 1.0,
+        maxLevel: 1.2,
     }
 })
 enemies.set("sun", {
@@ -269,14 +263,18 @@ enemies.set("sun", {
     },
     boss: true,
     xpYield: 100000,
-    helditems: ["mirror"],
     ability: "plot_armor",
+    moveset: ["twitter", "nerf_gun", "regen"],
+    aiSettings: {
+        supportMult: 2.0,
+        selfSupportMult: 1.2,
+    },
     encounter: {
         rate: 1,
         relativeLevel: true,
         minPlayerLevel: 30,
         maxPlayerLevel: Infinity,
-        minLevel: 1.1,
-        maxLevel: 1.5,
+        minLevel: 1.0,
+        maxLevel: 1.2,
     }
 })
