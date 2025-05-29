@@ -1,13 +1,45 @@
 import { Command, commands } from '../../command-loader.js'
 import { getTempData, getUser } from '../../users.js';
-import { ActionRowBuilder, APIEmbedField, ApplicationCommandOptionType, ApplicationCommandType, ChatInputCommandInteraction, codeBlock, StringSelectMenuBuilder, TextChannel } from 'discord.js';
-import { moves } from '../../moves.js';
+import { ActionRowBuilder, APIEmbedField, ApplicationCommandOptionType, ApplicationCommandType, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, codeBlock, StringSelectMenuBuilder, TextChannel } from 'discord.js';
+import { Move, moves } from '../../moves.js';
 import { getString, LocaleString } from '../../locale.js';
 import { StatID, Stats } from "../../stats.js";
 import { items } from '../../helditem.js';
 import { abilities } from '../../abilities.js';
 import { dispDelta, formatString, snapTo } from '../../util.js';
 import { teamEmojis } from '../../battle.js';
+function moveDescription(move: Move) {
+    //@ts-ignore
+    let desc = formatString(`Accuracy: [a]${move.accuracy}%[r]\nCategory: [a]${getString("move.category." + move.category)}[r]`)
+    if (move.type == "attack") {
+        //@ts-ignore
+        desc += formatString(`\nDamage Type: [a]${getString("move.dmgtype." + move.setDamage)}[r]`)
+        if (move.power) {
+            let atkStat = move.category == "physical" ? "atk" : "spatk"
+            let dispMult = ""
+            let dispMultSuffix = ""
+            if (move.setDamage == "percent") {
+                dispMult = `${snapTo(move.power)}%`
+                dispMultSuffix = ` of target's [a]MAX HP[r]`
+            }
+            if (move.setDamage == "regular") {
+                dispMult = `${snapTo(move.power)}%`
+                dispMultSuffix = ` of user's [a]${getString("stat." + atkStat)}[r] stat`
+            }
+            desc += formatString(`\nDamage Multiplier: [a]${dispMult}[r]${dispMultSuffix}`)
+        } else {
+            desc += formatString(`\nDamage Multiplier: [a]Varies[r]`)
+        }
+    }
+    desc += `\n\n${move.description}`
+    if (move.requiresCharge) {
+        desc += formatString(`\nThis move requires [a]${move.requiresCharge}[r] [red]Charge[r] to use.`)
+    }
+    if (move.requiresMagic) {
+        desc += formatString(`\nThis move requires [a]${move.requiresMagic}[r] [blue]Magic[r] to use.`)
+    }
+    return desc
+}
 export let command: Command = {
     name: "choose",
     description: "ur mom",
@@ -89,26 +121,45 @@ export let command: Command = {
             return await i.reply({ flags: ["Ephemeral"], content: "????" })
         let tmp = getTempData(i.user.id, "choose", { move: null, target: null })
         let moveset = player.moveset
+        function moveSelectorComponent(moveset: string[]) {
+            return new ActionRowBuilder<StringSelectMenuBuilder>()
+                .setComponents(new StringSelectMenuBuilder()
+                    .setCustomId("choose:move")
+                    .setMaxValues(1)
+                    .setMinValues(1)
+                    .setPlaceholder("Select a move.")
+                    .setOptions(moveset.map(k => {
+                        let info = moves.get(k)
+                        return {
+                            label: info?.name ?? "????",
+                            value: k,
+                            description: k,
+                        }
+                    })))
+        }
         if (i.isButton()) {
             if (i.customId == "choose:open_selector") {
                 tmp.move = null
                 return await i.reply({
-                    flags: ["Ephemeral"], components: [
-                        new ActionRowBuilder<StringSelectMenuBuilder>()
-                            .setComponents(new StringSelectMenuBuilder()
-                                .setCustomId("choose:move")
-                                .setMaxValues(1)
-                                .setMinValues(1)
-                                .setPlaceholder("Select a move.")
-                                .setOptions(moveset.map(k => {
-                                    let info = moves.get(k)
-                                    return {
-                                        label: info?.name ?? "????",
-                                        value: k,
-                                        description: k,
-                                    }
-                                })))
-                    ]
+                    flags: ["Ephemeral"], components: [moveSelectorComponent(moveset)]
+                })
+            }
+            if (i.customId == "choose:back") {
+                tmp.move = null
+                return await i.update({
+                    content: "",
+                    components: [moveSelectorComponent(moveset)]
+                })
+            }
+            if (i.customId == "choose:help") {
+                let info = moves.get(tmp.move)
+                if (!info) return i.reply({
+                    flags: ["Ephemeral"],
+                    content: ":("
+                })
+                return await i.reply({
+                    flags: ["Ephemeral"],
+                    content: codeBlock("ansi", moveDescription(info))
                 })
             }
         }
@@ -135,7 +186,15 @@ export let command: Command = {
                                         value: v.id,
                                         description: `HP: ${v.hp}/${v.maxhp} (${Math.ceil(v.hp / v.maxhp * 100)}%)`,
                                     }
-                                })))
+                                }))),
+                        new ActionRowBuilder<ButtonBuilder>()
+                            .setComponents(new ButtonBuilder()
+                                .setLabel("Back")
+                                .setStyle(ButtonStyle.Secondary)
+                                .setCustomId("choose:back"), new ButtonBuilder()
+                                    .setLabel("Move Info")
+                                    .setStyle(ButtonStyle.Secondary)
+                                    .setCustomId("choose:help"))
                     ]
                 })
                 return
@@ -236,39 +295,10 @@ export let command: Command = {
                 let moveId = i.options.getString("move", true);
                 let move = moves.get(moveId)
                 if (move) {
-                    //@ts-ignore
-                    let desc = formatString(`Accuracy: [a]${move.accuracy}%[r]\nCategory: [a]${getString("move.category." + move.category)}[r]`)
-                    if (move.type == "attack") {
-                        //@ts-ignore
-                        desc += formatString(`\nDamage Type: [a]${getString("move.dmgtype." + move.setDamage)}[r]`)
-                        if (move.power) {
-                            let atkStat = move.category == "physical" ? "atk" : "spatk"
-                            let dispMult = ""
-                            let dispMultSuffix = ""
-                            if (move.setDamage == "percent") {
-                                dispMult = `${snapTo(move.power)}%`
-                                dispMultSuffix = ` of target's [a]MAX HP[r]`
-                            }
-                            if (move.setDamage == "regular") {
-                                dispMult = `${snapTo(move.power)}%`
-                                dispMultSuffix = ` of user's [a]${getString("stat." + atkStat)}[r] stat`
-                            }
-                            desc += formatString(`\nDamage Multiplier: [a]${dispMult}[r]${dispMultSuffix}`)
-                        } else {
-                            desc += formatString(`\nDamage Multiplier: [a]Varies[r]`)
-                        }
-                    }
-                    desc += `\n\n${move.description}`
-                    if (move.requiresCharge) {
-                        desc += formatString(`\nThis move requires [a]${move.requiresCharge}[r] [red]Charge[r] to use.`)
-                    }
-                    if (move.requiresMagic) {
-                        desc += formatString(`\nThis move requires [a]${move.requiresMagic}[r] [blue]Magic[r] to use.`)
-                    }
                     await i.reply({
                         embeds: [{
                             title: `${move.name}`,
-                            description: codeBlock("ansi", desc),
+                            description: codeBlock("ansi", moveDescription(move)),
                         }]
                     })
                 } else return new Error(`Unknown move: '${moveId}'`)
