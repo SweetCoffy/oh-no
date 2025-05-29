@@ -8,6 +8,9 @@ import { statSync, readdirSync } from "fs"
 import { load } from "./content-loader.js"
 import { items } from "./helditem.js"
 import { readFileSync } from "fs"
+import { UserInfo } from "./users.js"
+import { calcStats, StatID } from "./stats.js"
+import { getString } from "./locale.js"
 export const CURRENCY_ICON = "$"
 export function lexer(str: string) {
     let ar: string[] = []
@@ -377,6 +380,16 @@ export function loadRecursive(path: string) {
             load(`${path}/${f}`)
         }
     }
+}
+export function levelUpMessage(u: UserInfo, oldLevel: number, newLevel: number) {
+    let oldStats = calcStats(oldLevel, u.baseStats)
+    let newStats = calcStats(newLevel, u.baseStats)
+    return formatString(`${"Level".padEnd(12)} [a]${oldLevel.toString().padStart(5)}[r] -> [s]${newLevel.toString().padEnd(5)}[r]\n`) + "—".repeat(27) + "\n" +
+        Object.keys(newStats).map(stat => {
+            let old = oldStats[stat as StatID]
+            let newStat = newStats[stat as StatID]
+            return formatString(`${getString("stat." + stat).padEnd(12)} [a]${old.toString().padStart(5)}[r] -> [s]${newStat.toString().padEnd(5)}[r]`)
+        }).join("\n")
 }
 export function timeFormat(seconds: number) {
     let secs = Math.floor(seconds % 60)

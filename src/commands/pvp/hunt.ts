@@ -1,11 +1,12 @@
-import { ApplicationCommandType } from "discord.js";
+import { ApplicationCommandType, codeBlock } from "discord.js";
 import { Player } from "../../battle.js";
 import { Command } from "../../command-loader.js";
 import { enemies, Enemy } from "../../enemies.js";
 import { createLobby } from "../../lobby.js";
 import { calcStats, StatID } from "../../stats.js";
 import { addXP, getUser } from "../../users.js";
-import { money, randomRange, weightedDistribution, weightedRandom } from "../../util.js";
+import { formatString, levelUpMessage, money, randomRange, weightedDistribution, weightedRandom } from "../../util.js";
+import { getString } from "../../locale.js";
 
 export let command: Command = {
     name: "hunt",
@@ -81,6 +82,9 @@ export let command: Command = {
             } else {
                 p.level = Math.ceil(randomRange(0.9, 1) * u.level)
             }
+            if (e.length > 1) {
+                p.level = Math.ceil(p.level / (1 + (e.length - 1) * 0.125))
+            }
             if (enemy.name == "The Skeleton") {
                 battle.logL("enemy.appears", { name: enemy.name }, "yellow")
             }
@@ -124,19 +128,18 @@ export let command: Command = {
                     enemies
                     .map(el => (el.level * el.xpYield) / 5)
                     .reduce((prev, cur) => prev + cur, 0) || 0)
-                let oldStats = calcStats(u.level, u.baseStats)
+                let oldLevel = u.level
                 let m = BigInt(Math.floor(xp * (xp * 0.075)))/100n*15n
                 getUser(i.user).money.points += m
                 await channel.send(`You won, gained ${xp} XP and ${money(m)}`)
                 let levels = addXP(i.user, xp)
-                let newStats = calcStats(u.level, u.baseStats)
+                let newLevel = u.level
                 if (levels > 0) {
-                    await channel.send(`+${levels} levels\n${
-                        Object.keys(oldStats)
-                        //@ts-ignore
-                        .map((el: StatID) => `\`${el.padEnd(6, " ")} ${oldStats[el].toString().padStart(6, " ")} + ${(newStats[el] - oldStats[el]).toString().padEnd(6, " ")}\``)
-                        .join("\n")
-                    }`)
+                    await channel.send(`**You leveled up!**\n` +
+                        codeBlock("ansi",
+                            levelUpMessage(u, oldLevel, newLevel)
+                        )
+                    )
                 }
             } else {
                 await channel.send("You lost")
