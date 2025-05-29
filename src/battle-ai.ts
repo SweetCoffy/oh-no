@@ -54,7 +54,7 @@ export class BotAI {
             }
         }))
         console.log(`[${this.player.name}]`)
-        let filtered = options//.filter(v => v.score > 0)
+        let filtered = options.filter(v => !isNaN(v.score))
         if (filtered.length == 0) filtered = options
         filtered.sort((a, b) => b.score - a.score)
         console.log(filtered.map(v => {

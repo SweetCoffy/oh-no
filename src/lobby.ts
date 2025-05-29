@@ -2,9 +2,9 @@ import { Collection, TextBasedChannel, User } from "discord.js"
 import { Battle, Player, BattleType, isTeamMatch, BattleTypeInfo } from "./battle.js"
 import { enemies } from "./enemies.js"
 import { items } from "./helditem.js"
-import { presets } from "./stats.js"
+import { limitStats, presets } from "./stats.js"
 import { getUser } from "./users.js"
-import { Dictionary, getID, settings } from "./util.js"
+import { Dictionary, getID, getMaxTotal, settings } from "./util.js"
 export class JoinError extends Error {
     name = "JoinError"
     intended = true
@@ -108,6 +108,7 @@ export class BattleLobby {
             play.helditems = (getUser(u).helditems || []).slice(0, settings.maxMoves).map(el => ({id: el}))
             play.ability = getUser(u).ability
             let e = this.usersE[i]
+            play.baseStats = limitStats(play.baseStats, getMaxTotal({ ability: play.ability }))
             if (this.flags.E) {
                 let preset = e.enemyPreset || "default"
                 if (preset != "default" && enemies.get(preset)) {
@@ -150,6 +151,7 @@ export class BattleLobby {
                 bot.team = teams.findIndex((v) => v < perTeam || v <= 0)
                 teams[bot.team]++
             }
+            bot.baseStats = limitStats(bot.baseStats, getMaxTotal({ ability: bot.ability }))
             //@ts-ignore
             bot.baseStats = {...b[Math.floor(Math.random() * b.length)]}
             bot.updateStats()
@@ -157,10 +159,6 @@ export class BattleLobby {
                 if (i == 0) {
                     bot.team = 1
                     bot.level *= 1 + (levelPerPlayer * this.users.length)
-                    this.battle.statBoost(bot, "atk", 1)
-                    this.battle.statBoost(bot, "def", 1)
-                    this.battle.statBoost(bot, "spatk", 1)
-                    this.battle.statBoost(bot, "spdef", 1)
                     bot.helditems.push({id: "bruh_orb"})
                     if (this.bossType) {
                         let enemy = enemies.get(this.bossType);

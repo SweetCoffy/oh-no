@@ -86,6 +86,7 @@ export function applyPreset(user: User, presetId: string) {
         return
     }
     u.baseStats = limitStats(preset.stats, getMaxTotal(preset))
+    preset.stats = u.baseStats
     u.ability = preset.ability
     u.helditems = preset.helditems || []
     u.preset = presetId

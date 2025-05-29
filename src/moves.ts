@@ -226,7 +226,7 @@ moves.set("reckless_rush", new Move("Reckless Rush", "status", 0, "status").set(
     move.getAiSupportRank = (b, p, t) => {
         if (t != p) return 0
         if (p.status.some(v => v.type == "rush")) return 0
-        return p.atk / p.spatk * p.charge
+        return Math.min(p.atk / p.spatk, 1.5) * p.charge
     }
 }).setDesc(formatString("[a]Consumes all Charge[r] and increases the user's [a]ATK[r] by [a]1%[r] for every point of [a]Charge[r] consumed. The [a]ATK[r] boost lasts for [a]2[r] turns.")))
 
@@ -260,7 +260,7 @@ moves.set("mind_overwork", new Move("Neuro-Overclock", "status", 0, "status").se
     move.getAiSupportRank = (b, p, t) => {
         if (t != p) return 0
         if (p.status.some(v => v.type == "mind_overwork")) return 0
-        return p.spatk / p.atk * p.magic * 0.5 + 10
+        return Math.min(p.spatk / p.atk, 1.5) * p.magic * 0.5 + 10
     }
 }).setDesc(
     formatString(
