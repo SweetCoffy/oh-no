@@ -70,6 +70,7 @@ export let command: Command = {
             p.baseStats = {...enemy.stats}
             p.xpYield = enemy.xpYield
             p.aiSettings = enemy.aiSettings ?? {}
+            p.moveset = enemy.moveset
             p.team = 1
             p.helditems = [...enemy.helditems || []].map((el) => ({ id: el }))
             p.ability = enemy.ability

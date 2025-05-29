@@ -31,16 +31,16 @@ export class BotAI {
     rankMove(move: string, t: Player): number {
         let info = moves.get(move)
         if (!info) return Number.NEGATIVE_INFINITY
-        if (this.player.magic < info.requiresMagic) return -999999
-        if (this.player.charge < info.requiresCharge) return -999999
+        if (this.player.magic < info.requiresMagic) return -999
+        if (this.player.charge < info.requiresCharge) return -999
         if (this.player == t) {
-            return 0
+            return info.getAiSupportRank(this.battle, this.player, t) * this.selfSupportMult
         }
-        let score = 0
+        let score = -99
         if (this.battle.isEnemy(this.player, t)) 
             score = info.getAiAttackRank(this.battle, this.player, t) * this.attackMult
         if (!this.battle.isEnemy(this.player, t)) 
-            score = info.getAiSupportRank(this.battle, this.player, t) * (t == this.player ? this.selfSupportMult : this.supportMult)
+            score = info.getAiSupportRank(this.battle, this.player, t) * this.supportMult
         let hpLost = Math.min((info.recoil * t.maxhp) / t.hp, 1)
         return score * (1 - hpLost)
     }
@@ -53,15 +53,16 @@ export class BotAI {
                 score: ai.rankMove(move, target)
             }
         }))
-        console.log(options.map(v => {
+        console.log(`[${this.player.name}]`)
+        let filtered = options//.filter(v => v.score > 0)
+        if (filtered.length == 0) filtered = options
+        filtered.sort((a, b) => b.score - a.score)
+        console.log(filtered.map(v => {
             return {
                 ...v,
                 target: v.target.name
             }
         }))
-        let filtered = options.filter(v => v.score > 0)
-        if (filtered.length == 0) filtered = options
-        filtered.sort((a, b) => b.score - a.score)
         return filtered[0]
     }
 }

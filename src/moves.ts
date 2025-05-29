@@ -327,10 +327,11 @@ moves.set("regen", new Move("Regeneration", "status", 0, "status", 100).set(move
     })
     move.getAiSupportRank = (b, p, t) => {
         if (t.dead) return -99
-        let healAmt = t.maxhp * 0.0625
-        let missingHp = t.maxhp - t.hp
-        if (missingHp/t.maxhp < 0.1) return -1
-        return Math.max((missingHp - healAmt) / t.maxhp * 100, 0)
+        if (t.hp > t.maxhp * 0.8) return -98
+        let healAmt = Math.ceil(t.maxhp * 0.2)
+        let healDelta = Math.min((t.hp + healAmt) / t.maxhp, 1) - (t.hp / t.maxhp)
+        if (healAmt > t.maxhp - t.hp) healDelta -= 0.05
+        return (healDelta * 100) + (1 - t.hp / t.maxhp) * 50
     }
 }).setDesc(formatString("Grants the user [a]Regeneration[r] for [a]4[r] turns, healing them by [a]6.25%[r] of their [a]MAX HP[r] every turn while the effect is active.")))
 moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
@@ -338,10 +339,11 @@ moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
     move.targetSelf = true
     move.getAiSupportRank = (b, p, t) => {
         if (t.dead) return -99
-        let healAmt = t.maxhp * 0.4
-        let missingHp = t.maxhp - t.hp
-        if (missingHp/t.maxhp < 0.1) return -1
-        return Math.max((missingHp - healAmt) / t.maxhp * 100, 0)
+        if (t.hp > t.maxhp * 0.8) return -98
+        let healAmt = Math.ceil(t.maxhp * 0.4)
+        let healDelta = Math.min((t.hp + healAmt) / t.maxhp, 1) - (t.hp / t.maxhp)
+        if (healAmt > t.maxhp - t.hp) healDelta -= 0.05
+        return (healDelta * 100) + (1 - t.hp / t.maxhp) * 50
     }
 }).setDesc(formatString("Heals the user by [a]40%[r] of their [a]MAX HP[r].")))
 moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
