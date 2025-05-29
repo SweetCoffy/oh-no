@@ -9,7 +9,7 @@ import { getUser } from "./users.js"
 import { HeldItem, ItemClass, items } from "./helditem.js"
 import { FG_Gray, Start, Reset, LogColor, LogColorWAccent } from "./ansi.js"
 import { abilities } from "./abilities.js"
-import { BotAI } from "./battle-ai.js"
+import { BotAI, BotAISettings } from "./battle-ai.js"
 
 export const BASELINE_DEF = 250
 
@@ -473,8 +473,7 @@ export class Player {
     /** The player's current held items */
     helditems: HeldItem[] = []
     itemSlots: { [x in ItemClass]?: HeldItem } = {}
-    /** The type of AI the player uses if `user` is not present */
-    aiType: BotAIType = "normal"
+    aiSettings: BotAISettings = {}
     aiState!: BotAI
     /** The base XP yield, only used in hunt */
     xpYield: number = 0
@@ -658,7 +657,7 @@ export class Battle extends EventEmitter {
                 if (!itemType) continue
                 itemType.onBattleStart?.(this, p, item)
             }
-            p.aiState = new BotAI(this, p)
+            p.aiState = new BotAI(this, p, p.aiSettings)
         }
         let start = BattleTypeInfo[this.type].onStart
         if (start) start(this)

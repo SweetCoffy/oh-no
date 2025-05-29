@@ -4,12 +4,19 @@ type AIAction = {
     target: Player,
     move: string
 }
+export type BotAISettings = {
+    attackMult?: number
+    supportMult?: number
+    selfSupportMult?: number
+}
 export class BotAI {
-    attackMult: number = 1
-    supportMult: number = 1
-    selfSupportMult: number = 1
-    constructor(readonly battle: Battle, readonly player: Player) {
-
+    attackMult: number
+    supportMult: number
+    selfSupportMult: number
+    constructor(readonly battle: Battle, readonly player: Player, settings: BotAISettings = {}) {
+        this.attackMult = settings.attackMult ?? 1
+        this.supportMult = settings.supportMult ?? 1
+        this.selfSupportMult = settings.selfSupportMult ?? 1.5
     }
     getAllies() {
         let p = this.player

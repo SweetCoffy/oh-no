@@ -1,0 +1,5 @@
+export type MoveID = "bonk" | "needle" | "nerf_gun" | "ping" | "slap" | "twitter" | "stronk" | "tonk" | "reckless_rush" | "spstronk" | "sptonk" | "mind_overwork" | "protect" | "counter" | "release" | "regen" | "heal" | "revive" | "pingcheck" | "sf_slap"
+export type AbilityID = "hardening" | "massive_health_bar" | "plot_armor" | "beserker_soul" | "training_arc" | "blood_is_fuel"
+export type HeldItemID = "eggs" | "shield" | "category_swap" | "bruh_orb" | "bruh_orb_attack" | "bruh_orb_speed" | "bruh_orb_defense" | "bruh_orb_hp" | "mirror"
+export type ItemID = "spaghet" | "coin" | "bank" | "cheese" | "cookie" | "bank_license" | "soul" | "copper" | "stone" | "egg" | "cooked_egg" | "wood" | "sus_bell" | "battery" | "bone" | "box" | "cd" | "expensive_electric_parts" | "fish" | "fishing_rod" | "floppy_disk" | "phone"
+export type StatusID = "poison" | "regen" | "bleed" | "rush" | "mind_overwork"

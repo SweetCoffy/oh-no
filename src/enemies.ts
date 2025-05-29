@@ -2,6 +2,7 @@ import { Collection } from "discord.js";
 import { BotAIType } from "./battle.js";
 import { ItemStack } from "./items.js";
 import { StatID, Stats } from "./stats.js";
+import { BotAISettings } from "./battle-ai.js";
 
 export type ItemDrop = ItemStack & { chance: number }
 export interface EncounterData {
@@ -15,12 +16,12 @@ export interface EncounterData {
 export interface Enemy {
     name: string,
     description?: string,
-    ai: BotAIType,
     stats: Stats,
     boss: boolean,
     xpYield: number,
     the?: boolean,
     boost?: {[x in StatID]?: number},
+    aiSettings?: BotAISettings
     encounter?: EncounterData,
     helditems?: string[],
     ability?: string,
@@ -30,7 +31,6 @@ export interface Enemy {
 export let enemies: Collection<string, Enemy> = new Collection()
 enemies.set("egg_hater", {
     name: "Egg Hater",
-    ai: "normal",
     description: "An egg hater, these guys are pretty dumb lmao",
     stats: {
         hp: 100,
@@ -53,7 +53,6 @@ enemies.set("egg_hater", {
 })
 enemies.set("otsid", {
     name: "Otsid",
-    ai: "egg_lord",
     description: "What is even this thing",
     stats: {
         hp: 420,
@@ -76,7 +75,6 @@ enemies.set("otsid", {
 })
 enemies.set("egg", {
     name: "Egg",
-    ai: "the_cat",
     description: "Egg",
     stats: {
         hp   :    1,
@@ -102,7 +100,6 @@ enemies.set("egg", {
 })
 enemies.set("the_skeleton", {
     name: "The Skeleton",
-    ai: "normal",
     description: "sus",
     stats: {
         hp   :    50,
@@ -129,7 +126,6 @@ enemies.set("the_skeleton", {
 })
 enemies.set("egg_lord", {
     name: "Egg Lord",
-    ai: "egg_lord",
     description: "Spooky egg",
     stats: {
         hp   :  122,
@@ -149,7 +145,6 @@ enemies.set("egg_lord", {
 })
 enemies.set("the_cat", {
     name: "The Cat",
-    ai: "the_cat",
     description: "Please do not the cat",
     stats: {
         hp   :  100,
@@ -173,7 +168,6 @@ enemies.set("the_cat", {
 })
 enemies.set("u", {
     name: "ú",
-    ai: "u",
     description: "Literal god",
     stats: {
         hp   :  210,
@@ -204,7 +198,6 @@ enemies.set("u", {
 })
 enemies.set("o", {
     name: "ö",
-    ai: 'egg_lord',
     description: [..."Literal god"].reverse().join(""),
     stats: {
         hp   :  364,
@@ -235,7 +228,6 @@ enemies.set("o", {
 })
 enemies.set("y", {
     name: "ÿ",
-    ai: "u",
     description: "Actual god",
     stats: {
         hp   :  364,
@@ -266,7 +258,6 @@ enemies.set("y", {
 })
 enemies.set("sun", {
     name: "The Sun",
-    ai: "the_cat",
     description: "The Sun looking fire",
     stats: {
         hp: 1200,

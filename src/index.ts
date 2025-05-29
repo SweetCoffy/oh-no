@@ -14,6 +14,7 @@ import { shopItems } from "./items.js"
 import { resolve } from "path"
 import { Stats, calcStat, limitStats } from "./stats.js"
 import { calcMoveDamage } from "./battle.js"
+import { generate } from "./codegen.js"
 
 let config = JSON.parse(readFileSync(resolve("./.config.json"), "utf8"))
 
@@ -148,4 +149,5 @@ client.on("error", (error) => {
 
 // get real
 if (experimental.april_fools) import("./april-fools.js")
+if (experimental.codegen) generate()
 // pain

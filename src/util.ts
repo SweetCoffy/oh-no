@@ -224,6 +224,7 @@ export let experimental = {
 
     // Now automatically set
     april_fools: date.getDate() == 1 && date.getMonth() == 4,
+    codegen: false
 }
 export let settings = {
     ownerID: "",
