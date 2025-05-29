@@ -24,6 +24,7 @@ dmg.poison: "n:$.player; took n:$.damage; damage from the poison."
 dmg.bleed: "n:$.player; took n:$.damage; damage from bleeding."
 dmg.release: "Dealt a total of n:$.damage; damage."
 dmg.plotarmor: "n:$.player;... didn't die?"
+dmg.crit: "A critical hit!!"
 
 # Healing messages
 heal.generic: "n:$.player; restored $.amount HP."
