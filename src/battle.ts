@@ -334,6 +334,10 @@ const defaultStats: ExtendedStats = {
     spdef: 0,
     spd: 0,
     dr: 0,
+    chgbuildup: 100,
+    magbuildup: 100,
+    chglimit: 50,
+    maglimit: 50,
     crit: 10,
     critdmg: 50,
 }
@@ -376,8 +380,12 @@ export class Player {
     absorptionTier: number = 0
     private _charge: number = 0
     private _magic: number = 0
-    maxCharge: number = 100
-    maxMagic: number = 100
+    get maxMagic() {
+        return this.cstats.maglimit
+    }
+    get maxCharge() {
+        return this.cstats.chglimit
+    }
     /** How far into the negatives the player's health can go before dying, used by the Plot Armor ability */
     plotArmor: number = 0
     /** The list of usable moves for the player, only used for user-controlled players */
@@ -389,6 +397,10 @@ export class Player {
         spatk: [],
         spdef: [],
         spd: [],
+        chgbuildup: [],
+        magbuildup: [],
+        chglimit: [],
+        maglimit: [],
         dr: [],
         crit: [],
         critdmg: [],
@@ -487,10 +499,7 @@ export class Player {
     get dr() { return this.cstats.dr }
 
     cstats: ExtendedStats = {
-        ...makeStats(),
-        dr: 0,
-        crit: 0,
-        critdmg: 0,
+        ...makeExtendedStats(),
     }
 
     _tempname = ""
@@ -536,9 +545,11 @@ export class Player {
     updateStats(updateHp: boolean = true) {
         let lastmax = this.maxhp
         setKeys(defaultStats, this.stats)
+        let resourceBaseline = calcStat(100, this.level)
         setKeys(calcStats(this.level, this.baseStats), this.stats)
-        this.maxCharge = Math.max(100 + Math.floor(this.baseStats.atk) - 100, 75)
-        this.maxMagic = Math.max(100 + Math.floor(this.baseStats.spatk) - 100, 75)
+        this.stats.chglimit = Math.ceil(Math.max(30 + this.stats.atk / resourceBaseline * 40, 50) / 5) * 5
+        this.stats.maglimit = Math.ceil(Math.max(30 + this.stats.spatk / resourceBaseline * 40, 50) / 5) * 5
+        this.stats.crit = Math.min(Math.ceil(this.stats.spd / resourceBaseline * 10), 50)
         this.recalculateStats()
         let max = this.maxhp
         if (updateHp) this.hp = Math.ceil(this.hp * (max / lastmax))
@@ -793,7 +804,7 @@ export class Battle extends EventEmitter {
     statBoost(player: Player, stat: StatID, stages: number, silent = false) {
         if (stages == 0) return
         if (!silent && stat == "atk" && stages > 0) {
-            player.charge += 5 + Math.floor(stages * 5)
+            player.charge += Math.floor(stages * 5 * player.cstats.chgbuildup / 100)
         }
         player.statStages[stat] += stages;
         if (silent) return
@@ -1052,12 +1063,10 @@ export class Battle extends EventEmitter {
                     let critDmg = 1 + action.player.cstats.critdmg / 100
                     let critChance = action.player.cstats.crit / 100 * mOpts.critMul
                     let atk = getATK(action.player, cat)
-
-
-
                     if (cat == "physical" && !requiresCharge) {
-                        action.player.charge += Math.floor(pow / 60 * 10)
-                    } else if (cat == "special" && !requiresMagic) action.player.magic += Math.floor(pow / 40 * 5)
+                        action.player.charge += Math.floor(pow / 6 * action.player.cstats.chgbuildup / 100)
+                    } else if (cat == "special" && !requiresMagic)
+                        action.player.magic += Math.floor(pow / 6 * action.player.cstats.magbuildup / 100)
                     let dmg = pow / 100 * atk
                     let opts: TakeDamageOptions = {
                         silent: false,
@@ -1089,7 +1098,8 @@ export class Battle extends EventEmitter {
                     let pow = move.getPower(this, action.player, supportTarget) / 100
                     this.addAbsorption(supportTarget, Math.floor(supportTarget.maxhp * pow), move.absorptionTier)
                 }
-                if (move.requiresMagic <= 0 && move.type != "attack") action.player.magic += 10
+                if (move.requiresMagic <= 0 && move.type != "attack")
+                    action.player.magic += Math.floor(action.player.cstats.magbuildup / 100 * 10)
                 if (move.recoil) {
                     let recoilDmg = Math.ceil(action.player.maxhp * move.recoil)
                     this.takeDamage(action.player, recoilDmg, false, "dmg.recoil")

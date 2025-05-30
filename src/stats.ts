@@ -2,7 +2,7 @@ import { Collection, User } from "discord.js"
 import { getUser, PresetList } from "./users.js"
 import { weightedDistribution } from "./util.js"
 export type StatID = "hp" | "atk" | "def" | "spatk" | "spdef" | "spd"
-export type ExtendedStatID = StatID | "dr" | "crit" | "critdmg"
+export type ExtendedStatID = StatID | "chglimit" | "maglimit" | "chgbuildup" | "magbuildup" | "dr" | "crit" | "critdmg"
 export type Stats = {
     [x in StatID]: number
 }
@@ -115,6 +115,10 @@ export function makeExtendedStats(obj?: { [key: string]: number }): ExtendedStat
         spatk: 0,
         spdef: 0,
         spd: 0,
+        chglimit: 0,
+        maglimit: 0,
+        chgbuildup: 0,
+        magbuildup: 0,
         dr: 0,
         crit: 0,
         critdmg: 0,
