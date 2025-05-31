@@ -18,6 +18,9 @@ export class DescriptionBuilder {
         this.text += text + "\n"
         return this
     }
+    bruhOrbMod(boost: { mult: { [x in StatID]?: number }, add: { [x in StatID]?: number } }) {
+        return this.mod(boost.mult).addMod(boost.add)
+    }
     mod(stats: { [x in StatID]?: number }) {
         let sorted = Object.entries(stats).sort(([_0, a], [_1, b]) => b - a)
         for (let [stat, v] of sorted) {
@@ -27,6 +30,18 @@ export class DescriptionBuilder {
                 this.text += `· [s]Increases [a]${getString("stat." + stat)}[r] by [a]${snapped}%[r]\n`
             } else {
                 this.text += `· [f]Decreases [a]${getString("stat." + stat)}[r] by [a]${snapped}%[r]\n`
+            }
+        }
+        return this
+    }
+    addMod(stats: { [x in StatID]?: number }) {
+        let sorted = Object.entries(stats).sort(([_0, a], [_1, b]) => b - a)
+        for (let [stat, v] of sorted) {
+            let snapped = Math.abs(Math.round(v * 100) / 100)
+            if (v >= 0) {
+                this.text += `· [s]Increases [a]${getString("stat." + stat)}[r] by [a]${snapped}[r]\n`
+            } else {
+                this.text += `· [f]Decreases [a]${getString("stat." + stat)}[r] by [a]${snapped}[r]\n`
             }
         }
         return this

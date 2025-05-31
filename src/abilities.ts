@@ -17,6 +17,8 @@ export class Ability {
     turn(b: Battle, p: Player) {
         this.onTurn?.(b, p)
     }
+    damageTakenModifierOrder: number = 0
+    damageDealtModifierOrder: number = 0
     onDamage?: (b: Battle, p: Player, dmg: number, inf: Player | undefined, opts: TakeDamageOptions) => number | void
     onDamageDealt?: (b: Battle, p: Player, dmg: number, victim: Player, opts: TakeDamageOptions) => number | void
     onTurn?: (b: Battle, p: Player) => any

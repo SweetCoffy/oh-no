@@ -4,7 +4,7 @@ import { setKeys, rng, bar, Dictionary, getID, xOutOfY, formatString, getName, b
 import { makeStats, calcStats, Stats, baseStats, StatID, calcStat, ExtendedStatID, ExtendedStats, makeExtendedStats } from "./stats.js"
 import { moves, Category } from "./moves.js"
 import { BattleLobby } from "./lobby.js"
-import { getString, LocaleString } from "./locale.js"
+import { getString, Locales, LocaleString } from "./locale.js"
 import { getUser } from "./users.js"
 import { HeldItem, ItemClass, items } from "./helditem.js"
 import { FG_Gray, Start, Reset, LogColor, LogColorWAccent } from "./ansi.js"
@@ -14,8 +14,11 @@ import { BotAI, BotAISettings } from "./battle-ai.js"
 export const BASELINE_DEF = 250
 
 export function calcDamage(dmg: number, def: number, level: number) {
+    return dmg * getDamageDEFMul(def, level)
+}
+export function getDamageDEFMul(def: number, level: number) {
     let lf = calcStat(BASELINE_DEF, level)
-    return Math.ceil(dmg * (lf / (def + lf)))
+    return lf / (lf + def)
 }
 export function calcMoveDamage(pow: number, atk: number, def: number, level: number) {
     return calcDamage((atk * pow / 100), def, level)
@@ -242,7 +245,7 @@ statusTypes.set("bleed", new StatusType("Bleeding", "Bleed", (b, p) => b.logL("s
     })
 }))
 type StatusModifierData = {
-    mods: (StatModifier & { id: string, stat: StatID })[]
+    mods: (StatModifier & { id: string, stat: ExtendedStatID })[]
 }
 let rush = new StatusType("Reckless Rush", "Rush", (b, p, s) => {
     let charge = p.charge
@@ -325,7 +328,64 @@ export interface StatModifier {
     disabled?: boolean,
     label?: string,
 }
+export type DamageTakenModifier = {
+    order: number,
+    func: (b: Battle, player: Player, damage: number, opts: TakeDamageOptions) => number,
+}
+export type DamageDealtModifier = {
+    order: number,
+    func: (b: Battle, player: Player, damage: number, target: Player, opts: TakeDamageOptions) => number,
+}
 export type StatModifierWithID = StatModifier & { id: string }
+const defaultDamageTakenModifiers: DamageTakenModifier[] = [
+    {
+        order: -9999,
+        func(b, p, dmg, opts) {
+            if (!p.protect)
+                return dmg
+            if (opts.breakshield) {
+                p.protect = false
+                p.logL("dmg.breakthrough", { player: p.toString() })
+                return dmg * 0.75
+            }
+            b.logL("dmg.block", { player: p.toString(), damage: Math.floor(dmg) })
+            p.damageBlocked += dmg
+            p.damageBlockedInTurn += dmg
+            return 0
+        }
+    },
+    {
+        order: -10,
+        func(b, p, dmg, opts) {
+            if (p.absorption <= 0) return dmg
+            let absorbPercent = p.absorptionTier * 0.1
+            let maxAbsorb = p.absorption
+            let absorb = Math.ceil(Math.min(absorbPercent, maxAbsorb))
+            dmg -= absorb
+            p.absorption -= absorb
+            return dmg
+        }
+    },
+    {
+        order: -2,
+        func(b, p, dmg, opts) {
+            return dmg * Math.max(1 - p.cstats.dr / 100, 0)
+        }
+    },
+    {
+        order: -1,
+        func(b, p, dmg, opts) {
+            if (!opts.defStat) return dmg
+            if (!opts.atkLvl) return dmg
+            let def = p.cstats[opts.defStat]
+            let lvl = opts.atkLvl
+            let defMul = getDamageDEFMul(def, lvl)
+            let totalReduced = dmg * (1 - defMul)
+            return dmg * defMul
+        }
+    }
+]
+const defaultDamageDealtModifiers: DamageDealtModifier[] = []
 const defaultStats: ExtendedStats = {
     hp: 0,
     atk: 0,
@@ -410,6 +470,62 @@ export class Player {
     toString() {
         return `[${teamColors[this.team] || "a"}]${this.name}[r]`
     }
+    getDamageTakenModifiers(): DamageTakenModifier[] {
+        let mods = [...defaultDamageTakenModifiers]
+        let ab = abilities.get(this.ability ?? "")
+        if (ab) {
+            mods.push({
+                order: ab.damageTakenModifierOrder,
+                func: (b, p, dmg, opts) => {
+                    let override = ab.damage(b, p, dmg, opts.inflictor, opts)
+                    return override ?? dmg
+                }
+            })
+        }
+        let defenseItem = this.itemSlots.defense
+        if (defenseItem) {
+            let item = items.get(defenseItem.id)
+            if (item?.onDamage) {
+                let onDamage = item.onDamage
+                mods.push({
+                    order: item.damageTakenModifierOrder,
+                    func: (b, p, dmg, opts) => {
+                        let override = onDamage(b, p, defenseItem, dmg, opts)
+                        return override ?? dmg
+                    }
+                })
+            }
+        }
+        return mods
+    }
+    getDamageDealtModifiers(): DamageDealtModifier[] {
+        let mods = [...defaultDamageDealtModifiers]
+        let ab = abilities.get(this.ability ?? "")
+        if (ab) {
+            mods.push({
+                order: ab.damageDealtModifierOrder,
+                func: (b, p, dmg, target, opts) => {
+                    let override = ab.damageDealt(b, p, dmg, target, opts)
+                    return override ?? dmg
+                }
+            })
+        }
+        let offenseItem = this.itemSlots.offense
+        if (offenseItem) {
+            let item = items.get(offenseItem.id)
+            if (item?.onDamageDealt) {
+                let damageDealt = item.onDamageDealt
+                mods.push({
+                    order: item.damageDealtModifierOrder,
+                    func: (b, p, dmg, target, opts) => {
+                        let override = damageDealt(b, p, offenseItem, dmg, target, opts)
+                        return override ?? dmg
+                    }
+                })
+            }
+        }
+        return mods
+    }
     getModifierValue(value: number, mods: StatModifierWithID[], exclude: string[] = []) {
         let addAccumulator = 0
         let multAccumulator = 1
@@ -428,7 +544,7 @@ export class Player {
         }
         return Math.max(Math.round(((value + value * multAddAccumulator) * multAccumulator) + addAccumulator), 0)
     }
-    addModifier(stat: StatID, mod: StatModifier) {
+    addModifier(stat: ExtendedStatID, mod: StatModifier) {
         let id = getID();
         let e = {
             ...mod,
@@ -445,13 +561,13 @@ export class Player {
         this.recalculateStats()
         return e;
     }
-    removeModifier(stat: StatID, id: string) {
+    removeModifier(stat: ExtendedStatID, id: string) {
         let i = this.modifiers[stat].findIndex(el => el.id == id)
         if (i == -1) return
         this.modifiers[stat].splice(i, 1)
         this.recalculateStats()
     }
-    getModifier(stat: StatID, id: string) {
+    getModifier(stat: ExtendedStatID, id: string) {
         return this.modifiers[stat].find(el => el.id == id);
     }
     get charge(): number {
@@ -637,7 +753,7 @@ export type MoveCastOpts = {
     pow: number,
     critMul: number,
 }
-type TakeDamageType = "none" | Category | "ability"
+export type TakeDamageType = "none" | Category | "ability"
 export interface TakeDamageOptions {
     silent?: boolean,
     message?: LocaleString,
@@ -839,7 +955,7 @@ export class Battle extends EventEmitter {
         this.logs.push(formatString(str, color))
         this.emit("log", str)
     }
-    logL(str: string, vars: Dictionary<any> | any[], color: LogColorWAccent = "white") {
+    logL(str: LocaleString, vars: Dictionary<any> | any[], color: LogColorWAccent = "white") {
         this.log(getString(str, vars), color)
     }
     sortActions() {
@@ -863,131 +979,52 @@ export class Battle extends EventEmitter {
         } else return false
     }
     takeDamage(user: Player, damage: number, silent: boolean = false, message: LocaleString = "dmg.generic", breakshield: boolean = false, inflictor?: Player, opts: TakeDamageOptions = {}) {
-        if (user.dead) return false
-        if (damage < 0) return this.heal(user, -damage, silent);
-        opts.inflictor = inflictor
-        opts.silent = silent
-        opts.breakshield = breakshield
-        opts.message = message
-        if (breakshield && user.protect) {
-            damage /= 4
-            user.protect = false
-            this.log(getString("dmg.breakthrough", { player: user.toString() }))
-        } else if (user.protect) {
-            user.damageBlocked += damage
-            user.damageBlockedInTurn += damage
-            this.log(getString("dmg.block", { player: user.toString(), damage: Math.floor(damage) }))
-            return false
-        }
-        let mirror = user.helditems.find(el => el.id == "mirror")
-        if (inflictor && mirror && !mirror.remove) {
-            if (!breakshield) {
-                let reflect = (mirror.durability ?? (mirror.durability = 100)) / 100 * 0.25
-                if (mirror.durability >= 100) {
-                    this.logL("item.mirror.perfect", { player: user.toString() })
-                    reflect = 0.6
-                }
-                let dmg = Math.floor(Math.min(damage, user.maxhp * 0.75) * reflect)
-                mirror.durability -= (damage / user.maxhp) * 200
-                let mirrorMax = Math.floor(user.maxhp / 2)
-                let mirrorCur = Math.floor(mirror.durability / 100 * user.maxhp / 2)
-                this.logL("item.mirror.reflect", { player: user.toString(), bar: `[${xOutOfY(mirrorCur, mirrorMax)}]` })
-                this.takeDamage(inflictor, dmg, false, "dmg.generic", false)
-                damage = Math.floor(damage * (1 - reflect))
-            } else mirror.durability = 0;
-            //@ts-ignore
-            if (mirror?.durability <= 0) {
-                this.logL("item.mirror.shatter", { player: user.toString() })
-                this.statBoost(user, "def", -1)
-                this.statBoost(user, "spdef", -1)
-                mirror.remove = true
-                this.takeDamage(user, user.maxhp / 8)
-                this.logL("item.mirror.shards", { player1: user.toString(), player2: inflictor.toString() }, "red")
-                this.inflictStatus(user, "bleed")
-                this.inflictStatus(inflictor, "bleed")
+        this.takeDamageO(user, damage, {
+            ...opts,
+            silent,
+            inflictor,
+            breakshield,
+            message,
+        })
+    }
+    takeDamageO(target: Player, dmg: number, opts: TakeDamageOptions = {}) {
+        if (target.dead) return
+        let prevHp = target.hp
+        let targetDmgMods = target.getDamageTakenModifiers()
+        let infDmgMods: DamageDealtModifier[] = []
+        if (opts.inflictor) {
+            infDmgMods = opts.inflictor.getDamageDealtModifiers()
+            infDmgMods.sort((a, b) => a.order - b.order)
+            for (let mod of infDmgMods) {
+                dmg = mod.func(this, opts.inflictor, dmg, target, opts)
             }
         }
-        if (inflictor) {
-            if (inflictor.itemSlots.offense) {
-                let item = inflictor.itemSlots.offense
-                let itemType = items.get(item.id)
-                let newDmg = itemType?.onDamageDealt?.(this, inflictor, item, damage, user, opts)
-                if (typeof newDmg == "number") {
-                    damage = newDmg
-                }
-            }
+        targetDmgMods.sort((a, b) => a.order - b.order)
+        for (let mod of targetDmgMods) {
+            dmg = mod.func(this, target, dmg, opts)
         }
-        let ab = abilities.get(user.ability ?? "")
-        let infAb = abilities.get(inflictor?.ability ?? "")
-        if (inflictor && infAb?.damageDealt) {
-            let dmgOverride = infAb.damageDealt(this, inflictor, damage, user, opts)
-            if (dmgOverride != null) {
-                damage = dmgOverride
-            }
-        }
-        if (user.itemSlots.defense) {
-            let item = user.itemSlots.defense
-            let itemType = items.get(item.id)
-            let dmgOverride = itemType?.onDamage?.(this, user, item, damage, opts)
-            if (dmgOverride != null) {
-                damage = dmgOverride
-            }
-        }
-        if (opts.atkLvl && opts.defStat) {
-            let pen = (opts.defPen || 0)
-            let lvl = opts.atkLvl
-            let def = Math.max(user.cstats[opts.defStat] * (1 - pen), 1)
-            damage = calcDamage(damage, def, lvl)
-        }
-        if (user.absorption > 0) {
-            let reduction = Math.min(user.absorptionTier, 9) * 0.1
-            let absorb = Math.floor(Math.min(damage * (1 - reduction), user.absorption))
-            user.absorption -= absorb
-            damage -= absorb
-            if (user.absorption <= 0) {
-                user.absorptionTier = 1
-                user.absorption = 0
-            };
-        }
-        if (ab?.damage) {
-            let dmgOverride = ab.damage(this, user, damage, inflictor, opts)
-            if (dmgOverride != null) {
-                damage = dmgOverride
-            }
-        }
-        if (damage == 0) {
-            if (!silent) this.logL("dmg.none", { player: user.toString() }, "unimportant")
+        dmg = Math.ceil(dmg)
+        if (dmg <= 0) {
+            if (!opts.silent) this.logL("dmg.none", { player: target.toString(), damage: Math.floor(dmg) }, "gray")
             return
         }
-        if (isNaN(damage)) return this.log(`Tried to deal NaN damage to ${user.name}`, "yellow")
-        damage = Math.ceil(damage)
-        if (inflictor) inflictor.damageDealt += damage
-        user.hp -= damage
-        if (isNaN(user.hp)) user.hp = 0;
-
-        user.addEvent({ type: "damage", amount: damage, inflictor }, this.turn)
-        user.damageTaken += damage
-        if (!silent) this.log(getString(message, { player: user.toString(), damage: Math.floor(damage) + "" }), "red")
-        let death = 0 - user.plotArmor
-        if (user.hp <= death) {
-            if (Math.random() < 0.05) {
-                user.hp = death + 1
-                this.logL(`dmg.rng`, { player: user.toString() })
-                return true
+        target.hp -= dmg
+        this.logL(opts.message ?? "dmg.generic", { player: target.toString(), damage: Math.floor(dmg), Inf: opts.inflictor?.toString?.() ?? "unknown" }, "red")
+        if (target.hp <= -target.plotArmor) {
+            let deathMsg = "dmg.death"
+            if (target.hp < -target.plotArmor - target.maxhp) {
+                deathMsg = "dmg.overkill"
             }
-            if (user.hp < -user.maxhp + death) this.logL("dmg.overkill", { player: user.toString() }, "red")
-            else this.log(getString("dmg.death", { player: user.toString() }), "red")
-            user.hp = death
-            return true
+            if (opts.inflictor) {
+                deathMsg += ".player"
+            }
+            this.logL(deathMsg as LocaleString, { player: target.toString(), Inf: opts.inflictor?.toString?.() ?? "unknown" }, "red")
+            target.hp = -target.plotArmor
+            return
         }
-        if (user.hp + damage > 0 && user.hp <= 0 && user.hp > death) {
-            this.logL("dmg.plotarmor", { player: user.toString() }, "accent")
+        if (target.hp <= 0 && prevHp > 0) {
+            this.logL("dmg.plotarmor", { player: target.toStrin() })
         }
-
-        return true
-    }
-    takeDamageO(user: Player, damage: number, options: TakeDamageOptions = {}) {
-        return this.takeDamage(user, damage, options.silent, (options.message || "dmg.generic") as LocaleString, options.breakshield, options.inflictor, options)
     }
     heal(user: Player, amount: number, silent: boolean = false, message: LocaleString = "heal.generic", overheal: boolean = false) {
         if (user.status.some((s) => s.type == "bleed")) return false
