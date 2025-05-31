@@ -12,7 +12,7 @@ export class Ability {
         return this.onDamage?.(b, p, dmg, inf, opts)
     }
     damageDealt(b: Battle, p: Player, dmg: number, victim: Player, opts: TakeDamageOptions = {}) {
-        this.onDamageDealt?.(b, p, dmg, victim, opts)
+        return this.onDamageDealt?.(b, p, dmg, victim, opts)
     }
     turn(b: Battle, p: Player) {
         this.onTurn?.(b, p)

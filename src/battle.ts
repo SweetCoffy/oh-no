@@ -21,8 +21,8 @@ export function calcMoveDamage(pow: number, atk: number, def: number, level: num
     return calcDamage((atk * pow / 100), def, level)
 }
 export interface CategoryStats {
-    atk: string,
-    def: string,
+    atk: ExtendedStatID,
+    def: ExtendedStatID,
 }
 export const teamColors: LogColor[] = [
     "blue",
@@ -303,11 +303,11 @@ export function calcMul(stages: number) {
     if (stages < 0) return Math.max(1 / (stages / MAX_STAT_STAGES * 4), 0.25)
     return 1
 }
-export function getDEF(player: Player, category: Category) {
-    return Number(player[categories[category].def])
+export function getDEF(player: Player, category: Category): number {
+    return player.cstats[categories[category].def] ?? 0
 }
-export function getATK(player: Player, category: Category) {
-    return Number(player[categories[category].atk])
+export function getATK(player: Player, category: Category): number {
+    return player.cstats[categories[category].atk] ?? 0
 }
 export interface Status {
     duration: number,
@@ -479,7 +479,7 @@ export class Player {
     status: Status[] = []
     /** The player's stat modifiers */
     statStages: Stats = makeStats()
-    private statStageModifiers: {[x in StatID]: StatModifier}
+    private statStageModifiers: { [x in StatID]: StatModifier }
     /** The ID of the player */
     id: string
     /** The player's current held items */
@@ -602,7 +602,7 @@ export class Player {
         this.prevHp = this.hp
         this._tempname = getName()
     }
-    [key: string]: number | any
+    [key: string]: any
 }
 export type ActionType = "move" | "item"
 export interface BaseAction {
@@ -644,7 +644,7 @@ export interface TakeDamageOptions {
     inflictor?: Player,
     breakshield?: boolean,
     type?: TakeDamageType,
-    defStat?: StatID,
+    defStat?: ExtendedStatID,
     defPen?: number
     atkLvl?: number
 }
@@ -683,8 +683,6 @@ export class Battle extends EventEmitter {
     }
     async infoMessage(channel: SendableChannels) {
         let b = this
-        let humans = this.players.filter(el => el.team == 0)
-        let bots = this.players.filter(el => el.team == 1)
         function getIcons(player: Player) {
             let icons = ""
             for (let s of player.status) {
@@ -734,10 +732,10 @@ export class Battle extends EventEmitter {
                 for (let i in teams) {
                     let damageDealt = 0
                     let damageTaken = 0
-    
+
                     let totalMaxHealth = 0
                     let totalHealth = 0
-    
+
                     let players = teams[i]
                     str += formatString(`[${teamColors[i]}]Team ${teamNames[i]}[r]\n`)
                     for (let p of players) {
@@ -747,7 +745,7 @@ export class Battle extends EventEmitter {
                         totalHealth += p.hp + p.plotArmor
                         str += "\n" + playerInfo(p)
                     }
-    
+
                     let hpColor = "red"
                     if (totalHealth > totalMaxHealth / 5) hpColor = "yellow"
                     if (totalHealth > totalMaxHealth / 2) hpColor = "green"
@@ -867,6 +865,10 @@ export class Battle extends EventEmitter {
     takeDamage(user: Player, damage: number, silent: boolean = false, message: LocaleString = "dmg.generic", breakshield: boolean = false, inflictor?: Player, opts: TakeDamageOptions = {}) {
         if (user.dead) return false
         if (damage < 0) return this.heal(user, -damage, silent);
+        opts.inflictor = inflictor
+        opts.silent = silent
+        opts.breakshield = breakshield
+        opts.message = message
         if (breakshield && user.protect) {
             damage /= 4
             user.protect = false
@@ -915,54 +917,55 @@ export class Battle extends EventEmitter {
                 }
             }
         }
+        let ab = abilities.get(user.ability ?? "")
+        let infAb = abilities.get(inflictor?.ability ?? "")
+        if (inflictor && infAb?.damageDealt) {
+            let dmgOverride = infAb.damageDealt(this, inflictor, damage, user, opts)
+            if (dmgOverride != null) {
+                damage = dmgOverride
+            }
+        }
         if (user.itemSlots.defense) {
             let item = user.itemSlots.defense
             let itemType = items.get(item.id)
-            let newDmg = itemType?.onDamage?.(this, user, item, damage, opts)
-            if (typeof newDmg == "number") {
-                damage = newDmg
+            let dmgOverride = itemType?.onDamage?.(this, user, item, damage, opts)
+            if (dmgOverride != null) {
+                damage = dmgOverride
             }
         }
         if (opts.atkLvl && opts.defStat) {
             let pen = (opts.defPen || 0)
             let lvl = opts.atkLvl
-            let def = Math.max(user[opts.defStat] * (1 - pen), 1)
+            let def = Math.max(user.cstats[opts.defStat] * (1 - pen), 1)
             damage = calcDamage(damage, def, lvl)
         }
-        opts.inflictor = inflictor
-        opts.silent = silent
-        opts.breakshield = breakshield
-        opts.message = message
-        let ab = abilities.get(user.ability ?? "")
-        let infAb = abilities.get(inflictor?.ability ?? "")
+        if (user.absorption > 0) {
+            let reduction = Math.min(user.absorptionTier, 9) * 0.1
+            let absorb = Math.floor(Math.min(damage * (1 - reduction), user.absorption))
+            user.absorption -= absorb
+            damage -= absorb
+            if (user.absorption <= 0) {
+                user.absorptionTier = 1
+                user.absorption = 0
+            };
+        }
         if (ab?.damage) {
             let dmgOverride = ab.damage(this, user, damage, inflictor, opts)
             if (dmgOverride != null) {
                 damage = dmgOverride
             }
         }
-        user.addEvent({ type: "damage", amount: damage, inflictor }, this.turn)
         if (damage == 0) {
             if (!silent) this.logL("dmg.none", { player: user.toString() }, "unimportant")
             return
         }
-        if (user.absorption > 0) {
-            let reduction = Math.min(user.absorptionTier, 9) * 0.1
-            user.absorption -= damage * reduction;
-            damage *= 1 - reduction;
-            if (user.absorption <= 0) {
-                user.absorptionTier = 1
-                user.absorption = 0
-            };
-        }
-        if (inflictor && infAb?.damageDealt) {
-            infAb.damageDealt(this, inflictor, damage, user, opts)
-        }
         if (isNaN(damage)) return this.log(`Tried to deal NaN damage to ${user.name}`, "yellow")
+        damage = Math.ceil(damage)
         if (inflictor) inflictor.damageDealt += damage
         user.hp -= damage
         if (isNaN(user.hp)) user.hp = 0;
 
+        user.addEvent({ type: "damage", amount: damage, inflictor }, this.turn)
         user.damageTaken += damage
         if (!silent) this.log(getString(message, { player: user.toString(), damage: Math.floor(damage) + "" }), "red")
         let death = 0 - user.plotArmor
@@ -1073,7 +1076,7 @@ export class Battle extends EventEmitter {
                         atkLvl: action.player.level,
                         inflictor: action.player,
                         type: cat,
-                        defStat: cat == "physical" ? "def" : "spdef",
+                        defStat: categories[cat].def,
                         defPen: 0,
                         breakshield: move.breakshield,
                     }
