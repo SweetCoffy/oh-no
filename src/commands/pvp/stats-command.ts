@@ -6,6 +6,7 @@ import { getString } from "../../locale.js";
 import { getPresetList, makeStats, getPreset, presets, StatID, limitStats, calcStat, calcStats, StatPreset } from "../../stats.js";
 import { applyPreset, getTempData, getUser } from "../../users.js";
 import { bar, confirmation, getMaxTotal, helditemString, indent } from "../../util.js"
+import { fnum } from "../../number-format.js";
 function getWeighted(weights: number[], total: number = 600) {
     let totalW = weights.reduce((prev, cur) => prev + cur, 0)
     let ar = []
@@ -413,7 +414,7 @@ export let command: Command = {
                 let string = codeBlock("ansi", `${"Base".padEnd(40)}Level 50` + "\n" + Object.keys(statsL50).map((key) => {
                     let statL50 = statsL50[key as StatID]
                     let stat = stats[key as StatID]
-                    return `${getString("stat." + key).padEnd(12)} ${stat.toString().padStart(3)}|${bar(stat, maxDisp, 20)}|`.padEnd(40) + `${statL50}`
+                    return `${getString("stat." + key).padEnd(12)} ${stat.toString().padStart(3)}|${bar(stat, maxDisp, 20)}|`.padEnd(40) + `${fnum(statL50)}`
                 }).join("\n")
                     + `\n\nAbility: ${abilityInfo === null ? "None" : abilityInfo?.name || "Invalid"}\n`
                     + (abilityInfo ? `${indent(abilityInfo.description, 4)}\n` : "")

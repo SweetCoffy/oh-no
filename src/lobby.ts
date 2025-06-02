@@ -134,7 +134,7 @@ export class BattleLobby {
             let exclude = ["tonk", "extreme-tonk", "default"]
             allowedPresets = allowedPresets.filter(el => !exclude.includes(el))
         }
-        let b = allowedPresets.map(el => presets.get(el)?.stats)
+        let b = allowedPresets.map(el => presets.get(el)).filter(v => v != undefined)
         let perTeam = Math.floor(this.botCount + this.users.length) / this.teamCount
         let teams = new Array(this.teamCount).fill(0)
         for (let p of this.battle.players) {
@@ -151,9 +151,12 @@ export class BattleLobby {
                 bot.team = teams.findIndex((v) => v < perTeam || v <= 0)
                 teams[bot.team]++
             }
-            bot.baseStats = limitStats(bot.baseStats, getMaxTotal({ ability: bot.ability }))
+            let preset = b[Math.floor(Math.random() * b.length)]
             //@ts-ignore
-            bot.baseStats = {...b[Math.floor(Math.random() * b.length)]}
+            bot.baseStats = { ...preset.stats }
+            bot.ability = preset.ability
+            bot.moveset = preset.moveset ?? bot.moveset
+            bot.baseStats = limitStats(bot.baseStats, getMaxTotal({ ability: bot.ability }))
             bot.updateStats()
             if (this.type == "boss") {
                 if (i == 0) {
@@ -179,6 +182,7 @@ export class BattleLobby {
                     bot.helditems.push({id: it[Math.floor(Math.random() * it.length)]})
                 }
             }
+            bot.updateItems()
             this.battle.players.push(bot)
         }
         if (this.flags.W) {

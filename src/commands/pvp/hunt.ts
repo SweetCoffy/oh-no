@@ -5,8 +5,9 @@ import { enemies, Enemy } from "../../enemies.js";
 import { createLobby } from "../../lobby.js";
 import { calcStats, StatID } from "../../stats.js";
 import { addXP, getUser } from "../../users.js";
-import { formatString, levelUpMessage, money, randomRange, weightedDistribution, weightedRandom } from "../../util.js";
+import { levelUpMessage, randomRange, weightedDistribution, weightedRandom } from "../../util.js";
 import { getString } from "../../locale.js";
+import { fnum, money } from "../../number-format.js";
 
 export let command: Command = {
     name: "hunt",
@@ -132,7 +133,7 @@ export let command: Command = {
                 let oldLevel = u.level
                 let m = BigInt(Math.floor(xp * (xp * 0.075)))/100n*15n
                 getUser(i.user).money.points += m
-                await channel.send(`You won, gained ${xp} XP and ${money(m)}`)
+                await channel.send(`You won, gained ${fnum(xp)} XP and ${money(m)}`)
                 let levels = addXP(i.user, xp)
                 let newLevel = u.level
                 if (levels > 0) {

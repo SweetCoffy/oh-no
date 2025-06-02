@@ -1,6 +1,6 @@
 import { EventEmitter } from "events"
 import { User, Collection, APIEmbedField, AttachmentBuilder, SendableChannels, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js"
-import { setKeys, rng, bar, Dictionary, getID, xOutOfY, formatString, getName, barDelta, dispDelta } from "./util.js"
+import { setKeys, rng, bar, Dictionary, getID, xOutOfY, formatString, getName, barDelta } from "./util.js"
 import { makeStats, calcStats, Stats, baseStats, StatID, calcStat, ExtendedStatID, ExtendedStats, makeExtendedStats } from "./stats.js"
 import { moves, Category } from "./moves.js"
 import { BattleLobby } from "./lobby.js"
@@ -10,6 +10,7 @@ import { HeldItem, ItemClass, items } from "./helditem.js"
 import { FG_Gray, Start, Reset, LogColor, LogColorWAccent } from "./ansi.js"
 import { abilities } from "./abilities.js"
 import { BotAI, BotAISettings } from "./battle-ai.js"
+import { dispDelta, fnum } from "./number-format.js"
 
 export const BASELINE_DEF = 250
 
@@ -351,6 +352,8 @@ const defaultDamageTakenModifiers: DamageTakenModifier[] = [
             b.logL("dmg.block", { player: p.toString(), damage: Math.floor(dmg) })
             p.damageBlocked += dmg
             p.damageBlockedInTurn += dmg
+            // workaround to hide the "took no damage" message
+            opts.silent = true
             return 0
         }
     },
@@ -621,7 +624,7 @@ export class Player {
     _tempname = ""
     get name() {
         if (this._nickname) return this._nickname
-        if (this.user) return this.user.username
+        if (this.user) return this.user.displayName
         return this._tempname
     }
     set name(v: string) {
@@ -659,7 +662,7 @@ export class Player {
      * @param updateHp Whether or not to increase or decrease current HP if Max HP is different
      */
     updateStats(updateHp: boolean = true) {
-        let lastmax = this.maxhp
+        let lastHpFrac = this.hp / this.maxhp
         setKeys(defaultStats, this.stats)
         let resourceBaseline = calcStat(100, this.level)
         setKeys(calcStats(this.level, this.baseStats), this.stats)
@@ -667,8 +670,7 @@ export class Player {
         this.stats.maglimit = Math.ceil(Math.max(30 + this.stats.spatk / resourceBaseline * 40, 50) / 5) * 5
         this.stats.crit = Math.min(Math.ceil(this.stats.spd / resourceBaseline * 10), 50)
         this.recalculateStats()
-        let max = this.maxhp
-        if (updateHp) this.hp = Math.ceil(this.hp * (max / lastmax))
+        if (updateHp) this.hp = Math.floor(lastHpFrac * this.maxhp)
     }
     updateStatStages() {
         for (let k in this.statStages) {
@@ -680,17 +682,21 @@ export class Player {
         this.recalculateStats()
     }
     updateItems() {
-        this.helditems = this.helditems.filter(el => !el.remove)
         for (let k in this.itemSlots) {
             this.itemSlots[k as ItemClass] = undefined
         }
         for (let item of this.helditems) {
             let itemType = items.get(item.id)
             if (!itemType) continue
+            if (item.remove) continue
             if (itemType.class != "passive") {
                 if (!this.itemSlots[itemType.class]) this.itemSlots[itemType.class] = item
+                else {
+                    item.remove = true
+                }
             }
         }
+        this.helditems = this.helditems.filter(el => !el.remove)
     }
     constructor(user?: User) {
         if (user) {
@@ -816,9 +822,9 @@ export class Battle extends EventEmitter {
             let barColor = "green"
             if (p.hp <= p.maxhp / 2) barColor = "yellow"
             if (p.hp <= p.maxhp / 4) barColor = "red"
-            let hpString = xOutOfY(Math.floor(p.hp), p.maxhp, true)
+            let hpString = xOutOfY(p.hp, p.maxhp, true)
             if (p.maxhp != p.stats.hp) {
-                hpString += formatString(`[u]/${Math.floor(p.stats.hp)}[r]`)
+                hpString += formatString(`[u]/${fnum(p.stats.hp)}[r]`)
             }
             let barW = Math.min(Math.max(Math.floor(10 * p.maxhp / p.stats.hp), 1), 20)
             let str = `${Start}0;${FG_Gray}m${icons}${Reset}${p.name}` + "\n" +
@@ -897,10 +903,16 @@ export class Battle extends EventEmitter {
             //files: [new AttachmentBuilder(Buffer.from(b.logs.join("\n"))).setName("log.ansi")],
             components: [
                 new ActionRowBuilder<ButtonBuilder>()
-                    .setComponents(new ButtonBuilder()
-                        .setLabel("ATTACK")
-                        .setStyle(ButtonStyle.Primary)
-                        .setCustomId("choose:open_selector"))
+                    .setComponents(
+                        new ButtonBuilder()
+                            .setLabel("ATTACK")
+                            .setStyle(ButtonStyle.Primary)
+                            .setCustomId("choose:open_selector"),
+                        new ButtonBuilder()
+                            .setLabel("INFO")
+                            .setStyle(ButtonStyle.Secondary)
+                            .setCustomId("info:open_selector")
+                    )
             ]
         })
         return msg
@@ -988,7 +1000,10 @@ export class Battle extends EventEmitter {
         })
     }
     takeDamageO(target: Player, dmg: number, opts: TakeDamageOptions = {}) {
-        if (target.dead) return
+        if (target.dead) {
+            if (!opts.silent) this.logL("dmg.dead", { player: target.toString() }, "gray")
+            return
+        }
         let prevHp = target.hp
         let targetDmgMods = target.getDamageTakenModifiers()
         let infDmgMods: DamageDealtModifier[] = []
@@ -1023,7 +1038,7 @@ export class Battle extends EventEmitter {
             return
         }
         if (target.hp <= 0 && prevHp > 0) {
-            this.logL("dmg.plotarmor", { player: target.toStrin() })
+            this.logL("dmg.plotarmor", { player: target.toString() })
         }
     }
     heal(user: Player, amount: number, silent: boolean = false, message: LocaleString = "heal.generic", overheal: boolean = false) {

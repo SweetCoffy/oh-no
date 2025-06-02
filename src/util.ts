@@ -1,7 +1,6 @@
-import { FG_Cyan, FG_Green, FG_Red, FG_Yellow, FG_Gray, FG_Blue, FG_Pink, Start, Reset, color2ANSIAlias, color2ANSITable, LogColor, LogColorWAccent } from "./ansi.js"
-import { ActionRowBuilder, APIActionRowComponent, ButtonBuilder, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, ContextMenuCommandInteraction, Message } from "discord.js"
+import { Start, Reset, color2ANSIAlias, color2ANSITable, LogColor, LogColorWAccent } from "./ansi.js"
+import { ActionRowBuilder, APIActionRowComponent, ButtonBuilder, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, ContextMenuCommandInteraction, Message, StringSelectMenuBuilder } from "discord.js"
 import { abilities } from "./abilities.js"
-import { formats } from "./formats.js"
 import { ItemResponse, ItemStack, shopItems } from "./items.js"
 import { BASE_STAT_TOTAL } from "./params.js"
 import { statSync, readdirSync } from "fs"
@@ -11,7 +10,9 @@ import { readFileSync } from "fs"
 import { UserInfo } from "./users.js"
 import { calcStats, StatID } from "./stats.js"
 import { getString } from "./locale.js"
-export const CURRENCY_ICON = "$"
+import { Battle, Player, teamEmojis } from "./battle.js"
+import { fnum, fracfmt } from "./number-format.js"
+
 export function lexer(str: string) {
     let ar: string[] = []
     let acc: string = ""
@@ -90,7 +91,7 @@ export function barDelta(num: number, prevNum: number, max: number, width: numbe
     let c = 0
     let fill = "█"
     let bg = " "
-    let things = ["▉", "▊", "▋", "▌", "▍", "▎", "▏"]
+    let partialFill = ["▉", "▊", "▋", "▌", "▍", "▎", "▏"]
 
     let str = ""
     if (!Number.isFinite(num)) {
@@ -99,23 +100,23 @@ export function barDelta(num: number, prevNum: number, max: number, width: numbe
         max = 1
     }
     else {
-        if (num - 0.01 > max) {
+        if (num - 0.1 > max) {
             str += `${Math.floor(num / max * 100)}%`
         }
     }
     width -= str.length;
-    let chars = Math.ceil((((num - 0.01) / max) * width) % (width))
+    let chars = Math.ceil((((num - 0.1) / max) * width) % width)
     while (c < chars) {
         let f = fill
-        let epicVal = 1
-        if (c + 1 >= chars && num % max != 0) epicVal = num / max * width % 1
-        if (epicVal < 1) f = things[0]
-        if (epicVal < 7 / 8) f = things[1]
-        if (epicVal < 3 / 4) f = things[2]
-        if (epicVal < 5 / 8) f = things[3]
-        if (epicVal < 1 / 2) f = things[4]
-        if (epicVal < 3 / 8) f = things[5]
-        if (epicVal < 1 / 4) f = things[6]
+        let remainder = 1
+        if (c + 1 >= chars && num % max != 0) remainder = num / max * width % 1
+        if (remainder < 1) f = partialFill[0]
+        if (remainder < 7 / 8) f = partialFill[1]
+        if (remainder < 3 / 4) f = partialFill[2]
+        if (remainder < 5 / 8) f = partialFill[3]
+        if (remainder < 1 / 2) f = partialFill[4]
+        if (remainder < 3 / 8) f = partialFill[5]
+        if (remainder < 1 / 4) f = partialFill[6]
         c++
         str += f
     }
@@ -129,46 +130,9 @@ export function barDelta(num: number, prevNum: number, max: number, width: numbe
     }
     return str
 }
-export function dispDelta(amount: number, color = false) {
-    let str = amount < 0 ? `${amount}` : `+${amount}`
-    if (color) {
-        if (amount == 0) {
-            str = `[u]${str}[r]`
-        }
-        else if (amount > 0) {
-            str = `[s]${str}[r]`
-        } else {
-            str = `[f]${str}[r]`
-        }
-    }
-    return str
-}
 export function indent(str: string, amount: number = 1) {
     let indent = " ".repeat(amount)
     return str.split("\n").map(line => indent + line).join("\n")
-}
-export function dispMul(mul: number, asDelta = true, color = false) {
-    let str
-    if (asDelta) {
-        let am = `${((mul - 1) * 100).toFixed(1)}%`
-        if (mul >= 1.0) {
-            am = `+${am}`
-        }
-        str = am
-    } else {
-        str = `×${(mul * 100).toFixed(1)}%`
-    }
-    if (color) {
-        if (mul == 1) {
-            str = `[u]${str}[r]`
-        }
-        else if (mul > 1) {
-            str = `[s]${str}[r]`
-        } else {
-            str = `[f]${str}[r]`
-        }
-    }
-    return str
 }
 export function bar(num: number, max: number, width: number = 25) {
     return barDelta(num, 0, max, width)
@@ -176,23 +140,6 @@ export function bar(num: number, max: number, width: number = 25) {
 export function abs(number: bigint | number) {
     if (number < 0n) return -number
     return number
-}
-export function format(number: bigint) {
-    let funi = null
-    for (let f of formats) {
-        if (abs(number) >= f.min) funi = f
-    }
-    if (!funi) return `${number}`
-    let m = number / funi.min
-    let d = abs((number % funi.min) / (funi.min / 100n))
-    function yes(num: bigint) {
-        let str = num.toString()
-        let a = str.slice(0, 4)
-        let count = str.length - 4
-        return `${a}e${count}`
-    }
-    if (abs(number) > funi.min * 1000n) return `${yes(number)}`
-    return `${m}.${d}${funi.suffix}`
 }
 export async function itemResponseReply(res: ItemResponse, i: CommandInteraction | ContextMenuCommandInteraction) {
     if (!res.reason) {
@@ -329,19 +276,18 @@ export function min(...numbers: bigint[]): bigint {
     return m || 0n
 }
 
-export function money(amount: bigint) {
-    return `${CURRENCY_ICON}${format(amount)}`
+let idCounter = 0
+const ID_MAX = 2 ** 16 - 1
+export function getID(): string {
+    let counter = idCounter = (++idCounter % ID_MAX)
+    return counter.toString(16).padStart(4, "0")
 }
-let start = 9999
-let idCounter = start
-export function getID(max: number = 10000) {
-    if (idCounter < 0) idCounter = start
-    return (idCounter-- % max).toString().padStart((max - 1).toString().length, "0")
-}
-let names = readFileSync("names.txt", "utf8").split("\n")
+let nameI = Date.now()
+let names = readFileSync("names.txt", "utf8").split("\n").filter(el => !!el)
 export function getName() {
-    let n = names.pop() as string
-    names.unshift(n)
+    nameI = nameI % names.length
+    let n = names[nameI]
+    nameI += 1 + Math.floor(Math.random() * 4)
     return n
 }
 export function getMaxTotal({ ability }: { ability?: string }) {
@@ -352,14 +298,9 @@ export function subscriptNum(num: number | string) {
     let str = num + ""
     return [...str].map(el => String.fromCharCode((el.charCodeAt(0) - 32) + 0x2070)).join("")
 }
-function formatNumber(n: number) {
-    if (Number.isNaN(n)) return "?"
-    if (!Number.isFinite(n)) return "∞"
-    return n.toString()
-}
 export function xOutOfY(x: number, y: number, color?: boolean) {
-    let xstr = formatNumber(x)
-    let ystr = formatNumber(y)
+    let xstr = fnum(x)
+    let ystr = fnum(y)
     let longest = Math.max(xstr.length, ystr.length)
     if (color) return `${xstr.padStart(longest, " ")}/[u]${ystr.padEnd(longest, " ")}[r]`
     return `${x.toString().padStart(longest, " ")}/${y.toString().padEnd(longest, " ")}`
@@ -388,7 +329,7 @@ export function levelUpMessage(u: UserInfo, oldLevel: number, newLevel: number) 
         Object.keys(newStats).map(stat => {
             let old = oldStats[stat as StatID]
             let newStat = newStats[stat as StatID]
-            return formatString(`${getString("stat." + stat).padEnd(12)} [a]${old.toString().padStart(5)}[r] -> [s]${newStat.toString().padEnd(5)}[r]`)
+            return formatString(`${getString("stat." + stat).padEnd(12)} [a]${fnum(old).padStart(5)}[r] -> [s]${fnum(newStat).padEnd(5)}[r]`)
         }).join("\n")
 }
 export function timeFormat(seconds: number) {
@@ -448,4 +389,21 @@ export function formatString(str: string, color: LogColorWAccent = "white") {
         if (format == "reset" || format == "r") return `${Start}0;${colorToANSI(color)}m`;
         return `${Start}0;${colorToANSI(format as LogColor)}m`
     }) + Reset
+}
+export function playerSelectorComponent(player: Player, battle: Battle, customId: string, defaultPlayerId: string = "") {
+    let targets = battle.players
+    return new StringSelectMenuBuilder()
+        .setCustomId(customId)
+        .setMaxValues(1)
+        .setMinValues(1)
+        .setPlaceholder("Select a target.")
+        .setOptions(targets.map(v => {
+            return {
+                label: v == player ? v.name + " (You)" : (v.name + (battle.isEnemy(player, v) ? " 🔴" : " 🔵")),
+                emoji: teamEmojis[v.team],
+                value: v.id,
+                default: v.id == defaultPlayerId,
+                description: `HP: ${fnum(v.hp)}/${fnum(v.maxhp)} (${fracfmt.format(v.hp / v.maxhp)})`,
+            }
+        }))
 }

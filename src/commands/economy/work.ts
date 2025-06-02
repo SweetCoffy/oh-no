@@ -2,7 +2,7 @@ import { ApplicationCommandType } from "discord.js"
 import { Command } from "../../command-loader.js"
 import { addItem, shopItems } from "../../items.js"
 import { getRank, getUser } from "../../users.js"
-import { format, money, rng } from "../../util.js"
+import { money } from "../../number-format.js"
 export let command: Command = {
     type: ApplicationCommandType.ChatInput,
     name: "work",

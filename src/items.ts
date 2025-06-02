@@ -1,7 +1,8 @@
 import { AutocompleteInteraction, Collection, User } from "discord.js"
 import { enemies } from "./enemies.js"
 import { getUser } from "./users.js"
-import { Dictionary, format, min } from "./util.js"
+import { Dictionary, min } from "./util.js"
+import { format } from "./number-format.js"
 
 export interface ItemStack {
     item: string,

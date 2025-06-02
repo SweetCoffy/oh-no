@@ -1,5 +1,6 @@
 import { load } from "./content-loader.js"
-import { getString } from "./locale.js"
+import { getString, locale } from "./locale.js"
+import { fracdeltafmt, numdeltafmt } from "./number-format.js"
 import { StatID, Stats } from "./stats.js"
 import { formatString } from "./util.js"
 load("content/locale/en_us/pvp.yml")
@@ -24,25 +25,23 @@ export class DescriptionBuilder {
     mod(stats: { [x in StatID]?: number }) {
         let sorted = Object.entries(stats).sort(([_0, a], [_1, b]) => b - a)
         for (let [stat, v] of sorted) {
-            let percent = (v - 1) * 100
-            let snapped = Math.abs(Math.round(percent * 100) / 100)
-            if (percent >= 0) {
-                this.text += `· [s]Increases [a]${getString("stat." + stat)}[r] by [a]${snapped}%[r]\n`
-            } else {
-                this.text += `· [f]Decreases [a]${getString("stat." + stat)}[r] by [a]${snapped}%[r]\n`
-            }
+            let percent = (v - 1)
+            let snapped = fracdeltafmt.format(percent)
+            let color = "u"
+            if (percent > 0) color = "s"
+            if (percent < 0) color = "f"
+            this.text += `· [a]${getString("stat." + stat)}[r] [${color}]${snapped}[r]\n`
         }
         return this
     }
     addMod(stats: { [x in StatID]?: number }) {
         let sorted = Object.entries(stats).sort(([_0, a], [_1, b]) => b - a)
         for (let [stat, v] of sorted) {
-            let snapped = Math.abs(Math.round(v * 100) / 100)
-            if (v >= 0) {
-                this.text += `· [s]Increases [a]${getString("stat." + stat)}[r] by [a]${snapped}[r]\n`
-            } else {
-                this.text += `· [f]Decreases [a]${getString("stat." + stat)}[r] by [a]${snapped}[r]\n`
-            }
+            let snapped = numdeltafmt.format(v)
+            let color = "u"
+            if (v > 0) color = "s"
+            if (v < 0) color = "f"
+            this.text += `· [a]${getString("stat." + stat)}[r] [${color}]${snapped}[r]\n`
         }
         return this
     }

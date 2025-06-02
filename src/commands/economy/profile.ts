@@ -1,7 +1,8 @@
 import { ApplicationCommandType, ApplicationCommandOptionType } from "discord.js"
 import { Command } from "../../command-loader.js"
 import { getLevelUpXP, getUser, level, getRank } from "../../users.js"
-import { bar, format, settings, money } from "../../util.js"
+import { bar, settings } from "../../util.js"
+import { fnum, format, money } from "../../number-format.js"
 export let command: Command = {
     type: ApplicationCommandType.ChatInput,
     name: "profile",
@@ -40,13 +41,13 @@ export let command: Command = {
 > 
 > **Hunt XP**
 > Level: ${u.level}
-> XP: \`[${bar(u.xp, getLevelUpXP(user), 10)}]\` ${u.xp}/${getLevelUpXP(user)}
+> XP: \`${bar(u.xp, getLevelUpXP(user), 16)}\` ${fnum(u.xp)}/${fnum(getLevelUpXP(user))}
 > 
 > **Message XP**
 > Level ${level(user)}
-> \`[${bar(u.msgLvl_xp - (level(user))**3, (level(user))**3 - (level(user)-2)**3, 10)}]\`
-> XP: ${u.msgLvl_xp}
-> Messages: ${u.msgLvl_messages}
+> \`${bar(u.msgLvl_xp - (level(user)) ** 3, (level(user)) ** 3 - (level(user) - 2) ** 3, 16)}\`
+> XP: ${fnum(u.msgLvl_xp)}
+> Messages: ${fnum(u.msgLvl_messages)}
 ${settings.noSave ? (settings.experimental ? `**• NOTE**: Bot is running in experimental mode, no changes will be saved` : `**• NOTE**: Bot is running in no save mode, no changes will be saved`) : ``}
 `
                 }

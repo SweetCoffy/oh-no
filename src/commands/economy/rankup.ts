@@ -1,7 +1,7 @@
 import { ApplicationCommandType, ApplicationCommandOptionType, ChatInputCommandInteraction } from "discord.js";
 import { Command } from "../../command-loader.js";
 import { getRank, getUser } from "../../users.js";
-import { money } from "../../util.js";
+import { money } from "../../number-format.js";
 
 export let command: Command = {
     name: "rankup",

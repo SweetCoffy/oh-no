@@ -2,15 +2,14 @@ import { Command, commands } from '../../command-loader.js'
 import { getTempData, getUser } from '../../users.js';
 import { ActionRowBuilder, APIEmbedField, ApplicationCommandOptionType, ApplicationCommandType, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, codeBlock, StringSelectMenuBuilder, TextChannel } from 'discord.js';
 import { Move, moves } from '../../moves.js';
-import { getString, LocaleString } from '../../locale.js';
-import { StatID, Stats } from "../../stats.js";
+import { getString } from '../../locale.js';
 import { items } from '../../helditem.js';
 import { abilities } from '../../abilities.js';
-import { dispDelta, formatString, snapTo } from '../../util.js';
-import { teamEmojis } from '../../battle.js';
+import { formatString, playerSelectorComponent, snapTo } from '../../util.js';
+import { ffrac, dispDelta } from '../../number-format.js';
 function moveDescription(move: Move) {
     //@ts-ignore
-    let desc = formatString(`Accuracy: [a]${move.accuracy}%[r]\nCategory: [a]${getString("move.category." + move.category)}[r]`)
+    let desc = formatString(`Accuracy: [a]${ffrac(move.accuracy / 100)}[r]\nCategory: [a]${getString("move.category." + move.category)}[r]`)
     if (move.type == "attack") {
         //@ts-ignore
         desc += formatString(`\nDamage Type: [a]${getString("move.dmgtype." + move.setDamage)}[r]`)
@@ -19,11 +18,11 @@ function moveDescription(move: Move) {
             let dispMult = ""
             let dispMultSuffix = ""
             if (move.setDamage == "percent") {
-                dispMult = `${snapTo(move.power)}%`
+                dispMult = `${ffrac(move.power / 100)}`
                 dispMultSuffix = ` of target's [a]MAX HP[r]`
             }
             if (move.setDamage == "regular") {
-                dispMult = `${snapTo(move.power)}%`
+                dispMult = `${ffrac(move.power / 100)}`
                 dispMultSuffix = ` of user's [a]${getString("stat." + atkStat)}[r] stat`
             }
             desc += formatString(`\nDamage Multiplier: [a]${dispMult}[r]${dispMultSuffix}`)
@@ -169,24 +168,11 @@ export let command: Command = {
                 let moveInfo = moves.get(tmp.move)
                 if (!moveInfo)
                     return await i.reply({ flags: ["Ephemeral"], content: "What." })
-                let targets = battle.players
                 await i.update({
                     content: `Chosen move: **${moveInfo.name}**`,
                     components: [
                         new ActionRowBuilder<StringSelectMenuBuilder>()
-                            .setComponents(new StringSelectMenuBuilder()
-                                .setCustomId("choose:target")
-                                .setMaxValues(1)
-                                .setMinValues(1)
-                                .setPlaceholder("Select a target.")
-                                .setOptions(targets.map(v => {
-                                    return {
-                                        label: v == player ? v.name + " (You)" : (v.name + (battle.isEnemy(player, v) ? " 🔴" : " 🔵")),
-                                        emoji: teamEmojis[v.team],
-                                        value: v.id,
-                                        description: `HP: ${v.hp}/${v.maxhp} (${Math.ceil(v.hp / v.maxhp * 100)}%)`,
-                                    }
-                                }))),
+                            .setComponents(playerSelectorComponent(player, battle, "choose:target")),
                         new ActionRowBuilder<ButtonBuilder>()
                             .setComponents(new ButtonBuilder()
                                 .setLabel("Back")

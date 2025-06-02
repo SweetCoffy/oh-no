@@ -2,7 +2,8 @@ import { ActionRowBuilder, APIActionRowComponent, ApplicationCommandOptionType, 
 import { Command } from "../../command-loader.js"
 import { shopItems, addItem, useItem, shops, Shop, stackString, itemString } from "../../items.js"
 import { getUser } from "../../users.js"
-import { format, itemResponseReply } from "../../util.js"
+import { itemResponseReply } from "../../util.js"
+import { format } from "../../number-format.js"
 export let command: Command = {
     type: ApplicationCommandType.ChatInput,
     name: "shop",

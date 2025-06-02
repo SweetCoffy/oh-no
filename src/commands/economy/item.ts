@@ -2,7 +2,8 @@ import { Command } from "../../command-loader.js"
 import { getUser } from "../../users.js"
 import { Message, ApplicationCommandOptionType, ApplicationCommandType, ComponentType, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, APIActionRowComponent, ButtonStyle } from "discord.js"
 import { addItem, getItem, recipes, shopItems, stackString, useItem } from "../../items.js"
-import { experimental, format, itemResponseReply, lexer, money } from "../../util.js"
+import { experimental, itemResponseReply, lexer } from "../../util.js"
+import { format, money } from "../../number-format.js"
 export let command: Command = {
     type: ApplicationCommandType.ChatInput,
     name: "item",

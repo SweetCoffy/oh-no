@@ -1,6 +1,7 @@
 import { Collection, User } from "discord.js"
 import { getUser, PresetList } from "./users.js"
 import { weightedDistribution } from "./util.js"
+import { MoveID } from "./gen.js"
 export type StatID = "hp" | "atk" | "def" | "spatk" | "spdef" | "spd"
 export type ExtendedStatID = StatID | "chglimit" | "maglimit" | "chgbuildup" | "magbuildup" | "dr" | "crit" | "critdmg"
 export type Stats = {
@@ -14,6 +15,7 @@ export interface StatPreset {
     stats: Stats,
     helditems?: string[],
     ability?: string,
+    moveset?: MoveID[]
 }
 export const baseStats: Stats = {
     hp   :  100,
@@ -39,7 +41,8 @@ presets.set("apache", {
         spdef:   24,
         spd  :  170,
     },
-    helditems: []
+    helditems: [],
+    moveset: ["bonk", "slap", "reckless_rush", "stronk"]
 })
 presets.set("tonk", {
     name: "Tonk",
@@ -51,7 +54,8 @@ presets.set("tonk", {
         spdef: 146,
         spd  :  13,
     },
-    helditems: []
+    helditems: [],
+    moveset: ["nerf_gun", "twitter", "ping", "heal", "mind_overwork"]
 })
 presets.set("extreme-apache", {
     name: "Extreme Apache Attack Helicopter",
@@ -63,7 +67,8 @@ presets.set("extreme-apache", {
         spdef:   44,
         spd  :  132,
     },
-    helditems: []
+    helditems: [],
+    moveset: ["bonk", "slap", "reckless_rush", "stronk"]
 })
 presets.set("extreme-tonk", {
     name: "Extreme Tonk",
@@ -77,6 +82,7 @@ presets.set("extreme-tonk", {
     },
     helditems: [],
     ability: "hardening",
+    moveset: ["nerf_gun", "twitter", "regen", "spstronk", "mind_overwork"]
 })
 presets.set("rock", {
     name: "Rock",
@@ -90,6 +96,7 @@ presets.set("rock", {
     },
     helditems: [],
     ability: "hardening",
+    moveset: ["nerf_gun", "twitter", "heal", "mind_overwork", "spstronk"]
 })
 export function makeStats(obj?: {[key: string]: number}): Stats {
     let o: Stats = {

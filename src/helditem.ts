@@ -5,6 +5,7 @@ import { calcStat, ExtendedStatID, StatID } from "./stats.js";
 import { formatString, max, rng } from "./util.js"
 import { DescriptionBuilder } from "./battle-description.js";
 import { Category } from "./moves.js";
+import { fnum } from "./number-format.js";
 export interface HeldItem {
     id: string,
     remove?: boolean,
@@ -231,7 +232,7 @@ items.set("mirror",
     new HeldItemType("Mirror")
         .setEffect(DescriptionBuilder.new()
             .line(`Redirects [yellow]30%[r]/[blue]60%[r]/[cyan]80%[r] of incoming [yellow]Physical[r]/[blue]Special[r]/[cyan]Status[r] damage to itself and deals [a]Special[r] damage to the attacker equal to the damage taken by the mirror.`)
-            .line(`The mirror has its own [a]HP[r], starting with ${MIRROR_TEST_LEVELS.map(l => `[a]${calcStat(MIRROR_BASE_MAX_HP, l)}[r]`).join("/")} at level ${MIRROR_TEST_LEVELS.map(l => "[a]" + l + "[r]").join("/")} respectively.`)
+            .line(`The mirror has its own [a]HP[r], starting with ${MIRROR_TEST_LEVELS.map(l => `[a]${fnum(calcStat(MIRROR_BASE_MAX_HP, l))}[r]`).join("/")} at level ${MIRROR_TEST_LEVELS.map(l => "[a]" + l + "[r]").join("/")} respectively.`)
             .build())
         .setIcon("🪞")
         .setClass("defense")
@@ -246,6 +247,7 @@ items.set("mirror",
             }
             v.onDamage = (b, p, item, dmg, opts) => {
                 let data = item.data as MirrorItemData
+                if (dmg <= 0) return
                 if (data.hp <= 0 || item.remove) return
                 if (!opts.inflictor) return
                 let reflectPercent = MIRROR_REFLECT[opts.type ?? "none"]

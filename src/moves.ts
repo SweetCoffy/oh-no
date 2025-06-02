@@ -1,5 +1,5 @@
 import { Collection } from "discord.js"
-import { Battle, calcDamage, getATK, Player } from "./battle.js"
+import { Battle, calcDamage, getATK, getDEF, Player } from "./battle.js"
 import { makeStats, Stats } from "./stats.js"
 import { formatString, weightedDistribution } from "./util.js"
 
@@ -157,6 +157,9 @@ export class Move {
         let pow = this.getPower(b, p, t)
         let atk = getATK(p, this.category)
         let dmg = this.getDamage(pow, atk, t)
+        if (this.category != "status") {
+            dmg = calcDamage(dmg, getDEF(t, this.category), p.level)
+        }
         let dmgRank = Math.min(dmg/t.hp, 1)
         return dmgRank*100 - (this.requiresCharge + this.requiresMagic)/100
     }

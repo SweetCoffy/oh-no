@@ -189,7 +189,7 @@ export function level(user: User) {
 export function getLevelUpXP(user: User) {
     let u = getUser(user)
     let l = u.level + 1
-    return (l * l * l) - ((l-1) * (l-1) * (l-1))
+    return Math.pow(l, 3) - Math.pow(l - 1, 3)
 }
 export function createUser(user: User) {
     let obj: UserInfo = {

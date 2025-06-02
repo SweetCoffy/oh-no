@@ -1,7 +1,5 @@
-import { BattleType } from "./battle"
 import { GenLocaleString } from "./gen"
-import { Category, DamageType, MoveType } from "./moves"
-import { StatID } from "./stats"
+import { fnum } from "./number-format.js"
 
 export type LocaleString = GenLocaleString
 type LocaleStrings = {
@@ -30,6 +28,9 @@ export function getString(key: string, obj: { [key: string]: any } | string[] = 
     }
     return str.replace(/\$\.(\w+)/g, function (sub, k) {
         //@ts-ignore
-        return obj[k.toLowerCase()] + ""
+        let v = obj[k.toLowerCase()]
+        if (typeof v == "number")
+            return fnum(v)
+        return v + ""
     })
 }
