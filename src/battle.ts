@@ -1331,7 +1331,7 @@ export class Battle extends EventEmitter {
                     fastest = action
                     continue
                 }
-                if (this.cmpActions(fastest, action)) continue
+                if (!this.cmpActions(action, fastest)) continue
                 fastest = action
             }
             let a = fastest as TurnAction

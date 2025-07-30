@@ -1,4 +1,4 @@
-import { settings, experimental, loadRecursive, colorToANSI, formatString } from "./util.js"
+import { settings, experimental, loadRecursive, colorToANSI, formatString, RNG } from "./util.js"
 for (let a of process.argv.slice(2)) {
     if (a.startsWith("-")) {
         //@ts-ignore
@@ -146,6 +146,19 @@ loadRecursive("content")
 client.on("error", (error) => {
     console.error(error)
 })
+
+let minv = Infinity
+let maxv = -Infinity
+
+let rng = new RNG()
+
+for (let i = 0; i < 100000; i++) {
+    let v = rng.get()
+    minv = Math.min(minv, v)
+    maxv = Math.max(maxv, v)
+}
+console.log(minv)
+console.log(maxv)
 
 // get real
 if (experimental.april_fools) import("./april-fools.js")

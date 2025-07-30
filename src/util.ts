@@ -70,6 +70,7 @@ export class RNG {
         this.seed = (this.seed ^ (this.seed << 13)) & maxvalue
         this.seed = (this.seed ^ (this.seed >> 17)) & maxvalue
         this.seed = (this.seed ^ (this.seed << 5)) & maxvalue
+        this.seed = Math.abs(this.seed % 0xffffffff)
         return this.seed
    }
     get01() {
@@ -78,7 +79,7 @@ export class RNG {
 }
 export let rng = new RNG()
 export function randomRange(min: number, max: number) {
-    let v = (rng.get() + rng.get() + rng.get() + rng.get()) / 4096
+    let v = rng.get01()
     return (min * v) + (max * (1 - v))
 }
 export function randomChance(chance: number) {
