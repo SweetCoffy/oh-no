@@ -30,9 +30,9 @@ export async function load(file: string) {
     }
     return h
 }
-
+const sourceDir = ("Bun" in globalThis) ? "./src" : "./build"
 export async function loadDir(dir: string) {
-    let fulldir = resolve(`./build/${dir}`)
+    let fulldir = resolve(`./${sourceDir}/${dir}`)
     function readdirRecursive(dir: string) {
         let files: string[] = []
         for (let f of readdirSync(dir)) {
