@@ -66,12 +66,14 @@ export class RNG {
         this.seed = seed ?? Date.now()
     }
     get() {
-        this.seed += Math.floor((this.seed % 512) + ((this.seed % 2048) * 1.535)) + 8192
-        this.seed = this.seed % (2 ** 32 / 2)
-        return (this.seed++ % 512) + ((this.seed++) % 256) + ((this.seed++ * 1.5) % 128) + ((this.seed++ * 2) % 128)
-    }
+        const maxvalue = 0xffffffff
+        this.seed = (this.seed ^ (this.seed << 13)) & maxvalue
+        this.seed = (this.seed ^ (this.seed >> 17)) & maxvalue
+        this.seed = (this.seed ^ (this.seed << 5)) & maxvalue
+        return this.seed
+   }
     get01() {
-        return this.get() / 1024
+        return (this.get() / 0xffffffff) % 1
     }
 }
 export let rng = new RNG()

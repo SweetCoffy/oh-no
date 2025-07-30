@@ -1,6 +1,6 @@
 import { EventEmitter } from "events"
 import { User, Collection, APIEmbedField, AttachmentBuilder, SendableChannels, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js"
-import { setKeys, rng, bar, Dictionary, getID, xOutOfY, formatString, getName, barDelta } from "./util.js"
+import { setKeys, rng, bar, Dictionary, getID, xOutOfY, formatString, getName, barDelta, abs, RNG } from "./util.js"
 import { makeStats, calcStats, Stats, baseStats, StatID, calcStat, ExtendedStatID, ExtendedStats, makeExtendedStats } from "./stats.js"
 import { moves, Category } from "./moves.js"
 import { BattleLobby } from "./lobby.js"
@@ -378,11 +378,16 @@ const defaultDamageTakenModifiers: DamageTakenModifier[] = [
     {
         order: -1,
         func(b, p, dmg, opts) {
+            if (opts.bypassAbsorb) return dmg
+            dmg = Math.ceil(dmg)
             let initial = dmg
             dmg = p.subAbsorptionAll(dmg)
             let absorbed = initial - dmg
             if (absorbed > 0) {
                 b.logL("dmg.absorb", { player: p.toString(), damage: fnum(absorbed) })
+            }
+            if (dmg <= 0) {
+                opts.silent = true
             }
             return dmg
         }
@@ -406,8 +411,9 @@ const defaultStats: ExtendedStats = {
 }
 export type AbsorptionMod = {
     initialValue: number,
+    efficiency: number
 }
-export type AbsorptionModWithID = AbsorptionMod & { id: string, value: number, active: boolean }
+export type AbsorptionModWithID = AbsorptionMod & { id: string, value: number, active: boolean, dmg: number }
 /**
  * Represents an in-battle player
  */
@@ -454,6 +460,7 @@ export class Player {
     }
     /** How far into the negatives the player's health can go before dying, used by the Plot Armor ability */
     plotArmor: number = 0
+    positionInTurn: number = 9999
     /** The list of usable moves for the player, only used for user-controlled players */
     moveset: string[] = ["bonk", "nerf_gun", "stronk", "spstronk"]
     absorptionMods: AbsorptionModWithID[]
@@ -708,14 +715,18 @@ export class Player {
             id,
             initialValue: a.initialValue,
             value: a.initialValue,
+            efficiency: a.efficiency,
+            dmg: 0,
             active: true
         }
         this.absorptionMods.push(mod)
+        this.absorptionMods.sort((a, b) => a.efficiency - b.efficiency)
         return mod
     }
     subAbsorption(mod: AbsorptionModWithID, amt: number): number {
-        let v = Math.min(mod.value, amt)
+        let v = Math.min(Math.ceil(mod.value*mod.efficiency), amt)
         mod.value -= v
+        mod.dmg += v
         let leftover = amt - v
         if (mod.value <= 0) {
             mod.active = false
@@ -810,6 +821,7 @@ export interface TakeDamageOptions {
     defStat?: ExtendedStatID,
     defPen?: number
     atkLvl?: number,
+    bypassAbsorb?: boolean
 }
 export function isTeamMatch(type: BattleType) {
     return type == "team_match" || type == "team_slap_fight"
@@ -820,6 +832,7 @@ export class Battle extends EventEmitter {
     turn: number = 0
     actions: TurnAction[] = []
     logs: string[] = []
+    rng: RNG
     ended: boolean = false
     start() {
         this.players.sort((a, b) => a.team - b.team)
@@ -864,6 +877,7 @@ export class Battle extends EventEmitter {
             if (p.hp <= p.maxhp / 2) barColor = "yellow"
             if (p.hp <= p.maxhp / 4) barColor = "red"
             let hpString = xOutOfY(p.hp, p.maxhp, true)
+            let absorb = p.getTotalAbsorption()
             if (p.maxhp != p.stats.hp) {
                 hpString += formatString(`[u]/${fnum(p.stats.hp)}[r]`)
             }
@@ -872,6 +886,9 @@ export class Battle extends EventEmitter {
                 formatString(`[${barColor}]${barDelta(p.hp, p.prevHp, p.maxhp, barW)}| ${hpString}`)
             str += "\n"
             if (p.charge || p.magic) {
+                if (absorb > 0) {
+                    str += formatString(`🛡[a]${fnum(absorb)}[r] `)
+                }
                 if (p.charge) {
                     str += formatString(`[red]C ${xOutOfY(p.charge, p.maxCharge, true)} `)
                 }
@@ -961,6 +978,7 @@ export class Battle extends EventEmitter {
     type: BattleType
     constructor(lobby: BattleLobby) {
         super()
+        this.rng = new RNG()
         this.lobby = lobby
         this.type = lobby.type
         this.turnLimit = BattleTypeInfo[this.type].turnLimit ?? 50
@@ -1132,7 +1150,7 @@ export class Battle extends EventEmitter {
                     let itemType = items.get(item.id)
                     itemType?.onMoveUse?.(this, user, item, action.move, mOpts)
                 }
-                let missed = rng.get01() > mOpts.accuracy / 100
+                let missed = this.rng.get01() > mOpts.accuracy / 100
                 if (missed) this.log(getString("move.miss"))
                 let failed = !move.checkFail(this, action.player, action.target) || action.player.magic < mOpts.requiresMagic || action.player.charge < mOpts.requiresCharge
                 if (failed && !missed) this.log(getString("move.fail"))
@@ -1150,6 +1168,10 @@ export class Battle extends EventEmitter {
                     let pow = mOpts.pow
                     let critDmg = 1 + action.player.cstats.critdmg / 100
                     let critChance = action.player.cstats.crit / 100 * mOpts.critMul
+                    // I'm desperately trying to make going for Speed a good option
+                    if (action.player.positionInTurn < action.target.positionInTurn) {
+                        critChance *= 1.2
+                    }
                     let atk = getATK(action.player, cat)
                     if (cat == "physical" && !requiresCharge) {
                         action.player.charge += Math.floor(pow / 6 * action.player.cstats.chgbuildup / 100)
@@ -1173,7 +1195,7 @@ export class Battle extends EventEmitter {
                     let hitCount = mOpts.multihit
                     dmg = Math.ceil(dmg / move.multihit)
                     for (let i = 0; i < hitCount; i++) {
-                        let critRoll = rng.get01()
+                        let critRoll = this.rng.get01()
                         if (critRoll < critChance) {
                             if (critRoll < critChance - 1) {
                                 this.logL("dmg.supercrit", {}, "red")
@@ -1186,7 +1208,7 @@ export class Battle extends EventEmitter {
                         this.takeDamageO(action.target, dmg, opts)
                     }
                 } else if (move.type == "protect") {
-                    if (rng.get01() > (1 / (action.player.protectTurns / 3 + 1))) return this.log(getString("move.fail"))
+                    if (this.rng.get01() > (1 / (action.player.protectTurns / 3 + 1))) return this.log(getString("move.fail"))
                     action.player.protectTurns++
                     supportTarget.protect = true
                 } else if (move.type == "heal") {
@@ -1202,18 +1224,18 @@ export class Battle extends EventEmitter {
                     let recoilDmg = Math.ceil(action.player.maxhp * move.recoil)
                     this.takeDamage(action.player, recoilDmg, false, "dmg.recoil")
                 }
-                if (rng.get01() < move.userStatChance) {
+                if (this.rng.get01() < move.userStatChance) {
                     for (let k in move.userStat) {
                         this.statBoost(action.player, k as StatID, move.userStat[k as StatID])
                     }
                 }
-                if (rng.get01() < move.targetStatChance) {
+                if (this.rng.get01() < move.targetStatChance) {
                     for (let k in move.targetStat) {
                         this.statBoost(action.target, k as StatID, move.targetStat[k as StatID])
                     }
                 }
                 for (let i of move.inflictStatus) {
-                    if (rng.get01() < i.chance) {
+                    if (this.rng.get01() < i.chance) {
                         this.inflictStatus(action.target, i.status, action.player)
                     }
                 }
@@ -1285,6 +1307,7 @@ export class Battle extends EventEmitter {
         this.log("> Item/Ability phase", "accent")
         for (let p of this.players) {
             if (p.dead) continue;
+            p.positionInTurn = 9999
             p.updateItems()
             let ab = abilities.get(p.ability || "")
             if (ab) {
@@ -1297,18 +1320,25 @@ export class Battle extends EventEmitter {
                 }
             }
             p.updateItems()
+            p.absorptionMods = p.absorptionMods.filter(el => el.active)
         }
         let actionQueue = new Set(this.actions)
+        let i = 0
         while (actionQueue.size > 0) {
-            let fastest = this.actions[0]
+            let fastest: TurnAction|null = null
             for (let action of actionQueue) {
-                if (this.cmpActions(action, fastest)) continue
+                if (fastest == null) {
+                    fastest = action
+                    continue
+                }
+                if (this.cmpActions(fastest, action)) continue
                 fastest = action
             }
-            actionQueue.delete(fastest)
-            let a = fastest
+            let a = fastest as TurnAction
+            actionQueue.delete(a)
+            if (a.player.dead) continue
+            a.player.positionInTurn = i++
             try {
-                if (a.player.dead) continue
                 this.log(`> ${a.player.name}'s turn`, "accent")
                 this.doAction(a)
                 a.player.damageBlockedInTurn = 0
@@ -1330,7 +1360,6 @@ export class Battle extends EventEmitter {
                 }
                 return el.turnsLeft > 0
             })
-            u.absorptionMods = u.absorptionMods.filter(el => el.active)
         }
         // Discourage stalling until the heat death of the universe by doing some stuff
         if (this.lengthPunishmentsStart > 0) {

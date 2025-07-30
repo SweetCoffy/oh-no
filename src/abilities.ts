@@ -42,16 +42,17 @@ hardening.onTurn = function (b, p) {
         a = p.abilityData.mod as AbsorptionModWithID
     } else {
         p.abilityData.mod = a = p.addAbsorption({
-            initialValue: 1
+            initialValue: 1,
+            efficiency: 0.5
         })
     }
     a.active = true
     if (a.value <= 0) {
         
     }
-    a.value = a.initialValue = p.cstats.def
+    a.value = a.initialValue = Math.ceil(p.cstats.def * 0.2)
 }
-hardening.description = DescriptionBuilder.new().line("Grants [a]Absorption[r] equal to the user's [a]DEF[r]. This effect is refreshed every turn.")
+hardening.description = DescriptionBuilder.new().line("Grants [a]50% Efficient[r] [a]Absorption[r] equal to the [a]20%[r] of user's [a]DEF[r]. If still active, refreshes every turn.")
     .build()
 let massive_health_bar = Ability.add("massive_health_bar", new Ability("Massive Health Bar", 300))
 massive_health_bar.onDamage = function (b, p, dmg, inf) {

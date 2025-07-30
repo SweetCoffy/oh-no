@@ -23,7 +23,10 @@ function moveDescription(move: Move) {
             }
             if (move.setDamage == "regular") {
                 dispMult = `${ffrac(move.power / 100)}`
-                dispMultSuffix = ` of user's [a]${getString("stat." + atkStat)}[r] stat`
+                dispMultSuffix = ` of [a]${getString("stat." + atkStat)}[r]`
+            }
+            if (move.multihit > 1) {
+                dispMultSuffix += `total, across [a]${move.multihit}[r] hits`
             }
             desc += formatString(`\nDamage Multiplier: [a]${dispMult}[r]${dispMultSuffix}`)
         } else {

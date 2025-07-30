@@ -2,6 +2,7 @@ import { Collection } from "discord.js"
 import { Battle, calcDamage, getATK, getDEF, Player } from "./battle.js"
 import { makeStats, Stats } from "./stats.js"
 import { formatString, weightedDistribution } from "./util.js"
+import { moveCursor } from "readline"
 
 export type MoveType = "attack" | "status" | "protect" | "heal" | "absorption" | "noop"
 export type Category = "physical" | "special" | "status"
@@ -186,7 +187,10 @@ moves.set("needle", new Move("Needle", "attack", 100/20, "physical", 80).set(mov
     move.inflictStatus.push({ status: "bleed", chance: 1 })
     move.setDamage = "percent"
 }).setDesc(formatString("Deals fixed damage equal to [a]5%[r] of the target's [a]MAX HP[r] and inflicts them with [a]Bleed[r]")))
-moves.set("nerf_gun", new Move("Nerf Gun", "attack", 90, "special"))
+moves.set("nerf_gun", new Move("Nerf Gun", "attack", 90, "special").set(move => {
+    move.multihit = 2
+    move.critMul = 1.2
+}).setDesc(formatString("A basic attack that deals damage across [a]2[r] hits.\nThis move has a [a]120% CRIT Rate multiplier[r]")))
 
 // Physical/Special recoil attacks
 moves.set("ping", new Move("Ping Attack", "attack", 290, "special").set(move => {
@@ -297,7 +301,7 @@ moves.set("counter", new Move("Counter", "attack", 0).set(move => {
     move.getPower = function(b, p, t) {
         return p.damageBlockedInTurn * 2
     }
-}).setDesc(formatString("Deals damage equal to [a]200%[r] of the damage blocked by [a]Protect[r] in the previous turn. The target's [a]DEF[r] stat is taken into account.\nThis move has a [a]50%[r] [f]reduced[r] [a]CRIT rate[r].")))
+}).setDesc(formatString("Deals damage equal to [a]200%[r] of the damage blocked by [a]Protect[r] in the previous turn. The target's [a]DEF[r] stat is taken into account.\nThis move has a [a]50% CRIT Rate multiplier[r].")))
 moves.set("release", new Move("Release", "attack", 0).set(move => {
     move.accuracy = 100
     move.priority = 1
@@ -320,7 +324,7 @@ moves.set("release", new Move("Release", "attack", 0).set(move => {
         }
         b.logL(`dmg.release`, { damage: total })
     }
-}).setDesc(formatString("Deals damage to [a]all enemies[r] on the target's team, totalling to [a]150%[r] of the damage blocked by [a]Protect[r] in the previous turn. The [a]DEF[r] stats of the targets are taken into account.\nThis move [f]cannot[r] deal [a]CRIT[r] damage.")))
+}).setDesc(formatString("Deals damage to [a]all enemies[r] on the target's team, adding up to [a]150%[r] of the damage blocked by [a]Protect[r] in the previous turn. The [a]DEF[r] stats of the targets are taken into account.\nThis move [f]cannot[r] [a]CRIT[r].")))
 
 moves.set("regen", new Move("Regeneration", "status", 0, "status", 100).set(move => {
     move.requiresMagic = 20
