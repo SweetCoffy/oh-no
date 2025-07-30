@@ -1264,6 +1264,15 @@ export class Battle extends EventEmitter {
     }
     lengthPunishmentsStart = 30
     turnLimit = 50
+    /** @returns `true` if `a` should be done before `b` */
+    cmpActions(a: TurnAction, b: TurnAction) {
+        let spda = a.player.cstats.spd
+        let spdb = a.player.cstats.spd
+        let prioa = getPriority(a)
+        let priob = getPriority(b)
+        if (prioa > priob) return true
+        return spda > spdb
+    }
     doActions() {
         if (this.ended) return
         this.turn++
@@ -1273,6 +1282,7 @@ export class Battle extends EventEmitter {
             u.protect = false
             u.prevHp = u.hp
         }
+        this.log("> Item/Ability phase", "accent")
         for (let p of this.players) {
             if (p.dead) continue;
             p.updateItems()
@@ -1288,19 +1298,28 @@ export class Battle extends EventEmitter {
             }
             p.updateItems()
         }
-        for (let a of this.actions) {
+        let actionQueue = new Set(this.actions)
+        while (actionQueue.size > 0) {
+            let fastest = this.actions[0]
+            for (let action of actionQueue) {
+                if (this.cmpActions(action, fastest)) continue
+                fastest = action
+            }
+            actionQueue.delete(fastest)
+            let a = fastest
             try {
                 if (a.player.dead) continue
+                this.log(`> ${a.player.name}'s turn`, "accent")
                 this.doAction(a)
                 a.player.damageBlockedInTurn = 0
             } catch (er) {
                 console.error(er)
-                this.log(`Couldn't perform ${a.player.name}'s action`)
             }
         }
         while (this.actions.length > 0) {
             this.actions.pop()
         }
+        this.log("> Status phase", "accent")
         for (let u of this.players) {
             for (let s of u.status) {
                 this.doStatusUpdate(u, s)
