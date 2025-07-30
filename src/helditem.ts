@@ -67,7 +67,7 @@ items.set("shield",
             p.addModifier("atk", { value: 0.5, label: "Shield" })
             p.addModifier("spatk", { value: 0.5, label: "Shield" })
             p.addModifier("spd", { value: 0.8, label: "Shield" })
-            b.addAbsorption(p, p.maxhp * 0.3, 2)
+            //b.addAbsorption(p, p.maxhp * 0.3, 2)
 
             d.used = true;
         }
@@ -164,6 +164,7 @@ export const bruhOrbBoosts: {
 
 function bruhOrbEffect(id: string) {
     return function (b: Battle, p: Player, item: HeldItem) {
+        let hpFrac = p.hp / p.maxhp
         let boost = bruhOrbBoosts[id]
         for (let k in boost.mult) {
             if (!boost.mult[k as ExtendedStatID]) continue
@@ -182,6 +183,7 @@ function bruhOrbEffect(id: string) {
                 type: "add",
             })
         }
+        p.hp = Math.floor(p.maxhp * hpFrac)
     }
 }
 

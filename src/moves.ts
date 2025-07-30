@@ -131,6 +131,7 @@ export class Move {
      */
     hitAll: boolean = false
     targetSelf: boolean = false
+    multihit: number = 1
     constructor(name: string, type: MoveType = "attack", power: number, category: Category = "physical", accuracy: number = 100) {
         this.type = type
         this.power = power

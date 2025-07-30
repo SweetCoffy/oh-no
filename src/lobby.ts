@@ -157,17 +157,18 @@ export class BattleLobby {
             bot.ability = preset.ability
             bot.moveset = preset.moveset ?? bot.moveset
             bot.baseStats = limitStats(bot.baseStats, getMaxTotal({ ability: bot.ability }))
-            bot.updateStats()
             if (this.type == "boss") {
                 if (i == 0) {
                     bot.team = 1
                     bot.level *= 1 + (levelPerPlayer * this.users.length)
+                    bot.level = Math.floor(bot.level)
                     bot.helditems.push({id: "bruh_orb"})
                     if (this.bossType) {
                         let enemy = enemies.get(this.bossType);
                         if (enemy) {
                             bot.baseStats = { ...enemy.stats }
                             bot.ability = enemy.ability;
+                            bot.moveset = [...enemy.moveset]
                             bot.helditems = [...enemy.helditems||[]].map(el => ({ id: el }))
                             bot._nickname = enemy.name
                             bot.aiSettings = enemy.aiSettings ?? {}
@@ -182,6 +183,7 @@ export class BattleLobby {
                     bot.helditems.push({id: it[Math.floor(Math.random() * it.length)]})
                 }
             }
+            bot.updateStats()
             bot.updateItems()
             this.battle.players.push(bot)
         }

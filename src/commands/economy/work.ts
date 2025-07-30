@@ -25,7 +25,7 @@ export let command: Command = {
                 item: "sus_bell",
                 amount: 1n,
             })
-            await i.followUp(`Huh? You found a ${shopItems.get("sus_bell")?.toString()}!`)
+            await i.followUp(`You found a ${shopItems.get("sus_bell")?.toString()}!`)
         }
     }
 }

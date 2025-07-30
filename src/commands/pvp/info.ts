@@ -2,12 +2,12 @@
 import { ActionRowBuilder, ApplicationCommandOptionType, ApplicationCommandType, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, codeBlock, StringSelectMenuBuilder } from "discord.js"
 import { calcMul, Player, StatModifier, statusTypes, teamNames } from "../../battle.js"
 import { Command } from "../../command-loader.js"
-import { StatID } from "../../stats.js"
+import { ExtendedStatID, StatID } from "../../stats.js"
 import { getUser } from "../../users.js"
 import { bar, barDelta, formatString, playerSelectorComponent } from "../../util.js"
 import { getString } from "../../locale.js"
 import { moves } from "../../moves.js"
-import { dispDelta, dispMul, fnum } from "../../number-format.js"
+import { dispDelta, dispMul, ffrac, fnum, fstat, modStatDisp } from "../../number-format.js"
 function playerInfoString(player: Player, details: boolean) {
     let finalStats = player.getFinalStats()
     function dispMod(mod: StatModifier) {
@@ -19,10 +19,15 @@ function playerInfoString(player: Player, details: boolean) {
         return dispMul(mod.value, false, true)
     }
     function statsString() {
-        return Object.keys(player.modifiers).map(el => {
-            let mds = player.modifiers[el as StatID]
+        let alwaysShow: string[] = ["hp", "atk", "def", "spatk", "spdef", "spd", "crit"]
+        return Object.keys(player.modifiers)
+        //@ts-ignore
+        .filter(el => alwaysShow.includes(el) || player.stats[el] != player.cstats[el])
+        .map(el => {
+            let stat = el as ExtendedStatID
+            let mds = player.modifiers[stat]
 
-            return formatString(`${getString("stat." + el).padEnd(12, " ")} [a]${fnum(player.stats[el as StatID])}[r] ${dispDelta(Math.ceil(finalStats[el as StatID] - player.stats[el as StatID]), true)}`
+            return formatString(`[a]${getString("stat." + stat).padEnd(12, " ")}[r] [a]${fstat(player.stats[stat], stat)}[r] -> ${modStatDisp(player.stats[stat], finalStats[stat], true, stat)}`
                 + (details ? `\n${mds.filter(el => !el.disabled)
                     .map(el => {
                         return `· ${el.label || "Unknown Modifier"}: ${dispMod(el)}`
@@ -30,9 +35,10 @@ function playerInfoString(player: Player, details: boolean) {
                     .join("\n")}` : ``).trimEnd())
         }).join("\n")
     }
+    let absorption = player.getTotalAbsorption()
     return codeBlock("ansi",
-        `${player.name.padEnd(32, " ")} Lv ${player.level}\nHP ${barDelta(player.hp, player.prevHp, player.maxhp, 32)}|\n${fnum(player.hp)}/${fnum(player.maxhp)}${player.absorption > 0 ? `\n\nT${player.absorptionTier} ${bar(player.absorption, player.maxhp, 20)}|\n${fnum(player.absorption)}/${fnum(player.maxhp)}\n` : ``}\nCHG ${player.charge.toString().padStart(3, " ")}  MAG ${player.magic.toString().padStart(3, " ")}\nDeath Point: ${fnum(-player.plotArmor)} HP (effectively ${fnum(player.hp + player.plotArmor)} HP)\n${player.status.map(el => {
-            return `· ${statusTypes.get(el.type)?.name} — ${el.turnsLeft.toString().padEnd(2, " ")} turns left`
+        `${player.name.padEnd(32, " ")} Lv ${player.level}\n❤️${barDelta(player.hp, player.prevHp, player.maxhp, 32)}|\n${fnum(player.hp)}/${fnum(player.maxhp)}${absorption > 0 ? `\n🛡️${bar(absorption, player.maxhp, 20)}|\n${fnum(absorption)}\n` : ``}\nCHG ${player.charge.toString().padStart(3, " ")}  MAG ${player.magic.toString().padStart(3, " ")}\n${player.status.map(el => {
+            return `· ${statusTypes.get(el.type)?.name} — ⏳${el.turnsLeft.toString().padEnd(2, " ")}`
         }).join("\n") || "No status effects."}\n` +
         `\n${statsString()}\n` + (details ? `Moveset:\n${player.moveset.map(v => `· ${moves.get(v)?.name}`).join("\n")}\n` : ``)
     )

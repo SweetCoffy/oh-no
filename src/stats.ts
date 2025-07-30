@@ -138,7 +138,7 @@ export function makeExtendedStats(obj?: { [key: string]: number }): ExtendedStat
     return o
 }
 export function calcStat(base: number, level: number) {
-    let v = Math.ceil(50 + level * base * 0.25)
+    let v = Math.ceil(20 + base + level * base * 0.25)
     return v
 }
 export function calcStats(level: number, baseStats: Stats): Stats {
@@ -146,7 +146,7 @@ export function calcStats(level: number, baseStats: Stats): Stats {
     for (let k in baseStats) {
         s[k as StatID] = calcStat(baseStats[k as StatID], level)
     }
-    s.hp += level*50 + Math.ceil(s.hp * 0.5)
+    s.hp += level*50 + Math.ceil(s.hp * 1.5)
     return s
 }
 export function getPreset(name: string, user?: User) {

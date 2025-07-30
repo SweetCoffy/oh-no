@@ -1,4 +1,5 @@
 import { formats } from "./formats.js"
+import type { ExtendedStatID } from "./stats.js"
 
 export const CURRENCY_ICON = "$"
 export const numfmt = new Intl.NumberFormat("en-US", { style: "decimal", maximumFractionDigits: 2 })
@@ -9,6 +10,11 @@ export const fracdeltafmt = new Intl.NumberFormat("en-US", { style: "percent", m
 function abs(number: bigint | number) {
     if (number < 0n) return -number
     return number
+}
+export function fstat(value: number, stat: ExtendedStatID) {
+    const percentStats: ExtendedStatID[] = ["dr", "crit", "critdmg", "chgbuildup", "magbuildup"]
+    if (percentStats.includes(stat)) return ffrac(value / 100)
+    return fnum(value)
 }
 export function format(number: bigint) {
     let funi = null
@@ -50,6 +56,25 @@ export function dispDelta(amount: number, color = false) {
             str = `[u]${str}[r]`
         }
         else if (amount > 0) {
+            str = `[s]${str}[r]`
+        } else {
+            str = `[f]${str}[r]`
+        }
+    }
+    return str
+}
+export function modStatDisp(base: number, final: number, color = false, stat?: ExtendedStatID) {
+    let str
+    if (stat == null) {
+        str = numfmt.format(final)
+    } else {
+        str = fstat(final, stat)
+    }
+    if (color) {
+        if (final == base) {
+            str = `[a]${str}[r]`
+        }
+        else if (final > base) {
             str = `[s]${str}[r]`
         } else {
             str = `[f]${str}[r]`

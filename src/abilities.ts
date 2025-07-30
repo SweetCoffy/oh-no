@@ -1,5 +1,5 @@
 import { Collection } from "discord.js";
-import { Battle, isDamageDirect, Player, StatModifierWithID, TakeDamageOptions } from "./battle.js";
+import { AbsorptionModWithID, Battle, isDamageDirect, Player, StatModifierWithID, TakeDamageOptions } from "./battle.js";
 import { DescriptionBuilder } from "./battle-description.js";
 import { lerp } from "./util.js";
 
@@ -37,10 +37,21 @@ export const abilities: Collection<string, Ability> = new Collection();
 
 let hardening = Ability.add("hardening", new Ability("Bone Hardening", 300))
 hardening.onTurn = function (b, p) {
-    if (p.absorption < p.maxhp) b.addAbsorption(p, Math.ceil(p.maxhp / 10), 1)
+    let a
+    if (p.abilityData.mod) {
+        a = p.abilityData.mod as AbsorptionModWithID
+    } else {
+        p.abilityData.mod = a = p.addAbsorption({
+            initialValue: 1
+        })
+    }
+    a.active = true
+    if (a.value <= 0) {
+        
+    }
+    a.value = a.initialValue = p.cstats.def
 }
-hardening.description = DescriptionBuilder.new().line("Every turn, if [a]Absorption[r] is lower than the user's [a]MAX HP[r]:")
-    .line("· The user [s]gains[r] Tier 1 [a]Absorption[r] equal to [a]10%[r] of their [a]MAX HP[r]")
+hardening.description = DescriptionBuilder.new().line("Grants [a]Absorption[r] equal to the user's [a]DEF[r]. This effect is refreshed every turn.")
     .build()
 let massive_health_bar = Ability.add("massive_health_bar", new Ability("Massive Health Bar", 300))
 massive_health_bar.onDamage = function (b, p, dmg, inf) {

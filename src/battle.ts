@@ -303,7 +303,7 @@ let categories: { [key: string]: CategoryStats } = {
 let curnum = 0
 export const MAX_STAT_STAGES = 8
 export function calcMul(stages: number) {
-    if (stages > 0) return Math.min(1 + (stages / MAX_STAT_STAGES * 2), 2)
+    if (stages > 0) return Math.min(1 + (stages / MAX_STAT_STAGES * 4), 4)
     if (stages < 0) return Math.max(1 / (stages / MAX_STAT_STAGES * 4), 0.25)
     return 1
 }
@@ -346,7 +346,7 @@ const defaultDamageTakenModifiers: DamageTakenModifier[] = [
                 return dmg
             if (opts.breakshield) {
                 p.protect = false
-                p.logL("dmg.breakthrough", { player: p.toString() })
+                b.logL("dmg.breakthrough", { player: p.toString() })
                 return dmg * 0.75
             }
             b.logL("dmg.block", { player: p.toString(), damage: Math.floor(dmg) })
@@ -358,25 +358,13 @@ const defaultDamageTakenModifiers: DamageTakenModifier[] = [
         }
     },
     {
-        order: -10,
-        func(b, p, dmg, opts) {
-            if (p.absorption <= 0) return dmg
-            let absorbPercent = p.absorptionTier * 0.1
-            let maxAbsorb = p.absorption
-            let absorb = Math.ceil(Math.min(absorbPercent, maxAbsorb))
-            dmg -= absorb
-            p.absorption -= absorb
-            return dmg
-        }
-    },
-    {
-        order: -2,
+        order: -3,
         func(b, p, dmg, opts) {
             return dmg * Math.max(1 - p.cstats.dr / 100, 0)
         }
     },
     {
-        order: -1,
+        order: -2,
         func(b, p, dmg, opts) {
             if (!opts.defStat) return dmg
             if (!opts.atkLvl) return dmg
@@ -386,7 +374,19 @@ const defaultDamageTakenModifiers: DamageTakenModifier[] = [
             let totalReduced = dmg * (1 - defMul)
             return dmg * defMul
         }
-    }
+    },
+    {
+        order: -1,
+        func(b, p, dmg, opts) {
+            let initial = dmg
+            dmg = p.subAbsorptionAll(dmg)
+            let absorbed = initial - dmg
+            if (absorbed > 0) {
+                b.logL("dmg.absorb", { player: p.toString(), damage: fnum(absorbed) })
+            }
+            return dmg
+        }
+    },
 ]
 const defaultDamageDealtModifiers: DamageDealtModifier[] = []
 const defaultStats: ExtendedStats = {
@@ -404,6 +404,10 @@ const defaultStats: ExtendedStats = {
     crit: 10,
     critdmg: 50,
 }
+export type AbsorptionMod = {
+    initialValue: number,
+}
+export type AbsorptionModWithID = AbsorptionMod & { id: string, value: number, active: boolean }
 /**
  * Represents an in-battle player
  */
@@ -438,9 +442,8 @@ export class Player {
     /** The team the player belongs to */
     team: number = 0
     /** The amount of absorption health the player has */
-    absorption: number = 0
-    /** The tier of absorption, each tier granting +10% damage reduction over the previous one */
-    absorptionTier: number = 0
+    // not anymore lollolololo
+    //absorption: number = 0
     private _charge: number = 0
     private _magic: number = 0
     get maxMagic() {
@@ -453,6 +456,7 @@ export class Player {
     plotArmor: number = 0
     /** The list of usable moves for the player, only used for user-controlled players */
     moveset: string[] = ["bonk", "nerf_gun", "stronk", "spstronk"]
+    absorptionMods: AbsorptionModWithID[]
     modifiers: { [x in ExtendedStatID]: (StatModifier & { id: string })[] } = {
         hp: [],
         atk: [],
@@ -654,8 +658,8 @@ export class Player {
             this.cstats[stat] = this.getModifierValue(this.stats[stat], this.modifiers[stat])
         }
         this.cstats.hp = Math.max(this.cstats.hp, 1)
-        this.cstats.dr = Math.min(this.cstats.dr, 100)
-        this.cstats.crit = Math.min(this.cstats.crit, 100)
+        this.cstats.dr = Math.min(this.cstats.dr, 99)
+        this.cstats.crit = Math.min(this.cstats.crit, 200)
     }
     /**
      * Updates the player's current stats to match what they should be according to level and base stats
@@ -668,7 +672,7 @@ export class Player {
         setKeys(calcStats(this.level, this.baseStats), this.stats)
         this.stats.chglimit = Math.ceil(Math.max(30 + this.stats.atk / resourceBaseline * 40, 50) / 5) * 5
         this.stats.maglimit = Math.ceil(Math.max(30 + this.stats.spatk / resourceBaseline * 40, 50) / 5) * 5
-        this.stats.crit = Math.min(Math.ceil(this.stats.spd / resourceBaseline * 10), 50)
+        this.stats.crit = Math.min(Math.ceil(this.stats.spd / resourceBaseline * 10), 100)
         this.recalculateStats()
         if (updateHp) this.hp = Math.floor(lastHpFrac * this.maxhp)
     }
@@ -698,7 +702,43 @@ export class Player {
         }
         this.helditems = this.helditems.filter(el => !el.remove)
     }
+    addAbsorption(a: AbsorptionMod): AbsorptionModWithID {
+        let id = getID()
+        let mod: AbsorptionModWithID = {
+            id,
+            initialValue: a.initialValue,
+            value: a.initialValue,
+            active: true
+        }
+        this.absorptionMods.push(mod)
+        return mod
+    }
+    subAbsorption(mod: AbsorptionModWithID, amt: number): number {
+        let v = Math.min(mod.value, amt)
+        mod.value -= v
+        let leftover = amt - v
+        if (mod.value <= 0) {
+            mod.active = false
+        }
+        return leftover
+    }
+    subAbsorptionAll(amt: number): number {
+        let leftover = amt
+        for (let mod of this.absorptionMods) {
+            if (leftover <= 0) break
+            if (!mod.active) continue
+            leftover = this.subAbsorption(mod, leftover)
+        }
+        return leftover
+    }
+    getTotalAbsorption(): number {
+        return this.absorptionMods.filter(v => v.active).reduce((prev, cur) => prev + cur.value, 0)
+    }
+    getTotalMaxAbsorption(): number {
+        return this.absorptionMods.filter(v => v.active).reduce((prev, cur) => prev + cur.initialValue, 0)
+    }
     constructor(user?: User) {
+        this.absorptionMods = []
         if (user) {
             this.user = user
             this.baseStats = { ...getUser(user).baseStats }
@@ -724,7 +764,7 @@ export class Player {
         this.prevHp = this.hp
         this._tempname = getName()
     }
-    [key: string]: any
+    //[key: string]: any
 }
 export type ActionType = "move" | "item"
 export interface BaseAction {
@@ -758,6 +798,7 @@ export type MoveCastOpts = {
     accuracy: number,
     pow: number,
     critMul: number,
+    multihit: number,
 }
 export type TakeDamageType = "none" | Category | "ability"
 export interface TakeDamageOptions {
@@ -768,7 +809,7 @@ export interface TakeDamageOptions {
     type?: TakeDamageType,
     defStat?: ExtendedStatID,
     defPen?: number
-    atkLvl?: number
+    atkLvl?: number,
 }
 export function isTeamMatch(type: BattleType) {
     return type == "team_match" || type == "team_slap_fight"
@@ -1053,16 +1094,7 @@ export class Battle extends EventEmitter {
         if (overheal) hp = amount;
         if (hp <= 0) return
         user.hp += hp
-        if (!silent) this.log(getString(message, { player: user.toString(), AMOUNT: Math.floor(amount) + "" }), "green")
-    }
-    addAbsorption(user: Player, amount: number, tier: number = 1) {
-        if (user.absorptionTier > tier) amount /= (user.absorptionTier - tier) / 3 + 1
-        user.absorption += Math.floor(amount)
-        if (user.absorption > user.maxhp) {
-            user.absorption = user.maxhp / 3
-            if (user.absorptionTier < 9) user.absorptionTier++
-        }
-        if (user.absorptionTier < tier) user.absorptionTier = tier
+        if (!silent) this.log(getString(message, { player: user.toString(), AMOUNT: Math.floor(amount) }), "green")
     }
     get isPve() {
         return this.type == "boss" || this.type == "pve"
@@ -1087,6 +1119,7 @@ export class Battle extends EventEmitter {
                     accuracy: move.accuracy,
                     pow: move.power || 0,
                     critMul: move.critMul,
+                    multihit: move.multihit,
                 }
                 let supportTarget = action.player
                 if (this.hasTeams) supportTarget = action.target
@@ -1137,11 +1170,21 @@ export class Battle extends EventEmitter {
                     } else if (move.setDamage == "percent") {
                         dmg = Math.ceil(pow / 100 * action.target.maxhp)
                     }
-                    if (rng.get01() < critChance) {
-                        this.logL("dmg.crit", {}, "red")
-                        dmg = Math.floor(dmg * critDmg)
+                    let hitCount = mOpts.multihit
+                    dmg = Math.ceil(dmg / move.multihit)
+                    for (let i = 0; i < hitCount; i++) {
+                        let critRoll = rng.get01()
+                        if (critRoll < critChance) {
+                            if (critRoll < critChance - 1) {
+                                this.logL("dmg.supercrit", {}, "red")
+                                critDmg += action.player.cstats.critdmg / 100
+                            } else {
+                                this.logL("dmg.crit", {}, "red")
+                            }
+                            dmg = Math.floor(dmg * critDmg)
+                        }
+                        this.takeDamageO(action.target, dmg, opts)
                     }
-                    this.takeDamageO(action.target, dmg, opts)
                 } else if (move.type == "protect") {
                     if (rng.get01() > (1 / (action.player.protectTurns / 3 + 1))) return this.log(getString("move.fail"))
                     action.player.protectTurns++
@@ -1151,7 +1194,7 @@ export class Battle extends EventEmitter {
                     this.heal(supportTarget, Math.floor(supportTarget.maxhp * pow), false, undefined, move.overheal)
                 } else if (move.type == "absorption") {
                     let pow = move.getPower(this, action.player, supportTarget) / 100
-                    this.addAbsorption(supportTarget, Math.floor(supportTarget.maxhp * pow), move.absorptionTier)
+                    //this.addAbsorption(supportTarget, Math.floor(supportTarget.maxhp * pow), move.absorptionTier)
                 }
                 if (move.requiresMagic <= 0 && move.type != "attack")
                     action.player.magic += Math.floor(action.player.cstats.magbuildup / 100 * 10)
@@ -1268,6 +1311,7 @@ export class Battle extends EventEmitter {
                 }
                 return el.turnsLeft > 0
             })
+            u.absorptionMods = u.absorptionMods.filter(el => el.active)
         }
         // Discourage stalling until the heat death of the universe by doing some stuff
         if (this.lengthPunishmentsStart > 0) {
