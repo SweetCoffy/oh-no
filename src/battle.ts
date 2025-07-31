@@ -649,6 +649,7 @@ export class Player {
      * A list of player events for each turn
      */
     events: PlayerEvent[][] = []
+    critMod: StatModifierWithID
     addEvent(event: PlayerEvent, turn: number) {
         if (!(turn in this.events)) this.events[turn] = []
         this.events[turn].push(event)
@@ -666,7 +667,10 @@ export class Player {
         }
         this.cstats.hp = Math.max(this.cstats.hp, 1)
         this.cstats.dr = Math.min(this.cstats.dr, 99)
-        this.cstats.crit = Math.min(this.cstats.crit, 200)
+        if (this.critMod != null) {
+            this.critMod.value = this.cstats.spd / this.stats.spd
+        }
+        this.cstats.crit = this.getModifierValue(this.stats.crit, this.modifiers.crit)
     }
     /**
      * Updates the player's current stats to match what they should be according to level and base stats
@@ -681,6 +685,7 @@ export class Player {
         this.stats.maglimit = Math.ceil(Math.max(30 + this.stats.spatk / resourceBaseline * 40, 50) / 5) * 5
         this.stats.crit = Math.min(Math.ceil(this.stats.spd / resourceBaseline * 10), 100)
         this.recalculateStats()
+        this.cstats.crit = Math.min(this.cstats.crit, 200)
         if (updateHp) this.hp = Math.floor(lastHpFrac * this.maxhp)
     }
     updateStatStages() {
@@ -766,6 +771,11 @@ export class Player {
                 value: 0,
             })
         }
+        this.critMod = this.addModifier("crit", {
+            type: "multiply",
+            value: 1,
+            label: "Speed Modifier"
+        })
         //@ts-ignore
         this.statStageModifiers = stageModifiers
 

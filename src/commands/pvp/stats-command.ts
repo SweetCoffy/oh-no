@@ -424,7 +424,11 @@ export let command: Command = {
                         return `· ${iteminfo.name}\n${indent(iteminfo.passiveEffect, 4)}`
                     }).join("\n") : "None"}`)
                 // @ts-ignore
-                await i.reply(`Preset: **${p.name}**\n${string}\nJSON: \`${json}\``)
+                await i.reply({ embeds: [
+                    {
+                        description: `Preset: **${p.name}**\n${string}\nJSON: \`${json}\``,
+                    }
+                ] })
                 break;
             }
             case "delete": {
