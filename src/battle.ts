@@ -340,31 +340,13 @@ export type DamageDealtModifier = {
 export type StatModifierWithID = StatModifier & { id: string }
 const defaultDamageTakenModifiers: DamageTakenModifier[] = [
     {
-        order: -9999,
-        func(b, p, dmg, opts) {
-            if (!p.protect)
-                return dmg
-            if (opts.breakshield) {
-                p.protect = false
-                b.logL("dmg.breakthrough", { player: p.toString() })
-                return dmg * 0.75
-            }
-            b.logL("dmg.block", { player: p.toString(), damage: Math.floor(dmg) })
-            p.damageBlocked += dmg
-            p.damageBlockedInTurn += dmg
-            // workaround to hide the "took no damage" message
-            opts.silent = true
-            return 0
-        }
-    },
-    {
-        order: -3,
+        order: -5,
         func(b, p, dmg, opts) {
             return dmg * Math.max(1 - p.cstats.dr / 100, 0)
         }
     },
     {
-        order: -2,
+        order: -4,
         func(b, p, dmg, opts) {
             if (!opts.defStat) return dmg
             if (!opts.atkLvl) return dmg
@@ -373,6 +355,31 @@ const defaultDamageTakenModifiers: DamageTakenModifier[] = [
             let defMul = getDamageDEFMul(def, lvl)
             let totalReduced = dmg * (1 - defMul)
             return dmg * defMul
+        }
+    },
+    {
+        order: -3,
+        func(b, p, dmg, opts) {
+            if (!p.protect)
+                return dmg
+            let def = 0
+            if (opts.type == "physical")
+                def = p.cstats.def
+            if (opts.type == "special")
+                def = p.cstats.spdef
+            let block = Math.min(dmg*0.5 + def, dmg)
+            if (opts.breakshield) {
+                b.logL("dmg.breakthrough", { player: p.toString() })
+                block *= 0.5
+            }
+            b.logL("dmg.block", { player: p.toString(), damage: Math.floor(block) })
+            p.damageBlocked += block
+            p.damageBlockedInTurn += block
+            dmg -= block
+            if (dmg <= 0) {
+                opts.silent = true
+            }
+            return dmg
         }
     },
     {
@@ -443,6 +450,7 @@ export class Player {
     protect: boolean = false
     /** The damage blocked in the previous turn, used for Counter */
     damageBlockedInTurn: number = 0
+    damageTakenInTurn: number = 0
     /** The type of Bruh Orb the player has activated */
     bruh?: string = undefined
     /** The team the player belongs to */
@@ -1352,6 +1360,7 @@ export class Battle extends EventEmitter {
                 this.log(`> ${a.player.name}'s turn`, "accent")
                 this.doAction(a)
                 a.player.damageBlockedInTurn = 0
+                a.player.damageTakenInTurn = 0
             } catch (er) {
                 console.error(er)
             }

@@ -233,7 +233,7 @@ blood_is_fuel.onTurn = (b, p) => {
     }
     let maxhp = ukMaxHP(p.abilityData.hardDamage.id, p)
     let data = p.abilityData as UKAbilityData
-    if (data.hardDamage.value < 0) data.hardDamage.value += Math.ceil(maxhp / 10)
+    if (data.hardDamage.value < 0) data.hardDamage.value += Math.ceil(maxhp / 20)
     if (data.hardDamage.value > 0) data.hardDamage.value = 0
     if (data.hardDamage.value < -maxhp + 1) data.hardDamage.value = -maxhp + 1
     p.recalculateStats()
@@ -241,19 +241,19 @@ blood_is_fuel.onTurn = (b, p) => {
 blood_is_fuel.onDamageDealt = (b, p, dmg, _v) => {
     let s = p.status.findIndex(s => s.type == "bleed")
     if (s != -1) p.status.splice(s)
-    b.heal(p, Math.ceil(dmg / 2), false, "heal.uk", false)
+    b.heal(p, Math.ceil(dmg * 0.3), false, "heal.uk", false)
 }
 blood_is_fuel.onDamage = (b, p, dmg, inf, opts) => {
     if (!isDamageDirect(opts)) return
     let data = p.abilityData as UKAbilityData
-    data.hardDamage.value -= Math.floor(dmg * 0.5)
+    data.hardDamage.value -= Math.floor(dmg * 0.9)
     let maxhp = ukMaxHP(p.abilityData.hardDamage.id, p)
     if (data.hardDamage.value < -maxhp + 1) data.hardDamage.value = -maxhp + 1
     p.recalculateStats()
 }
 blood_is_fuel.description = DescriptionBuilder.new()
-    .line("· When dealing damage, the user is [s]healed[r] by [a]50%[r] of the damage dealt. If the user is bleeding, the effect is removed before healing.")
-    .line("· When taking [a]direct[r] damage, the user takes [a]Hard Damage[r] equal to [a]50%[r] of the damage taken.")
+    .line("· When dealing damage, the user is [s]healed[r] by [a]30%[r] of the damage dealt. If the user is bleeding, the effect is removed before healing.")
+    .line("· When taking [a]direct[r] damage, the user takes [a]Hard Damage[r] equal to [a]90%[r] of the damage taken.")
     .line("· [a]Hard Damage[r] temporarily [f]reduces[r] the user's [a]MAX HP[r].")
-    .line("· [a]Hard Damage[r] is reduced by [a]10%[r] of [a]MAX HP[r] every turn.")
+    .line("· [a]Hard Damage[r] is reduced by [a]5%[r] of [a]MAX HP[r] every turn.")
     .build()
