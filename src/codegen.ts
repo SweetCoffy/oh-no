@@ -6,6 +6,7 @@ import { moves } from "./moves.js";
 import { statusTypes } from "./battle.js";
 import { locales } from "./locale.js";
 import { load } from "./content-loader.js";
+import { rogueItems } from "./rogue_mode.js";
 
 export function generate() {
     load("content/locale/en_us/pvp.yml")
@@ -16,5 +17,6 @@ export function generate() {
     stream.write(`export type ItemID = ${shopItems.map((_, k) => `"${k}"`).join(" | ")}\n`)
     stream.write(`export type StatusID = ${statusTypes.map((_, k) => `"${k}"`).join(" | ")}\n`)
     stream.write(`export type GenLocaleString = ${Object.keys(locales.en_US ?? {}).map(k => `"${k}"`).join(" | ")}\n`)
+    stream.write(`export type RogueItemID = ${rogueItems.map((_, k) => `"${k}"`).join(" | ")}`)
     stream.close()
 }

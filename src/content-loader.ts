@@ -5,6 +5,7 @@ import { readFileSync } from "fs";
 import { resolve, join, dirname, basename } from "path";
 import { locales } from "./locale.js";
 import yaml from "js-yaml"
+import { rogueItems, RogueItemType, RogueMoveLearnItem } from "./rogue_mode.js";
 type TypeString = "string" | "number" | "bigint" | "itemstack" | "boolean" | "json" | "chance"
 type ArrayTypeString = `array<${TypeString}>`
 type Types = string | number | bigint | ItemStack | boolean | Dictionary<any>
@@ -32,6 +33,32 @@ let types: Dictionary<ContentType> = {
             }
             shops.set(obj.contentid as string, shop)
         }
+    },
+    rogue_item: {
+        properties: {
+            "class": "string",
+            id: "string",
+            name: "string",
+            icon: "string"
+        },
+        onLoad(obj) {
+            const classes = {
+                "RogueItemType": RogueItemType,
+                RogueMoveLearnItem
+            }
+            //@ts-ignore
+            let cls: typeof RogueItemType = classes[obj["class"]]
+            let item = new cls(obj.name as string, obj.icon as string)
+            for (let key in obj) {
+                let k = key[0].toLowerCase() + key.slice(1)
+                if (k in item) {
+                    //@ts-ignore
+                    item[k] = obj[k]
+                }
+            }
+            //@ts-ignore
+            rogueItems.set(obj.id, item)
+        },
     },
     item: {
         properties: {

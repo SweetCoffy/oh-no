@@ -1,0 +1,8 @@
+ContentType: rogue_item
+Class: RogueMoveLearnItem
+Name: "The Hammer"
+Id: "the_hammer"
+Icon: ""
+Move: "bonk"
+Lore: "It's not just any hammer, it's The Hammer."
+Rarity: 2

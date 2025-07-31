@@ -1,9 +1,14 @@
-import { SendableChannels, User } from "discord.js";
-import { ItemID, MoveID } from "./gen";
+import { codeBlock, Collection, SendableChannels, User } from "discord.js";
+import { ItemID, MoveID, RogueItemID } from "./gen";
 import { baseStats, calcStats, makeStats, Stats } from "./stats";
 import { Battle, Player } from "./battle";
 import { BattleLobby, createLobby } from "./lobby";
 import { getUser } from "./users";
+import { fnum } from "./number-format";
+import { End, FG_Blue, Reset, Start } from "./ansi";
+import { moves } from "./moves";
+export const rogueItems = new Collection<RogueItemID, RogueItemType>()
+export type RogueRarity = 1 | 2 | 3 | 4 | 5
 export class RoguePlayer {
     user: User
     level: number
@@ -67,6 +72,63 @@ export class RogueRoom {
         this.exits = []
     }
 }
+export type RogueItemResult = { msg: string, status: "success" | "fail" }
+export class RogueItemType {
+    description: string = ""
+    lore: string = ""
+    usable: boolean = false
+    consumable: boolean = false
+    autoDescription(): string {
+        return ""
+    }
+    use(plr: RoguePlayer): RogueItemResult {
+        return {
+            msg: "impossible",
+            status: "fail"
+        }
+    }
+    constructor(public name: string, public icon: string) {
+        this.description = this.autoDescription()
+    }
+}
+function success(msg: string): RogueItemResult {
+    return {
+        msg,
+        status: "success"
+    }
+}
+function fail(msg: string): RogueItemResult {
+    return {
+        msg,
+        status: "fail"
+    }
+}
+function tfmt(strings: TemplateStringsArray, ...values: any[]) {
+    let final = ""
+    for (let i = 0; i < strings.length; i++) {
+        final += strings[i]
+        let v = values[i]
+        if (typeof v == "number") {
+            v = fnum(v)
+        }
+        final += `${Start}${FG_Blue}${End}${v}${Reset}`
+    }
+    return final
+}
+export class RogueMoveLearnItem extends RogueItemType {
+    move: MoveID = "bonk"
+    autoDescription(): string {
+        let info = moves.get(this.move)
+        return tfmt`Item used to learn the move ${info?.name}.`
+    }
+    use(plr: RoguePlayer): RogueItemResult {
+        if (plr.moveset.length >= plr.moveLimit) return fail("You can't learn any more moves.")
+        if (plr.moveset.includes(this.move)) return fail("You already know this move.")
+        plr.moveset.push(this.move)
+        let info = moves.get(this.move)
+        return success(tfmt`You learned ${info?.name}.`)
+    }
+}
 export class RogueGame {
     players: RoguePlayer[]
     inventory: ItemID[]
@@ -126,6 +188,10 @@ export class RogueGame {
             if (!player) continue
             player.applyPlayer(battlePlayer)
         }
+    }
+    infoMessage(): string {
+        let str = `Money: ${fnum(this.money)}`
+        return codeBlock("ansi", str)
     }
     constructor() {
         this.players = []
