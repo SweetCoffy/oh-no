@@ -26,6 +26,7 @@ export class RoguePlayer {
     }
     createPlayer(): Player {
         let p = new Player(this.user)
+        p.id = this.user.id
         p.baseStats = {...this.baseStats}
         p.level = this.level
         p.helditems = []
@@ -77,7 +78,7 @@ export class RogueGame {
         let divided = Math.ceil(xp / this.players.length)
         return this.players.map(p => p.addXp(divided))
     }
-    startBattle() {
+    startBattle(enemies: Player[] = []) {
         let players = this.players.map(p => p.createPlayer())
         for (let plr of this.players) {
             let u = getUser(plr.user)
@@ -97,8 +98,34 @@ export class RogueGame {
         this.lobby = lobby
         lobby.start(false)
         if (!lobby.battle) throw new Error("this is impossible")
-        lobby.battle.players = [...players]
-        lobby.battle.start()
+            lobby.battle.players = [...players]
+        for (let e of enemies) {
+            e.team = 1
+            lobby.battle.players.push(e)
+        }
+        let battle = lobby.battle
+        battle.lengthPunishmentsStart = 999
+        battle.on("turn", () => {
+            for (let c of game.channels) {
+                battle.infoMessage(c)
+            }
+        })
+        battle.on("end", (winner) => {
+            game.battleEnded(battle, winner == "Team Blue")
+        })
+        battle.start()
+    }
+    battleEnded(b: Battle, won: boolean) {
+        if (!won) {
+            // TODO: game over stuff
+            return
+        }
+        for (let battlePlayer of b.players) {
+            if (!battlePlayer.user) continue
+            let player = this.players.find(v => v.user.id == battlePlayer.id)
+            if (!player) continue
+            player.applyPlayer(battlePlayer)
+        }
     }
     constructor() {
         this.players = []
