@@ -2,7 +2,7 @@ ContentType: rogue_item
 Class: RogueMoveLearnItem
 Name: "Tungsten Cube"
 Id: tungsten_cube
-Icon: ""
+Icon: "⬜"
 Move: protect
 Lore: "This incredibly heavy cube made of pure tungsten makes you feel like you can tank a hit from The Sun."
 Rarity: 3

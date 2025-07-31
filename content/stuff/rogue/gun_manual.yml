@@ -2,7 +2,7 @@ ContentType: rogue_item
 Class: RogueMoveLearnItem
 Name: "Firearm Operation Manual"
 Id: "gun_manual"
-Icon: ""
+Icon: "📕"
 Move: nerf_gun
 Lore: "This book provides detailed instructions on how to operate a real world firearm."
 Rarity: 2
