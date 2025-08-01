@@ -1,6 +1,6 @@
 import { Command, commands } from '../../command-loader.js'
 import { getTempData, getUser } from '../../users.js';
-import { ActionRowBuilder, APIEmbedField, ApplicationCommandOptionType, ApplicationCommandType, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, codeBlock, StringSelectMenuBuilder, TextChannel } from 'discord.js';
+import { ActionRowBuilder, APIEmbedField, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, ApplicationCommandType, AutocompleteInteraction, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, codeBlock, Collection, StringSelectMenuBuilder, TextChannel } from 'discord.js';
 import { Move, moves } from '../../moves.js';
 import { getString } from '../../locale.js';
 import { items } from '../../helditem.js';
@@ -42,6 +42,16 @@ function moveDescription(move: Move) {
     }
     return desc
 }
+async function collectionAutocomplete<T extends { name: string }>
+(i: AutocompleteInteraction, c: Collection<string, T>) 
+{
+    let focused = i.options.getFocused(true)
+    let query = focused.value.toLowerCase()
+    let results = c.map((v, k) => ({ name: v.name, value: k }))
+    .filter(v => v.name.toLowerCase().includes(query))
+    .slice(0, 20)
+    await i.respond(results)
+}
 export let command: Command = {
     name: "choose",
     description: "ur mom",
@@ -80,7 +90,7 @@ export let command: Command = {
                     type: ApplicationCommandOptionType.String,
                     required: true,
                     description: "The move to show info about",
-                    choices: moves.map((el, k) => ({name: el.name, value: k}))
+                    autocomplete: true,
                 },
             ]
         },
@@ -94,7 +104,7 @@ export let command: Command = {
                     type: ApplicationCommandOptionType.String,
                     required: true,
                     description: "The item",
-                    choices: items.map((el, k) => ({ name: el.name, value: k }))
+                    autocomplete: true,
                 }
             ]
         },
@@ -108,7 +118,7 @@ export let command: Command = {
                     type: ApplicationCommandOptionType.String,
                     required: true,
                     description: "The ability",
-                    choices: abilities.map((el, k) => ({ name: el.name, value: k }))
+                    autocomplete: true,
                 }
             ]
         }
@@ -214,6 +224,17 @@ export let command: Command = {
         }
     },
     async autocomplete(i) {
+        if (i.options.getSubcommand() == "help") {
+            let focused = i.options.getFocused(true)
+            if (focused.name != "move") return
+            return await collectionAutocomplete(i, moves)
+        }
+        if (i.options.getSubcommand() == "item_info") {
+            return await collectionAutocomplete(i, items)
+        }
+        if (i.options.getSubcommand() == "ability") {
+            return await collectionAutocomplete(i, abilities)
+        }
         let u = getUser(i.user)
         if (!u.lobby?.battle) return await i.respond([])
         let play = u.lobby.battle.players.find(el => el.user?.id == i.user.id)

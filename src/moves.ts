@@ -282,25 +282,44 @@ moves.set("protect", new Move("Protect", "protect", 0, "status").set(move => mov
     .setDesc(formatString("Significantly reduces [a]all damage[r] taken by the user for the whole turn. [a]Repeated uses decrease the move's success rate.[r]\nThe maximum damage blocked per instance is equal to [a]70%[r] of the [a]incoming damage[r] plus the user's [a]DEF[r]/[a]Special DEF[r] for [a]Physical[r]/[a]Special[r] damage.\nFor [a]Status[r] damage, a fixed [a]50%[r] is blocked instead.")))
 
 // Only usable in certain conditions
-//moves.set("shield_breaker", new Move("Protect is Cringe", "attack", 500).set(move => {
-//    move.accuracy = 100
-//    move.priority = -1
-//    move.breakshield = true
-//    move.checkFail = function(b, p, t) {
-//        return t.protect
-//    }
-//}).setDesc("This move can break through protect, but it can only be used if the target is protecting"))
+moves.set("shield_breaker", new Move("Anti-Tank Guided Missile", "attack", 500).set(move => {
+    move.accuracy = 100
+    move.priority = -2
+    move.breakshield = true
+    move.power = null
+    move.critMul = 2
+    move.onUse = function(b, p, t) {
+        let dmgMult = b.critRoll(p, t, this.critMul)
+        b.logL("dmg.breakthrough", { player: p.toString() })
+        p.protect = false
+        let dmg = Math.ceil(p.cstats.atk*1.2 + t.cstats.def*0.5)
+        b.takeDamageO(t, dmg, {
+            inflictor: t,
+            type: "physical",
+            atkLvl: p.level,
+            defStat: "def",
+        })
+    }
+    move.checkFail = function(b, p, t) {
+        return t.protect
+    }
+}).setDesc(formatString("A powerful move that can only be used on a [a]protected[r] target. On hit, it breaks the target's protection, deals damage equal to [a]120%[r] of your [a]ATK[r] + [a]50%[r] of the target's [a]DEF[r], and inflicts [a]Broken[r] for [a]2[r] turns.")))
 moves.set("counter", new Move("Counter", "attack", 0).set(move => {
     move.accuracy = 100
     move.priority = -2
     move.critMul = 0.5
     move.setDamage = "set"
+    move.inflictStatus.push({
+        status: "broken",
+        chance: 1
+    })
     move.checkFail = function(b, p, t) {
-        return p.damageBlockedInTurn > 0
+        return p.damageBlockedInTurn > 0 || p.damageTakenInTurn > 0
     }
     move.getPower = function(b, p, t) {
-        return p.damageBlockedInTurn * 2
+        return Math.ceil(p.damageTakenInTurn * 1.5 + p.damageBlockedInTurn * 0.9)
     }
+    
 }).setDesc(formatString("Deals damage equal to [a]150%[r] of the damage taken in the previous turn + [a]90%[r] of any damage blocked by shielding moves (eg. [a]Protect[r]). The target's [a]DEF[r] stat is taken into account.\nThis move has a [a]50% CRIT Rate multiplier[r].\nThis move has [a]-2 priority[r]")))
 moves.set("release", new Move("Release", "attack", 0).set(move => {
     move.accuracy = 100

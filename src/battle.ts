@@ -168,6 +168,7 @@ export class StatusType {
     name: string
     short: string
     duration = 4
+    description: string = "N/A"
     upgradeTo?: string
     icon?: string
     negative: boolean = true
@@ -212,6 +213,23 @@ function statusMessageEffect(message: LocaleString): StatusCallback {
 }
 export let statusTypes: Collection<string, StatusType> = new Collection()
 const STATUS_BASELINE_SPATK = 50
+statusTypes.set("broken", new StatusType("Broken", "Break", (b, p, s) => {
+    let mods = [p.addModifier("def", {
+        value: 0,
+        type: "multiply",
+        multCombine: "multiply",
+        label: "Broken"
+    })]
+    s.data = { mods }
+}, undefined, (b, p, s) => {
+    let d = s.data as { mods: StatModifierWithID[] }
+    for (let mod of d.mods) {
+        p.removeModifier("def", mod.id)
+    }
+}).set(s => {
+    s.duration = 2
+    s.description = formatString("[a]DEF[r] is reduced to [a]0[r]")
+}))
 statusTypes.set("poison", new StatusType("Poison", "Poison", statusMessageEffect("status.poison.start"),
     function (b, p, s) {
         let base = s.infStats?.spatk ?? calcStat(STATUS_BASELINE_SPATK, p.level)
@@ -226,14 +244,18 @@ statusTypes.set("poison", new StatusType("Poison", "Poison", statusMessageEffect
             type: "status",
             defStat: "spdef",
         })
-    }, undefined))
+    }, undefined).set(s => {
+        s.description = formatString("[a]DoT[r] that scales with the inflictor's [a]Special ATK[r].")
+    }))
 statusTypes.set("regen", new StatusType("Regeneration", "Regen", (b, p, s) => {
     statusTypes.get(s.type)?.onTurn?.(b, p, s)
 }, function (b, p, s) {
     let base = p.maxhp
     let mult = 1 / 16
     b.heal(p, Math.ceil(base * mult), false, "heal.regeneration")
-}, undefined))
+}, undefined).set(s => {
+    s.description = formatString("Heals for [a]6.25%[r] of [a]MAX HP[r] every turn")
+}))
 statusTypes.set("bleed", new StatusType("Bleeding", "Bleed", (b, p) => b.logL("status.bleed.start", { player: p.toString() }), (b, p, s) => {
     let base = s.infStats?.atk ?? calcStat(STATUS_BASELINE_SPATK, p.level)
     let mult = 1 / 5
@@ -244,6 +266,8 @@ statusTypes.set("bleed", new StatusType("Bleeding", "Bleed", (b, p) => b.logL("s
         type: "status",
         defStat: "def",
     })
+}).set(s => {
+    s.description = formatString("[a]Prevents healing[r] and deals [a]DoT[r] that scales with the inflictor's [a]ATK[r]")
 }))
 type StatusModifierData = {
     mods: (StatModifier & { id: string, stat: ExtendedStatID })[]
@@ -265,6 +289,8 @@ let rush = new StatusType("Reckless Rush", "Rush", (b, p, s) => {
     for (let mod of data.mods) {
         p.removeModifier(mod.stat, mod.id)
     }
+}).set(s => {
+    s.description = formatString("[a]ATK[r] is greatly boosted")
 })
 let overclock = new StatusType("Overclock", "Overclock", (b, p, s) => {
     let magic = p.magic
@@ -286,6 +312,8 @@ let overclock = new StatusType("Overclock", "Overclock", (b, p, s) => {
         p.removeModifier(mod.stat, mod.id)
     }
     p.magic = 0
+}).set(s => {
+    s.description = formatString("[a]Special ATK[r] is boosted and [a]Magic[r] is fully regenerated every turn.")
 })
 
 statusTypes.set("rush", rush)
@@ -1138,6 +1166,27 @@ export class Battle extends EventEmitter {
     get hasTeams() {
         return this.type == "boss" || this.type == "pve" || this.isTeamMatch()
     }
+    critRoll(p: Player, t: Player, mult: number): number {
+        let critDmg = 1 + p.cstats.critdmg / 100
+        let fmult = 1
+        let critChance = p.cstats.crit / 100 * mult
+        // I'm desperately trying to make going for Speed a good option
+        if (p.positionInTurn < t.positionInTurn) {
+            critChance *= 1.2
+        }
+        let critRoll = this.rng.get01()
+        if (critRoll < critChance) {
+            if (critRoll < critChance - 1) {
+                this.logL("dmg.supercrit", {}, "red")
+                critDmg += p.cstats.critdmg / 100
+            } else {
+                this.logL("dmg.crit", {}, "red")
+            }
+            fmult *= critDmg
+            //dmg = Math.floor(dmg * critDmg)
+        }
+        return fmult
+    }
     doAction(action: TurnAction) {
         switch (action.type) {
             case "move": {
@@ -1184,12 +1233,6 @@ export class Battle extends EventEmitter {
                     let requiresCharge = mOpts.requiresCharge
                     let requiresMagic = mOpts.requiresMagic
                     let pow = mOpts.pow
-                    let critDmg = 1 + action.player.cstats.critdmg / 100
-                    let critChance = action.player.cstats.crit / 100 * mOpts.critMul
-                    // I'm desperately trying to make going for Speed a good option
-                    if (action.player.positionInTurn < action.target.positionInTurn) {
-                        critChance *= 1.2
-                    }
                     let atk = getATK(action.player, cat)
                     if (cat == "physical" && !requiresCharge) {
                         action.player.charge += Math.floor(pow / 6 * action.player.cstats.chgbuildup / 100)
@@ -1213,16 +1256,7 @@ export class Battle extends EventEmitter {
                     let hitCount = mOpts.multihit
                     dmg = Math.ceil(dmg / move.multihit)
                     for (let i = 0; i < hitCount; i++) {
-                        let critRoll = this.rng.get01()
-                        if (critRoll < critChance) {
-                            if (critRoll < critChance - 1) {
-                                this.logL("dmg.supercrit", {}, "red")
-                                critDmg += action.player.cstats.critdmg / 100
-                            } else {
-                                this.logL("dmg.crit", {}, "red")
-                            }
-                            dmg = Math.floor(dmg * critDmg)
-                        }
+                        dmg = Math.ceil(dmg * this.critRoll(action.player, action.target, mOpts.critMul))
                         this.takeDamageO(action.target, dmg, opts)
                     }
                 } else if (move.type == "protect") {
