@@ -7,6 +7,8 @@ import { getUser } from "./users";
 import { fnum } from "./number-format";
 import { End, FG_Blue, Reset, Start } from "./ansi";
 import { moves } from "./moves";
+import { enemies } from "./enemies";
+import { bar, RNG, weightedRandom } from "./util";
 export const rogueItems = new Collection<RogueItemID, RogueItemType>()
 export type RogueRarity = 1 | 2 | 3 | 4 | 5
 export class RoguePlayer {
@@ -23,7 +25,7 @@ export class RoguePlayer {
         this.level = level
         this.xp = 0
         this.level = 1
-        this.baseStats = {...baseStats}
+        this.baseStats = { ...baseStats }
         this.stats = makeStats()
         this.recalculateStats()
         this.hp = this.stats.hp
@@ -32,10 +34,10 @@ export class RoguePlayer {
     createPlayer(): Player {
         let p = new Player(this.user)
         p.id = this.user.id
-        p.baseStats = {...this.baseStats}
+        p.baseStats = { ...this.baseStats }
         p.level = this.level
         p.helditems = []
-        p.moveset = []
+        p.moveset = [...this.moveset]
         p.updateStats()
         p.recalculateStats()
         p.hp = this.hp
@@ -66,10 +68,71 @@ export class RoguePlayer {
     }
 
 }
+type RogueRoomSettings = {
+    next: RogueRoom[]
+}
+type RogueCombatRoomSettings = RogueRoomSettings & {}
 export class RogueRoom {
     exits: RogueRoom[]
-    constructor() {
-        this.exits = []
+    canExit: boolean = true
+    constructor(settings: RogueRoomSettings) {
+        this.exits = settings.next
+    }
+    getName(): string {
+        return "Default Room"
+    }
+    onEnter(game: RogueGame): string {
+        return ""
+    }
+}
+export class RogueShopRoom extends RogueRoom {
+    getName(): string {
+        return "Shop"
+    }
+}
+function createEnemy(e: string, level: number): Player {
+    let p = new Player()
+    let enemy = enemies.get(e)
+    if (!enemy) throw new Error("bro")
+    p.baseStats = { ...enemy.stats }
+    p.aiSettings = enemy.aiSettings ?? {}
+    p.moveset = [...enemy.moveset]
+    p.team = 1
+    p.level = level
+    p.xpYield = enemy.xpYield
+    p._nickname = enemy.name
+    p.ability = enemy.ability
+    p.recalculateStats()
+    p.updateStats()
+    p.updateItems()
+    return p
+}
+export class RogueCombatRoom extends RogueRoom {
+    getName(): string {
+        return "Combat"
+    }
+    onEnter(game: RogueGame): string {
+        let count = 1 + Math.floor(game.rng.get01() * 2)
+        if (game.rng.get01() < 0.1) {
+            count += 2
+        }
+        let e: Player[] = []
+        let pool = [...enemies.keys()]
+            .map(k => [k, enemies.get(k)?.encounter?.rate ?? 0.01] as [string, number])
+        for (let i = 0; i < count; i++) {
+            let enemyId = weightedRandom(pool, game.rng.get01.bind(game.rng))
+            //let enemy = enemies.get(enemyId)
+            //if (!enemy) continue
+            let level = 1
+            e.push(createEnemy(enemyId, level))
+        }
+        game.startBattle(e)
+        if (!game.lobby?.battle) return "????"
+        let room = this
+        game.lobby.battle.once("end", () => {
+            room.canExit = true
+        })
+        return "combat room"
     }
 }
 export type RogueItemResult = { msg: string, status: "success" | "fail" }
@@ -131,14 +194,37 @@ export class RogueMoveLearnItem extends RogueItemType {
 }
 export class RogueGame {
     players: RoguePlayer[]
-    inventory: ItemID[]
+    inventory: RogueItemID[]
     money: number = 0
     lobby?: BattleLobby
     inBattle: boolean = false
     channels: SendableChannels[]
+    room: RogueRoom
+    rng: RNG
+    join(u: User) {
+        this.players.push(new RoguePlayer(u, 1))
+        getUser(u).rogue = this
+    }
     addXp(xp: number): number[] {
         let divided = Math.ceil(xp / this.players.length)
         return this.players.map(p => p.addXp(divided))
+    }
+    end() {
+        for (let plr of this.players) {
+            let u = getUser(plr.user)
+            u.rogue = undefined
+        }
+    }
+    useItem(item: RogueItemID, player: RoguePlayer): RogueItemResult | null {
+        let idx = this.inventory.indexOf(item)
+        if (idx == -1) return null
+        let it = rogueItems.get(item)
+        if (!it) return null
+        let res = it.use(player)
+        if (res.status == "success" && it.consumable) {
+
+        }
+        return res
     }
     startBattle(enemies: Player[] = []) {
         let players = this.players.map(p => p.createPlayer())
@@ -160,26 +246,37 @@ export class RogueGame {
         this.lobby = lobby
         lobby.start(false)
         if (!lobby.battle) throw new Error("this is impossible")
-            lobby.battle.players = [...players]
+        lobby.battle.players = [...players]
         for (let e of enemies) {
             e.team = 1
             lobby.battle.players.push(e)
         }
         let battle = lobby.battle
         battle.lengthPunishmentsStart = 999
-        battle.on("turn", () => {
+        battle.on("newTurn", () => {
             for (let c of game.channels) {
                 battle.infoMessage(c)
             }
         })
-        battle.on("end", (winner) => {
+        battle.once("end", (winner) => {
             game.battleEnded(battle, winner == "Team Blue")
         })
         battle.start()
+        for (let c of game.channels) {
+            battle.infoMessage(c)
+        }
     }
     battleEnded(b: Battle, won: boolean) {
+        b.removeAllListeners("newTurn")
+        b.removeAllListeners("end")
+        this.inBattle = false
+        for (let c of this.channels) {
+            b.infoMessage(c)
+        }
+        this.lobby?.delete()
         if (!won) {
-            // TODO: game over stuff
+            this.broadcast("Game Over")
+            this.end()
             return
         }
         for (let battlePlayer of b.players) {
@@ -188,14 +285,51 @@ export class RogueGame {
             if (!player) continue
             player.applyPlayer(battlePlayer)
         }
+        this.lobby = undefined
     }
     infoMessage(): string {
-        let str = `Money: ${fnum(this.money)}`
-        return codeBlock("ansi", str)
+        let str = `Money: ${fnum(this.money)}\n`
+        str += this.players.map(p => {
+            return `${p.user.displayName} - Lv. ${p.level}\n${bar(p.hp, p.stats.hp, 20)}| ${fnum(p.hp)}/${fnum(p.stats.hp)}`
+        }).join("\n")
+        return str
+    }
+    broadcast(msg: string) {
+        return Promise.allSettled(this.channels.map(c => c.send({
+            embeds: [
+                {
+                    description: codeBlock("ansi", msg)
+                }
+            ]
+        })))
+    }
+    advance(room: RogueRoom | number): boolean {
+        if (typeof room == "number") {
+            room = this.room.exits[room]
+        }
+        if (!this.room.canExit) return false
+        if (this.inBattle) return false
+        if (!this.room.exits.includes(room)) return false
+        this.room = room
+        let msg = room.onEnter(this)
+        this.broadcast(msg)
+        return true
     }
     constructor() {
+        this.rng = new RNG()
         this.players = []
         this.inventory = []
         this.channels = []
+        this.room = new RogueShopRoom({
+            next: [
+                new RogueCombatRoom({
+                    next: [
+                        new RogueShopRoom({
+                            next: []
+                        })
+                    ]
+                })
+            ]
+        })
     }
 }

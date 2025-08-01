@@ -6,6 +6,7 @@ import { writeFileSync, existsSync, readFileSync, mkdirSync } from "fs"
 import { experimental, getMaxTotal, settings } from './util.js'
 import { client } from './index.js'
 import { Enemy } from './enemies.js'
+import { RogueGame } from './rogue_mode.js'
 export let data: any = {}
 
 type TempData = {
@@ -62,6 +63,7 @@ export interface UserInfo {
     msgLvl_messages: number,
     rank_xp: number,
     ability?: string,
+    rogue?: RogueGame,
 }
 export interface UserSaveData {
     baseStats: Stats,
@@ -171,7 +173,7 @@ export function getUser(user: User | string): UserInfo {
     if (!data.unloadTimeout) {
         // Don't unload users that are in a lobby as it can cause "funny" things to happen
         data.unloadTimeout = setTimeout(function() {
-            if (data.lobby) return data.unloadTimeout?.refresh()
+            if (data.lobby || data.rogue) return data.unloadTimeout?.refresh()
             data.unloadTimeout = undefined;
             writeFileSync(`data/${settings.saveprefix}${(user as User).id}.json`, JSON.stringify(getUserSaveData(data), replacer, 4))
             users.delete((user as User).id);

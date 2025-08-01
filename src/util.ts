@@ -238,12 +238,12 @@ export class BitArray2D extends BitArray {
     }
 }
 // https://blobfolio.com/2019/randomizing-weighted-choices-in-javascript/
-export function weightedRandom<T>(data: [T, number][]) {
+export function weightedRandom<T>(data: [T, number][], randomFunc = Math.random) {
     let total = 0;
     for (let i = 0; i < data.length; ++i) {
         total += data[i][1];
     }
-    const threshold = Math.random() * total;
+    const threshold = randomFunc() * total;
     total = 0;
     for (let i = 0; i < data.length - 1; ++i) {
         total += data[i][1];
