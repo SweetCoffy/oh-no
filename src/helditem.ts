@@ -16,6 +16,9 @@ type HeldItemCallback = (battle: Battle, player: Player, item: HeldItem) => any
 export class HeldItemType {
     name: string
     passiveEffect: string = "None"
+    get description() {
+        return this.passiveEffect
+    }
     removeUse: boolean = true
     class: ItemClass = "passive"
     onTurn?: HeldItemCallback
