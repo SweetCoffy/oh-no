@@ -329,9 +329,9 @@ let categories: { [key: string]: CategoryStats } = {
     }
 }
 let curnum = 0
-export const MAX_STAT_STAGES = 8
+export const MAX_STAT_STAGES = 12
 export function calcMul(stages: number) {
-    if (stages > 0) return Math.min(1 + (stages / MAX_STAT_STAGES * 4), 4)
+    if (stages > 0) return Math.min(1 + (stages / MAX_STAT_STAGES * 3), 4)
     if (stages < 0) return Math.max(1 / (stages / MAX_STAT_STAGES * 4), 0.25)
     return 1
 }

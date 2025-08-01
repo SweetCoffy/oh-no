@@ -289,10 +289,10 @@ moves.set("shield_breaker", new Move("Anti-Tank Guided Missile", "attack", 500).
     move.power = null
     move.critMul = 2
     move.onUse = function(b, p, t) {
-        let dmgMult = b.critRoll(p, t, this.critMul)
+        let dmgMult = b.critRoll(p, t, 2)
         b.logL("dmg.breakthrough", { player: p.toString() })
         p.protect = false
-        let dmg = Math.ceil(p.cstats.atk*1.2 + t.cstats.def*0.5)
+        let dmg = Math.ceil(p.cstats.atk*1.2 + t.cstats.def*0.5 * dmgMult)
         b.takeDamageO(t, dmg, {
             inflictor: t,
             type: "physical",
