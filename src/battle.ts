@@ -995,12 +995,14 @@ export class Battle extends EventEmitter {
             content: this.lobby?.users.map(el => el.toString()).join(" "),
             embeds: [
                 {
+                    title: "Summary",
                     description: str,
                     fields: [
                         ...fields,
                     ]
                 },
                 {
+                    title: "Log",
                     description: "```ansi" + "\n" + b.logs.slice(-35).join("\n").slice(-1900) + "\n```"
                 }
             ],
@@ -1009,11 +1011,13 @@ export class Battle extends EventEmitter {
                 new ActionRowBuilder<ButtonBuilder>()
                     .setComponents(
                         new ButtonBuilder()
-                            .setLabel("ATTACK")
+                            .setLabel("Attack")
+                            .setEmoji("⚔️")
                             .setStyle(ButtonStyle.Primary)
                             .setCustomId("choose:open_selector"),
                         new ButtonBuilder()
-                            .setLabel("INFO")
+                            .setLabel("View Info")
+                            .setEmoji("ℹ️")
                             .setStyle(ButtonStyle.Secondary)
                             .setCustomId("info:open_selector")
                     )
@@ -1129,6 +1133,7 @@ export class Battle extends EventEmitter {
             return
         }
         target.hp -= dmg
+        target.damageTakenInTurn += dmg
         this.logL(opts.message ?? "dmg.generic", { player: target.toString(), damage: Math.floor(dmg), Inf: opts.inflictor?.toString?.() ?? "unknown" }, "red")
         if (target.hp <= -target.plotArmor) {
             let deathMsg = "dmg.death"
@@ -1260,7 +1265,7 @@ export class Battle extends EventEmitter {
                         this.takeDamageO(action.target, dmg, opts)
                     }
                 } else if (move.type == "protect") {
-                    if (this.rng.get01() > (1 / (action.player.protectTurns / 3 + 1))) return this.log(getString("move.fail"))
+                    if (this.rng.get01() > (1 / (action.player.protectTurns + 1))) return this.log(getString("move.fail"))
                     action.player.protectTurns++
                     supportTarget.protect = true
                 } else if (move.type == "heal") {

@@ -3,6 +3,7 @@ import { Battle, calcDamage, getATK, getDEF, Player } from "./battle.js"
 import { makeStats, Stats } from "./stats.js"
 import { formatString, weightedDistribution } from "./util.js"
 import { moveCursor } from "readline"
+import { fnum } from "./number-format.js"
 
 export type MoveType = "attack" | "status" | "protect" | "heal" | "absorption" | "noop"
 export type Category = "physical" | "special" | "status"
@@ -153,6 +154,9 @@ export class Move {
         }
         return 0
     }
+    selectDialogExtra(b: Battle, p: Player) {
+        return ""
+    }
     getAiAttackRank(b: Battle, p: Player, t: Player) {
         if (this.type != "attack") return 0
         if (!this.checkFail(b, p, t)) return 0
@@ -253,7 +257,6 @@ moves.set("mind_overwork", new Move("Neuro-Overclock", "status", 0, "status").se
     move.targetSelf = true
     move.requiresMagic = 25
     move.onUse = (b, p) => {
-
         let s = p.status.find(v => v.type == "mind_overwork")
         if (s) {
             s.turnsLeft = s.duration
@@ -264,6 +267,12 @@ moves.set("mind_overwork", new Move("Neuro-Overclock", "status", 0, "status").se
         s = b.inflictStatus(p, "mind_overwork")
         if (!s) return
         s.turnsLeft = s.duration = 3
+    }
+    move.selectDialogExtra = (b, p) => {
+        if (p.status.some(v => v.type == "mind_overwork")) {
+            return "⚠️ **You will take damage to refresh the effect."
+        }
+        return ""
     }
     move.getAiSupportRank = (b, p, t) => {
         if (t != p) return 0
@@ -278,7 +287,22 @@ moves.set("mind_overwork", new Move("Neuro-Overclock", "status", 0, "status").se
 ))
 
 // P R O T E C T
-moves.set("protect", new Move("Protect", "protect", 0, "status").set(move => move.priority = 4)
+moves.set("protect", new Move("Protect", "protect", 0, "status").set(move => {
+    move.priority = 4
+    move.getAiSupportRank = (b, p, t) => {
+        if (t.dead) return 0
+        let effectiveHp = t.hp + t.plotArmor
+        let enemies = b.players.filter(e => !e.dead && b.isEnemy(p, e))
+        let enemiesDmgPotential = enemies.map(e => {
+            let atk = Math.max(e.cstats.atk, e.cstats.spatk)
+            let testPower = 0.8
+            let dmg = calcDamage(testPower * atk, Math.min(t.cstats.def, t.cstats.spdef), e.level)
+            let dmgPercent = Math.min(dmg / effectiveHp, 1)
+            return dmgPercent * 80
+        })
+        return Math.max(0, ...enemiesDmgPotential) * (1 / (p.protectTurns + 1))
+    }
+})
     .setDesc(formatString("Significantly reduces [a]all damage[r] taken by the user for the whole turn. [a]Repeated uses decrease the move's success rate.[r]\nThe maximum damage blocked per instance is equal to [a]70%[r] of the [a]incoming damage[r] plus the user's [a]DEF[r]/[a]Special DEF[r] for [a]Physical[r]/[a]Special[r] damage.\nFor [a]Status[r] damage, a fixed [a]50%[r] is blocked instead.")))
 
 // Only usable in certain conditions
@@ -300,6 +324,13 @@ moves.set("shield_breaker", new Move("Anti-Tank Guided Missile", "attack", 500).
             defStat: "def",
         })
     }
+    move.inflictStatus.push({
+        status: "broken",
+        chance: 1
+    })
+    move.getAiAttackRank = (b, p, t) => {
+        return 0
+    }
     move.checkFail = function(b, p, t) {
         return t.protect
     }
@@ -309,10 +340,10 @@ moves.set("counter", new Move("Counter", "attack", 0).set(move => {
     move.priority = -2
     move.critMul = 0.5
     move.setDamage = "set"
-    move.inflictStatus.push({
-        status: "broken",
-        chance: 1
-    })
+    move.selectDialogExtra = (b, p) => {
+        let dmg = move.getPower(b, p, p)
+        return `ℹ️ Estimated damage: **${fnum(dmg)}**`
+    }
     move.checkFail = function(b, p, t) {
         return p.damageBlockedInTurn > 0 || p.damageTakenInTurn > 0
     }
@@ -332,8 +363,18 @@ moves.set("release", new Move("Release", "attack", 0).set(move => {
     move.getPower = (b, u, t) => {
         return Math.ceil(u.damageBlockedInTurn*0.9 + u.damageTakenInTurn*1.5)
     }
+    move.selectDialogExtra = (b, p) => {
+        let dmg = Math.ceil(p.damageBlockedInTurn * 0.8)
+        return `ℹ️ Estimated damage: **${fnum(dmg)}**`
+    }
+    move.getAiAttackRank = function(b, p, t) {
+        let targets = b.players.filter(e => !e.dead && e.team == t.team)
+        let dmgPerTarget = p.damageBlockedInTurn * 0.8 / targets.length
+        if (targets.length == 0) return 0
+        return targets.map(p => dmgPerTarget / (p.hp + p.plotArmor)).reduce((a, b) => a + b, 0) * 100
+    }
     move.onUse = function(b, p, t) {
-        let damage = Math.ceil(p.damageBlockedInTurn * 1.5)
+        let damage = Math.ceil(p.damageBlockedInTurn * 0.8)
         let enemies = b.players.filter(e => !e.dead && b.isEnemy(p, e) && e.team == t.team)
         let dist = weightedDistribution(enemies.map(e => e.hp), damage)
         let total = 0
@@ -343,7 +384,7 @@ moves.set("release", new Move("Release", "attack", 0).set(move => {
         }
         b.logL(`dmg.release`, { damage: total })
     }
-}).setDesc(formatString("Deals damage to [a]all enemies[r] on the target's team, adding up to [a]150%[r] of the damage blocked by [a]Protect[r] in the previous turn. The [a]DEF[r] stats of the targets are taken into account.\nThis move [f]cannot[r] [a]CRIT[r].")))
+}).setDesc(formatString("Deals damage to [a]all enemies[r] on the target's team, adding up to [a]80%[r] of the damage blocked by [a]Protect[r] in the previous turn. The [a]DEF[r] stats of the targets are taken into account.\nThis move [f]cannot[r] [a]CRIT[r].")))
 
 moves.set("regen", new Move("Regeneration", "status", 0, "status", 100).set(move => {
     move.requiresMagic = 20

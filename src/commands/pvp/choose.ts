@@ -181,17 +181,29 @@ export let command: Command = {
                 let moveInfo = moves.get(tmp.move)
                 if (!moveInfo)
                     return await i.reply({ flags: ["Ephemeral"], content: "What." })
+                let warning = ""
+                let veryBad = false
+                if (moveInfo.requiresCharge > player.charge || moveInfo.requiresMagic > player.magic) {
+                    warning = "\n⚠️ **You may not have enough resources to use this move.**"
+                    veryBad = true
+                }
+                let extra = moveInfo.selectDialogExtra(battle, player)
+                if (extra) {
+                    warning += `\n${extra}`
+                }
                 await i.update({
-                    content: `Chosen move: **${moveInfo.name}**`,
+                    content: `**${moveInfo.name}**` + warning + "\nSelect a target below.",
                     components: [
                         new ActionRowBuilder<StringSelectMenuBuilder>()
                             .setComponents(playerSelectorComponent(player, battle, "choose:target")),
                         new ActionRowBuilder<ButtonBuilder>()
                             .setComponents(new ButtonBuilder()
                                 .setLabel("Back")
-                                .setStyle(ButtonStyle.Secondary)
+                                .setEmoji("↩️")
+                                .setStyle(veryBad ? ButtonStyle.Primary : ButtonStyle.Secondary)
                                 .setCustomId("choose:back"), new ButtonBuilder()
                                     .setLabel("Move Info")
+                                    .setEmoji("ℹ️")
                                     .setStyle(ButtonStyle.Secondary)
                                     .setCustomId("choose:help"))
                     ]

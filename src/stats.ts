@@ -42,7 +42,7 @@ presets.set("apache", {
         spd  :  170,
     },
     helditems: [],
-    moveset: ["bonk", "slap", "reckless_rush", "stronk"]
+    moveset: ["bonk", "slap", "reckless_rush", "counter", "protect"]
 })
 presets.set("tonk", {
     name: "Tonk",
@@ -68,7 +68,7 @@ presets.set("extreme-apache", {
         spd  :  132,
     },
     helditems: [],
-    moveset: ["bonk", "slap", "reckless_rush", "stronk"]
+    moveset: ["bonk", "slap", "reckless_rush", "counter", "protect"]
 })
 presets.set("extreme-tonk", {
     name: "Extreme Tonk",
@@ -146,7 +146,7 @@ export function calcStats(level: number, baseStats: Stats): Stats {
     for (let k in baseStats) {
         s[k as StatID] = calcStat(baseStats[k as StatID], level)
     }
-    s.hp += level*50 + Math.ceil(s.hp * 1.5)
+    s.hp += level*50 + Math.ceil(s.hp * 2.5)
     return s
 }
 export function getPreset(name: string, user?: User) {

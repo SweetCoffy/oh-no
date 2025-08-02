@@ -1,6 +1,7 @@
 import { Battle, calcDamage, Player } from "./battle.js";
 import { moves } from "./moves.js";
 import { calcStat } from "./stats.js";
+import { weightedRandom } from "./util.js";
 type AIAction = {
     target: Player,
     move: string
@@ -10,6 +11,7 @@ export type BotAISettings = {
     supportMult?: number
     selfSupportMult?: number
 }
+type AIActionWithScore = AIAction & { score: number }
 export class BotAI {
     attackMult: number
     supportMult: number
@@ -54,7 +56,7 @@ export class BotAI {
     }
     getAction(): AIAction {
         let ai = this
-        let options = this.player.moveset.flatMap(move => ai.battle.players.map(target => {
+        let options: AIActionWithScore[] = this.player.moveset.flatMap(move => ai.battle.players.map(target => {
             return {
                 move,
                 target,
@@ -66,6 +68,8 @@ export class BotAI {
         filtered.sort((a, b) => b.score - a.score)
         console.log(this.player.name)
         console.log(filtered.map(v => `${v.move} -> ${v.target.toString()}: ${v.score}`))
-        return filtered[0]
+        let opts = filtered.map(v => [v, v.score]) as [AIActionWithScore, number][]
+        let choice = weightedRandom(opts)
+        return choice
     }
 }

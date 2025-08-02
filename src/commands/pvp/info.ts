@@ -37,7 +37,10 @@ function playerInfoString(player: Player, details: boolean) {
     }
     let absorption = player.getTotalAbsorption()
     return codeBlock("ansi",
-        `${player.name.padEnd(32, " ")} Lv ${player.level}\n❤️${barDelta(player.hp, player.prevHp, player.maxhp, 32)}|\n${fnum(player.hp)}/${fnum(player.maxhp)}${absorption > 0 ? `\n🛡️${bar(absorption, player.maxhp, 20)}|\n${fnum(absorption)}\n` : ``}\nCHG ${player.charge.toString().padStart(3, " ")}  MAG ${player.magic.toString().padStart(3, " ")}\n${player.status.map(el => {
+        `${player.name} Lv ${player.level}\n${barDelta(player.hp, player.prevHp, player.maxhp, 32)}|\n` + 
+        `${fnum(player.hp)}/${fnum(player.maxhp)}${absorption > 0 ? `\n🛡️${bar(absorption, player.maxhp, 20)}|\n${fnum(absorption)}\n` : ``}\n` + 
+        `CHG ${player.charge.toString().padStart(3, " ")} | MAG ${player.magic.toString().padStart(3, " ")}\n` + 
+        `${player.status.map(el => {
             return `· ${statusTypes.get(el.type)?.name} — ⏳${el.turnsLeft.toString().padEnd(2, " ")}`
         }).join("\n") || "No status effects."}\n` +
         `\n${statsString()}\n` + (details ? `Moveset:\n${player.moveset.map(v => `· ${moves.get(v)?.name}`).join("\n")}\n` : ``)
