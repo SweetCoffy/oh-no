@@ -266,6 +266,18 @@ statusTypes.set("regen", new StatusType("Regeneration", "Regen", (b, p, s) => {
 type DelayedPainData = { damage: number };
 statusTypes.set("delayed_pain", new StatusType<DelayedPainData>("Delayed Pain", "D. Pain", (b, p, s) => {
     s.data = { damage: 0 }
+}).set(e => {
+    e.end = (b, p, s) => {
+        b.takeDamageO(p, s.data.damage, {
+            type: "none",
+            breakshield: true
+        })
+    }
+    e.damageTakenModifier = (b, p, d, s) => {
+        s.data.damage += d
+        return d
+    }
+    e.description = formatString("Becomes [a]completely invulnerable[r] for the duration of the effect. However, [a]all would-be damage taken[r] is accumulated and is dealt [a]all at once[r] when the effect ends.")
 }))
 statusTypes.set("bleed", new StatusType("Bleeding", "Bleed", (b, p) => b.logL("status.bleed.start", { player: p.toString() }), (b, p, s) => {
     let base = s.infStats?.atk ?? calcStat(STATUS_BASELINE_SPATK, p.level)
@@ -546,6 +558,7 @@ export class Player {
         for (let status of this.status) {
             let type = statusTypes.get(status.type)
             if (!type) continue
+            if (status.turnsLeft <= 0) continue
             let fn = type.damageTakenModifier
             if (!fn) continue
             mods.push({
@@ -588,6 +601,7 @@ export class Player {
             if (!type) continue
             let fn = type.damageDealtModifier
             if (!fn) continue
+            if (status.turnsLeft <= 0) continue
             mods.push({
                 order: type.damageDealtModifierOrder,
                 func: (b, p, dmg, target, opts) => {
