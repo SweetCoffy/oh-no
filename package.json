@@ -18,6 +18,7 @@
     "vm2": "^3.9.5"
   },
   "devDependencies": {
+    "@types/bun": "^1.2.19",
     "@types/hjson": "^2.4.3",
     "@types/js-yaml": "^4.0.5",
     "@types/node": "^22.15.2"

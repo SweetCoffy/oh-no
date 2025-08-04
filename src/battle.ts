@@ -164,7 +164,7 @@ export type BattleType = "boss" | "ffa" | "pve" | "slap_fight" | "team_match" | 
 export const MinTeams = 2
 export const MaxTeams = 5
 export type BotAIType = "normal" | "egg_lord" | "the_cat" | "u";
-export class StatusType {
+export class StatusType<T = undefined> {
     name: string
     short: string
     duration = 4
@@ -172,19 +172,25 @@ export class StatusType {
     upgradeTo?: string
     icon?: string
     negative: boolean = true
-    onStart?: StatusCallback
-    onTurn?: StatusCallback
-    onEnd?: StatusCallback
-    start(b: Battle, p: Player, s: Status) {
+    onStart?: typeof this.start
+    onTurn?: typeof this.turn
+    onEnd?: typeof this.end
+    damageTakenModifierOrder = 0
+    damageTakenModifier?:
+        (b: Battle, p: Player, dmg: number, s: Status<T>, opts: TakeDamageOptions) => number;
+    damageDealtModifierOrder = 0
+    damageDealtModifier?:
+        (b: Battle, p: Player, dmg: number, t: Player, s: Status<T>, opts: TakeDamageOptions) => number;
+    start(b: Battle, p: Player, s: Status<T | undefined>) {
         if (this.onStart) this.onStart(b, p, s)
     }
-    turn(b: Battle, p: Player, s: Status) {
+    turn(b: Battle, p: Player, s: Status<T>) {
         if (this.onTurn) this.onTurn(b, p, s)
     }
-    end(b: Battle, p: Player, s: Status) {
+    end(b: Battle, p: Player, s: Status<T>) {
         if (this.onEnd) this.onEnd(b, p, s)
     }
-    constructor(name: string, short?: string, onStart?: StatusCallback, onTurn?: StatusCallback, onEnd?: StatusCallback, upgradeTo?: string) {
+    constructor(name: string, short?: string, onStart?: typeof this.start, onTurn?: typeof this.turn, onEnd?: typeof this.end, upgradeTo?: string) {
         this.name = name
         this.short = short || name
         this.onStart = onStart
@@ -192,7 +198,7 @@ export class StatusType {
         this.onEnd = onEnd
         this.upgradeTo = upgradeTo
     }
-    set(func: (el: StatusType) => any) {
+    set(func: (el: StatusType<T>) => any) {
         func(this)
         return this;
     }
@@ -211,9 +217,10 @@ function statusMessageEffect(message: LocaleString): StatusCallback {
         b.log(getString(message, { player: p.toString(), inf: s.inflictor?.toString() }))
     }
 }
-export let statusTypes: Collection<string, StatusType> = new Collection()
+export let statusTypes: Collection<string, StatusType<any>> = new Collection()
 const STATUS_BASELINE_SPATK = 50
-statusTypes.set("broken", new StatusType("Broken", "Break", (b, p, s) => {
+type BrokenStatusData = { mods: StatModifierWithID[] };
+statusTypes.set("broken", new StatusType<BrokenStatusData>("Broken", "Break", (b, p, s) => {
     let mods = [p.addModifier("def", {
         value: 0,
         type: "multiply",
@@ -256,6 +263,10 @@ statusTypes.set("regen", new StatusType("Regeneration", "Regen", (b, p, s) => {
 }, undefined).set(s => {
     s.description = formatString("Heals for [a]6.25%[r] of [a]MAX HP[r] every turn")
 }))
+type DelayedPainData = { damage: number };
+statusTypes.set("delayed_pain", new StatusType<DelayedPainData>("Delayed Pain", "D. Pain", (b, p, s) => {
+    s.data = { damage: 0 }
+}))
 statusTypes.set("bleed", new StatusType("Bleeding", "Bleed", (b, p) => b.logL("status.bleed.start", { player: p.toString() }), (b, p, s) => {
     let base = s.infStats?.atk ?? calcStat(STATUS_BASELINE_SPATK, p.level)
     let mult = 1 / 5
@@ -272,7 +283,7 @@ statusTypes.set("bleed", new StatusType("Bleeding", "Bleed", (b, p) => b.logL("s
 type StatusModifierData = {
     mods: (StatModifier & { id: string, stat: ExtendedStatID })[]
 }
-let rush = new StatusType("Reckless Rush", "Rush", (b, p, s) => {
+let rush = new StatusType<StatusModifierData>("Reckless Rush", "Rush", (b, p, s) => {
     let charge = p.charge
     p.charge = 0
     let mods = []
@@ -285,14 +296,14 @@ let rush = new StatusType("Reckless Rush", "Rush", (b, p, s) => {
     s.data = data
     b.logL("status.rush.start", { player: p.toString() })
 }, undefined, (b, p, s) => {
-    let data = s.data as StatusModifierData
+    let data = s.data
     for (let mod of data.mods) {
         p.removeModifier(mod.stat, mod.id)
     }
 }).set(s => {
     s.description = formatString("[a]ATK[r] is greatly boosted")
 })
-let overclock = new StatusType("Overclock", "Overclock", (b, p, s) => {
+let overclock = new StatusType<StatusModifierData>("Overclock", "Overclock", (b, p, s) => {
     let magic = p.magic
     p.magic = p.maxMagic
     let mods = []
@@ -307,7 +318,7 @@ let overclock = new StatusType("Overclock", "Overclock", (b, p, s) => {
 }, (b, p, s) => {
     p.magic = p.maxMagic
 }, (b, p, s) => {
-    let data = s.data as StatusModifierData
+    let data = s.data
     for (let mod of data.mods) {
         p.removeModifier(mod.stat, mod.id)
     }
@@ -341,14 +352,14 @@ export function getDEF(player: Player, category: Category): number {
 export function getATK(player: Player, category: Category): number {
     return player.cstats[categories[category].atk] ?? 0
 }
-export interface Status {
+export interface Status<T = object|undefined> {
     duration: number,
     turns: number,
     turnsLeft: number,
     inflictor?: Player,
     infStats?: ExtendedStats
     type: string,
-    data?: object,
+    data: T,
 }
 export interface StatModifier {
     type?: "add" | "multiply",
@@ -395,7 +406,7 @@ const defaultDamageTakenModifiers: DamageTakenModifier[] = [
                 def = p.cstats.def
             if (opts.type == "special")
                 def = p.cstats.spdef
-            let block = Math.min(dmg*0.5 + def, dmg)
+            let block = Math.min(dmg * 0.5 + def, dmg)
             if (opts.breakshield) {
                 b.logL("dmg.breakthrough", { player: p.toString() })
                 block *= 0.5
@@ -532,6 +543,18 @@ export class Player {
                 }
             })
         }
+        for (let status of this.status) {
+            let type = statusTypes.get(status.type)
+            if (!type) continue
+            let fn = type.damageTakenModifier
+            if (!fn) continue
+            mods.push({
+                order: type.damageTakenModifierOrder,
+                func: (b, p, dmg, opts) => {
+                    return fn(b, p, dmg, status, opts)
+                }
+            })    
+        }
         let defenseItem = this.itemSlots.defense
         if (defenseItem) {
             let item = items.get(defenseItem.id)
@@ -559,6 +582,18 @@ export class Player {
                     return override ?? dmg
                 }
             })
+        }
+        for (let status of this.status) {
+            let type = statusTypes.get(status.type)
+            if (!type) continue
+            let fn = type.damageDealtModifier
+            if (!fn) continue
+            mods.push({
+                order: type.damageDealtModifierOrder,
+                func: (b, p, dmg, target, opts) => {
+                    return fn(b, p, dmg, target, status, opts)
+                }
+            })    
         }
         let offenseItem = this.itemSlots.offense
         if (offenseItem) {
@@ -765,7 +800,7 @@ export class Player {
         return mod
     }
     subAbsorption(mod: AbsorptionModWithID, amt: number): number {
-        let v = Math.min(Math.ceil(mod.value*mod.efficiency), amt)
+        let v = Math.min(Math.ceil(mod.value * mod.efficiency), amt)
         mod.value -= v
         mod.dmg += v
         let leftover = amt - v
@@ -1314,6 +1349,7 @@ export class Battle extends EventEmitter {
                 infStats: inf?.getFinalStats(),
                 turnsLeft: sType.duration,
                 duration: sType.duration,
+                data: undefined
             }
             if (a) {
                 if (sType.upgradeTo) {
@@ -1382,7 +1418,7 @@ export class Battle extends EventEmitter {
         let actionQueue = new Set(this.actions)
         let i = 0
         while (actionQueue.size > 0) {
-            let fastest: TurnAction|null = null
+            let fastest: TurnAction | null = null
             for (let action of actionQueue) {
                 if (fastest == null) {
                     fastest = action
