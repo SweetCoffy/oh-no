@@ -40,6 +40,7 @@ heal.uk: "n:$.player; restored $.amount HP with blood."
 move.use: "n:$.player; used $.move."
 move.miss: "...But it missed."
 move.fail: "...But it failed."
+move.absorption: "n:$.player; gained Absorption."
 
 move.category.physical: "Physical"
 move.category.special: "Special"

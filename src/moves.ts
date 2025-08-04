@@ -222,10 +222,10 @@ moves.set("stronk", new Move("Stronk", "status", 0, "status").set(move => {
     move.targetSelf = true
 }).setDesc(formatString("Increases the user's [a]ATK[r] by [a]1[r] stage.")))
 
-moves.set("tonk", new Move("Tonk", "status", 0, "status").set(move => {
-    move.targetStat.def = 1
-    move.targetSelf = true
-}).setDesc(formatString("Increases the user's [a]DEF[r] by [a]1[r] stage.")))
+// moves.set("tonk", new Move("Tonk", "status", 0, "status").set(move => {
+//     move.targetStat.def = 1
+//     move.targetSelf = true
+// }).setDesc(formatString("Increases the user's [a]DEF[r] by [a]1[r] stage.")))
 
 moves.set("reckless_rush", new Move("Reckless Rush", "status", 0, "status").set(move => {
     move.targetSelf = true
@@ -248,10 +248,10 @@ moves.set("spstronk", new Move("Magik Sord", "status", 0, "status").set(move => 
     move.targetSelf = true
 }).setDesc(formatString("Increases the user's [a]SPATK[r] by [a]1[r] stage.")))
 
-moves.set("sptonk", new Move("Magik Sheld", "status", 0, "status").set(move => {
-    move.targetStat.spdef = 1
-    move.targetSelf = true
-}).setDesc(formatString("Increases the user's [a]SPDEF[r] by [a]1[r] stage.")))
+// moves.set("sptonk", new Move("Magik Sheld", "status", 0, "status").set(move => {
+//     move.targetStat.spdef = 1
+//     move.targetSelf = true
+// }).setDesc(formatString("Increases the user's [a]SPDEF[r] by [a]1[r] stage.")))
 
 moves.set("mind_overwork", new Move("Neuro-Overclock", "status", 0, "status").set(move => {
     move.targetSelf = true
@@ -304,6 +304,28 @@ moves.set("protect", new Move("Protect", "protect", 0, "status").set(move => {
     }
 })
     .setDesc(formatString("Significantly reduces [a]all damage[r] taken by the user for the whole turn. [a]Repeated uses decrease the move's success rate.[r]\nThe maximum damage blocked per instance is equal to [a]70%[r] of the [a]incoming damage[r] plus the user's [a]DEF[r]/[a]Special DEF[r] for [a]Physical[r]/[a]Special[r] damage.\nFor [a]Status[r] damage, a fixed [a]50%[r] is blocked instead.")))
+
+moves.set("support_absorption", new Move("Support: Absorption", "status", 0, "status", 100).set(move => {
+    move.requiresMagic = 20
+    move.targetSelf = true
+    move.onUse = (b, p, t) => {
+        let id = p.id = "_support_absorption"
+        let mod = t.absorptionMods.find(v => v.id == id)
+        let v = p.cstats.spdef * 0.9
+        if (!mod) {
+            mod = t.addAbsorption({
+                initialValue: v,
+                efficiency: 0.9
+            })
+            mod.id = id
+        } else {
+            mod.initialValue = v
+            mod.value = v
+        }
+        b.logL("move.absorption", { player: t.toString() })
+    }
+}).setDesc(formatString("Grants the target [a]90% efficient Absorption[r] equal to [a]90%[r] of the user's [a]Special DEF[r]. If the target already has Absorption from this move, it is refreshed.")))
+
 
 // Only usable in certain conditions
 moves.set("shield_breaker", new Move("Anti-Tank Guided Missile", "attack", 500).set(move => {
@@ -413,7 +435,7 @@ moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
         if (healAmt > t.maxhp - t.hp) healDelta -= 0.05
         return (healDelta * 100) + (1 - t.hp / t.maxhp) * 50
     }
-}).setDesc(formatString("Heals the user by [a]40%[r] of their [a]MAX HP[r].")))
+}).setDesc(formatString("Heals the target by [a]40%[r] of their [a]MAX HP[r].")))
 moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
     move.accuracy = 100
     move.priority = 1
