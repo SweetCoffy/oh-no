@@ -9,6 +9,13 @@ const playerHeight = 64
 const pad = 8
 console.log("still alive")
 const numFormat = new Intl.NumberFormat("en-US", { style: "decimal", maximumFractionDigits: 2 })
+const teamColors = [
+    "#0051ff",
+    "#ff0015",
+    "#fff700",
+    "#00ff26",
+    "#d400ff"
+]
 function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) {
     ctx.font = "20px monospace"
     ctx.textAlign = "left"
@@ -18,7 +25,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     let measured = ctx.measureText(p.name)
     ctx.translate(0, 20 + 8)
     let barWidth = playerWidth
-    let barHeight = 20
+    let barHeight = 24
     //let barRadius = 2
     if (p.absorb > 0) {
         let absorbOfs = 4
@@ -60,13 +67,13 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     ctx.fillStyle = "#000"
     let barMiddle = barHeight / 2
     ctx.textBaseline = "middle"
-    ctx.font = "bold 18px monospace"
+    ctx.font = "bold 20px monospace"
     let hpText = numFormat.format(p.hp)
     let maxHpText = numFormat.format(p.cstats.hp)
     measured = ctx.measureText(hpText)
     ctx.fillText(hpText, 4, barMiddle)
     ctx.textAlign = "right"
-    ctx.font = "16px monospace"
+    ctx.font = "bold 16px monospace"
     ctx.fillText(maxHpText, barWidth - 4, barMiddle)
 }
 function generate(b: PartialBattle) {
@@ -79,20 +86,73 @@ function generate(b: PartialBattle) {
     ctx.textBaseline = "top"
     
     let totalW = 0
-    let maxW = 480 - pad
+    let maxW = canvas.width - pad
     let x = 0
     let y = 0
-    let teams: PartialPlayer[][]
+    let teams: PartialPlayer[][] = []
+    let curPlayerW = playerWidth
     for (let p of b.players) {
-        if (x + playerWidth + pad > maxW) {
-            x = 0
-            y += playerHeight + pad
+        if (!teams[p.team]) teams[p.team] = []
+        teams[p.team].push(p)
+    }
+    if (teams.length > 1) {
+        let tx = 0
+        let tallest = 0
+        let yOfs = 0
+        curPlayerW = playerWidth*0.6
+        for (let i = 0; i < teams.length; i++) {
+            if (tx > 1) {
+                tx = 0
+                yOfs += tallest + pad
+                tallest = 0
+            }
+            let players = teams[i]
+            let resetX = tx*canvas.width/2
+            let h = 0
+            x = resetX
+            y = 0
+            totalW = 0
+            maxW = canvas.width / 2 - pad*2
+            for (let p of players) {
+                if (x + curPlayerW + pad > maxW) {
+                    x = resetX
+                    y += playerHeight + pad
+                    totalW = 0
+                }
+                ctx.resetTransform()
+                ctx.translate(x, y)
+                drawPlayer(ctx, p, curPlayerW)
+                h += playerHeight + pad
+                totalW += curPlayerW + pad
+                x += curPlayerW + pad
+            }
+            tallest = Math.max(tallest, h)
+            tx++
         }
-        ctx.resetTransform()
-        ctx.translate(x, y)
-        drawPlayer(ctx, p, playerWidth)
-        totalW += playerWidth + pad
-        x += playerWidth + pad
+        for (let p of b.players) {
+            if (x + playerWidth + pad > maxW) {
+                x = 0
+                y += playerHeight + pad
+                totalW = 0
+            }
+            ctx.resetTransform()
+            ctx.translate(x, y)
+            drawPlayer(ctx, p, playerWidth)
+            totalW += playerWidth + pad
+            x += playerWidth + pad
+        }
+    } else {
+        for (let p of b.players) {
+            if (x + playerWidth + pad > maxW) {
+                x = 0
+                y += playerHeight + pad
+            }
+            ctx.resetTransform()
+            ctx.translate(x, y)
+            drawPlayer(ctx, p, playerWidth)
+            totalW += playerWidth + pad
+            x += playerWidth + pad
+        }
     }
 
     return canvas.toBuffer("image/png")
