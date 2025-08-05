@@ -275,7 +275,7 @@ statusTypes.set("delayed_pain", new StatusType<DelayedPainData>("Delayed Pain", 
     }
     e.damageTakenModifier = (b, p, d, s) => {
         s.data.damage += d
-        return d
+        return 0
     }
     e.description = formatString("Becomes [a]completely invulnerable[r] for the duration of the effect. However, [a]all would-be damage taken[r] is accumulated and is dealt [a]all at once[r] when the effect ends.")
 }))
