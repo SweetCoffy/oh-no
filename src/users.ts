@@ -64,6 +64,8 @@ export interface UserInfo {
     rank_xp: number,
     ability?: string,
     rogue?: RogueGame,
+    lastUpdate: number,
+    
 }
 export interface UserSaveData {
     baseStats: Stats,
@@ -139,6 +141,7 @@ export function getUserSaveData(info: UserInfo) {
         moveset: info.moveset,
         rank_xp: info.rank_xp,
         ability: info.ability,
+        lastUpdate: info.lastUpdate
     }
     return obj;
 }
@@ -164,6 +167,8 @@ export function replacer(k: string, v: any) {
     if (typeof v == "bigint") return `BigInt(${v})`
     return v
 }
+export const UPDATE_TIME_INC = 1000
+export const MAX_UPDATE_INCS = 120
 export function getUser(user: User | string): UserInfo {
     if (typeof user == "string") {
         user = client.users.cache.get(user) as User
@@ -182,7 +187,28 @@ export function getUser(user: User | string): UserInfo {
     } else {
         data.unloadTimeout.refresh()
     }
+    let now = Date.now()
+    let timeDelta = now - data.lastUpdate
+    if (timeDelta > UPDATE_TIME_INC) {
+        let increments = Math.floor(timeDelta / UPDATE_TIME_INC)
+        data.lastUpdate += increments * UPDATE_TIME_INC
+        updateUser(user, data, Math.min(increments, MAX_UPDATE_INCS))
+    }
     return data
+}
+export type TimestepUpdateFn = (u: User, d: UserInfo) => void
+export type SingleUpdateFn = (u: User, d: UserInfo, increments: number) => void
+const timestepUpdaters: { label: string, fn: TimestepUpdateFn }[] = []
+const singleUpdaters: { label: string, fn: SingleUpdateFn }[] = []
+function updateUser(user: User, data: UserInfo, increments: number) {
+    for (let i = 0; i < increments; i++) {
+        for (let u of timestepUpdaters) {
+            u.fn(user, data)
+        }
+    }
+    for (let u of singleUpdaters) {
+        u.fn(user, data, increments)
+    }
 }
 export function level(user: User) {
     let u = getUser(user)
@@ -227,6 +253,7 @@ export function createUser(user: User) {
         moveset: ["bonk", "nerf_gun", "stronk", "spstronk", "protect"],
         msgLvl_messages: 0,
         msgLvl_xp: 0,
+        lastUpdate: Date.now(),
     }
     if (existsSync(`data/${settings.saveprefix}${user.id}.json`)) {
         obj = {...obj, ...JSON.parse(readFileSync(`data/${settings.saveprefix}${user.id}.json`, "utf8"), reviver)}
