@@ -1,4 +1,0 @@
-files:
-    tree.js: js/tree.js
-    libtree.js: libs/libtree.js
-depends: []
