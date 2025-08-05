@@ -183,7 +183,7 @@ export function load(file: string) {
         a[k.toLowerCase()] = obj[k]
     }
     a._contentType = a.contenttype
-    console.log(a)
+    //console.log(a)
     if (!a) return;
     types[a._contentType.toString()].onLoad(a);
     loaded[file] = a;

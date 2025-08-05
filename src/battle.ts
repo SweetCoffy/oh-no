@@ -1,6 +1,6 @@
 import { EventEmitter } from "events"
-import { User, Collection, APIEmbedField, AttachmentBuilder, SendableChannels, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js"
-import { setKeys, rng, bar, Dictionary, getID, xOutOfY, formatString, getName, barDelta, abs, RNG } from "./util.js"
+import { User, Collection, APIEmbedField, AttachmentBuilder, SendableChannels, ActionRowBuilder, ButtonBuilder, ButtonStyle, RawFile, Embed, EmbedData, APIEmbed, APIAttachment, Attachment } from "discord.js"
+import { setKeys, rng, bar, Dictionary, getID, xOutOfY, formatString, getName, barDelta, abs, RNG, experimental } from "./util.js"
 import { makeStats, calcStats, Stats, baseStats, StatID, calcStat, ExtendedStatID, ExtendedStats, makeExtendedStats } from "./stats.js"
 import { moves, Category } from "./moves.js"
 import { BattleLobby } from "./lobby.js"
@@ -11,6 +11,7 @@ import { FG_Gray, Start, Reset, LogColor, LogColorWAccent } from "./ansi.js"
 import { abilities } from "./abilities.js"
 import { BotAI, BotAISettings } from "./battle-ai.js"
 import { dispDelta, fnum } from "./number-format.js"
+import { generateImage } from "./canvas_threads.js"
 
 export const BASELINE_DEF = 250
 
@@ -364,7 +365,7 @@ export function getDEF(player: Player, category: Category): number {
 export function getATK(player: Player, category: Category): number {
     return player.cstats[categories[category].atk] ?? 0
 }
-export interface Status<T = object|undefined> {
+export interface Status<T = object | undefined> {
     duration: number,
     turns: number,
     turnsLeft: number,
@@ -566,7 +567,7 @@ export class Player {
                 func: (b, p, dmg, opts) => {
                     return fn(b, p, dmg, status, opts)
                 }
-            })    
+            })
         }
         let defenseItem = this.itemSlots.defense
         if (defenseItem) {
@@ -607,7 +608,7 @@ export class Player {
                 func: (b, p, dmg, target, opts) => {
                     return fn(b, p, dmg, target, status, opts)
                 }
-            })    
+            })
         }
         let offenseItem = this.itemSlots.offense
         if (offenseItem) {
@@ -1040,17 +1041,31 @@ export class Battle extends EventEmitter {
             str = `\`\`\`ansi\n${str}\n\`\`\``
         }
         let fields: APIEmbedField[] = []
+        let summaryEmbed: APIEmbed = {
+            title: "Summary",
+            description: str,
+            fields: [
+                ...fields,
+            ]
+        }
+        let files: AttachmentBuilder[] = []
+        if (experimental.battle_info_canvas) {
+            let img = await generateImage(this)
+            console.log(img)
+            files = [
+                new AttachmentBuilder(img, { name: "h.png" })
+            ]
+            summaryEmbed = {
+                title: "Summary",
+            }
+        }
         let msg = await channel.send({
+            files,
             content: this.lobby?.users.map(el => el.toString()).join(" "),
             embeds: [
+                summaryEmbed,
                 {
-                    title: "Summary",
-                    description: str,
-                    fields: [
-                        ...fields,
-                    ]
-                },
-                {
+                    
                     title: "Log",
                     description: "```ansi" + "\n" + b.logs.slice(-35).join("\n").slice(-1900) + "\n```"
                 }
