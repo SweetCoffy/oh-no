@@ -12,6 +12,7 @@ import { calcStats, StatID } from "./stats.js"
 import { getString } from "./locale.js"
 import { Battle, Player, teamEmojis } from "./battle.js"
 import { fnum, fracfmt } from "./number-format.js"
+import { huntData } from "./save_special.js"
 
 export function lexer(str: string) {
     let ar: string[] = []
@@ -183,7 +184,7 @@ export let settings = {
     ownerID: "",
     noSave: false,
     experimental: false,
-    unloadTimeout: 2 * 60 * 1000,
+    unloadTimeout: 10 * 1000,
     saveprefix: experimental.april_fools ? "fools_" : "",
     maxMoves: 5,
     accentColor: 0x15deff,
@@ -326,8 +327,10 @@ export function loadRecursive(path: string) {
     }
 }
 export function levelUpMessage(u: UserInfo, oldLevel: number, newLevel: number) {
-    let oldStats = calcStats(oldLevel, u.baseStats)
-    let newStats = calcStats(newLevel, u.baseStats)
+    let hunt = huntData.get(u)
+    let baseStats = hunt.stats
+    let oldStats = calcStats(oldLevel, baseStats)
+    let newStats = calcStats(newLevel, baseStats)
     return formatString(`${"Level".padEnd(12)} [a]${oldLevel.toString().padStart(5)}[r] -> [s]${newLevel.toString().padEnd(5)}[r]\n`) + "—".repeat(27) + "\n" +
         Object.keys(newStats).map(stat => {
             let old = oldStats[stat as StatID]

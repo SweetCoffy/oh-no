@@ -8,6 +8,7 @@ import { addXP, getUser } from "../../users.js";
 import { levelUpMessage, randomRange, weightedDistribution, weightedRandom } from "../../util.js";
 import { getString } from "../../locale.js";
 import { fnum, money } from "../../number-format.js";
+import { huntData } from "../../save_special.js";
 
 export let command: Command = {
     name: "hunt",
@@ -17,9 +18,13 @@ export let command: Command = {
     async run(i) {
         if (!i.channel) return await i.reply("what")
         let u = getUser(i.user)
+        let hunt = huntData.get(u)
         if (u.lobby) return await i.reply("You are already in a lobby")
         if (!i.channel.isSendable()) {
             return
+        }
+        if (hunt.hpPercent <= 0) {
+            return await i.reply(`You're dead.`)
         }
         let l = createLobby(i.user, `${i.user.username}'s hunt`, 1)
         await i.reply({
@@ -63,6 +68,12 @@ export let command: Command = {
         }
         let battle = l.battle
         u.lobby = l;
+        let p = battle.players[0]
+        p.baseStats = {...hunt.stats}
+        p.moveset = [...hunt.moveset]
+        p.updateStats()
+        p.helditems = []
+        p.ability = undefined
         let threateningBonus = 1
         for (let enemy of e) {
             if (!enemy) continue
@@ -110,7 +121,7 @@ export let command: Command = {
         }
         //if (l.battle) l.battle.type = "pve"
         battle.start()
-        
+        p.hp = Math.ceil(p.stats.hp * hunt.hpPercent)
         let lastinfo = await battle.infoMessage(i.channel)
 
         let channel = i.channel
@@ -123,6 +134,7 @@ export let command: Command = {
         battle.on("end", async (winner: string) => {
             if (!i.channel) return
             if (lastinfo?.deletable) lastinfo.delete()
+            hunt.hpPercent = Math.max(Math.min(p.hp / p.stats.hp, 1), 0)
             lastinfo = await battle.infoMessage(channel)
             if (winner == "Team Blue") {
                 let enemies = battle.players.filter(el => !el.user) || []

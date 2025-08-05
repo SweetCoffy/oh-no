@@ -65,7 +65,7 @@ export interface UserInfo {
     ability?: string,
     rogue?: RogueGame,
     lastUpdate: number,
-    
+    special: Dict<any>
 }
 export interface UserSaveData {
     baseStats: Stats,
@@ -117,6 +117,50 @@ function clearTempData(id: string) {
     tempData.delete(id)
     d.expired = true
 }
+const specialData: Collection<string, UserSpecialData<any>> = new Collection()
+export class UserSpecialData<T extends {}> {
+    id: string
+    saveKeys: (keyof T)[]
+    defaults: T
+    constructor(id: string, defaults: T, saveKeys?: (keyof T)[]) {
+        this.defaults = defaults
+        this.id = id
+        if (!saveKeys) saveKeys = Object.keys(defaults) as typeof this.saveKeys
+        this.saveKeys = saveKeys
+    }
+    register(): typeof this {
+        specialData.set(this.id, this)
+        return this
+    }
+    getSave(sp: T) {
+        let save: Partial<T> = {}
+        for (let k of this.saveKeys) {
+            save[k] = sp[k]
+        }
+        return save
+    }
+    get(u: UserInfo): T {
+        let sp = u.special[this.id]
+        if (!sp) {
+            sp = u.special[this.id] = structuredClone(this.defaults)
+            sp.__populated = true
+        }
+        if (!sp.__populated) {
+            sp.__populated = true
+            let defaults = this.defaults
+            for (let k in defaults) {
+                if (!(k in sp)) {
+                    if (typeof defaults[k] == "object") {
+                        sp[k] = structuredClone(defaults[k])
+                    } else {
+                        sp[k] = defaults[k]
+                    }
+                }
+            }
+        }
+        return sp as T
+    }
+}
 export function getUserSaveData(info: UserInfo) {
     let m: any = {}
     for (let k in info.money) {
@@ -141,7 +185,14 @@ export function getUserSaveData(info: UserInfo) {
         moveset: info.moveset,
         rank_xp: info.rank_xp,
         ability: info.ability,
-        lastUpdate: info.lastUpdate
+        lastUpdate: info.lastUpdate,
+        special: {}
+    }
+    for (let k in info.special) {
+        let i = specialData.get(k)
+        if (!i) continue
+        //@ts-ignore
+        obj.special[k] = i.getSave(info.special[k])
     }
     return obj;
 }
@@ -200,6 +251,12 @@ export type TimestepUpdateFn = (u: User, d: UserInfo) => void
 export type SingleUpdateFn = (u: User, d: UserInfo, increments: number) => void
 const timestepUpdaters: { label: string, fn: TimestepUpdateFn }[] = []
 const singleUpdaters: { label: string, fn: SingleUpdateFn }[] = []
+export function addSingleUpdater(label: string, fn: SingleUpdateFn) {
+    singleUpdaters.push({ label, fn })
+}
+export function addTimestepUpdater(label: string, fn: TimestepUpdateFn) {
+    timestepUpdaters.push({ label, fn })
+}
 function updateUser(user: User, data: UserInfo, increments: number) {
     for (let i = 0; i < increments; i++) {
         for (let u of timestepUpdaters) {
@@ -254,6 +311,10 @@ export function createUser(user: User) {
         msgLvl_messages: 0,
         msgLvl_xp: 0,
         lastUpdate: Date.now(),
+        special: {}
+    }
+    for (let [k, v] of specialData) {
+        obj.special[k] = structuredClone(v.defaults)
     }
     if (existsSync(`data/${settings.saveprefix}${user.id}.json`)) {
         obj = {...obj, ...JSON.parse(readFileSync(`data/${settings.saveprefix}${user.id}.json`, "utf8"), reviver)}
