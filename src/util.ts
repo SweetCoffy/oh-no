@@ -184,7 +184,7 @@ export let settings = {
     ownerID: "",
     noSave: false,
     experimental: false,
-    unloadTimeout: 10 * 1000,
+    unloadTimeout: 2 * 60 * 1000,
     saveprefix: experimental.april_fools ? "fools_" : "",
     maxMoves: 5,
     accentColor: 0x15deff,
