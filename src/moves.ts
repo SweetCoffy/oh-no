@@ -1,9 +1,10 @@
 import { Collection } from "discord.js"
 import { Battle, calcDamage, getATK, getDEF, Player } from "./battle.js"
-import { makeStats, Stats } from "./stats.js"
-import { formatString, weightedDistribution } from "./util.js"
+import { ExtendedStatID, makeStats, StatID, Stats } from "./stats.js"
+import { formatString, weightedDistribution, weightedRandom } from "./util.js"
 import { moveCursor } from "readline"
-import { fnum } from "./number-format.js"
+import { ffrac, fnum } from "./number-format.js"
+import { StatusID } from "./gen.js"
 
 export type MoveType = "attack" | "status" | "protect" | "heal" | "absorption" | "noop"
 export type Category = "physical" | "special" | "status"
@@ -166,8 +167,8 @@ export class Move {
         if (this.category != "status") {
             dmg = calcDamage(dmg, getDEF(t, this.category), p.level)
         }
-        let dmgRank = Math.min(dmg/t.hp, 1)
-        return dmgRank*100 - (this.requiresCharge + this.requiresMagic)/100
+        let dmgRank = Math.min(dmg / t.hp, 1)
+        return dmgRank * 100 - (this.requiresCharge + this.requiresMagic) / 100
     }
     getAiSupportRank(b: Battle, p: Player, t: Player) {
         if (!this.checkFail(b, p, t)) return 0
@@ -187,7 +188,7 @@ export let moves: Collection<string, Move> = new Collection()
 
 // Physical/Special basic attacks
 moves.set("bonk", new Move("Bonk", "attack", 110))
-moves.set("needle", new Move("Needle", "attack", 100/20, "physical", 80).set(move => {
+moves.set("needle", new Move("Needle", "attack", 100 / 20, "physical", 80).set(move => {
     move.inflictStatus.push({ status: "bleed", chance: 1 })
     move.setDamage = "percent"
 }).setDesc(formatString("Deals fixed damage equal to [a]5%[r] of the target's [a]MAX HP[r] and inflicts them with [a]Bleed[r]")))
@@ -206,7 +207,7 @@ moves.set("slap", new Move("Slap", "attack", 300).set(move => {
 
 // Status inflicting moves
 moves.set("twitter", new Move("Twitter", "status", 0, "status", 90).set(move => {
-    move.inflictStatus.push({chance: 1, status: "poison"})
+    move.inflictStatus.push({ chance: 1, status: "poison" })
     move.requiresMagic = 20
     move.getAiAttackRank = (b, p, t) => {
         let s = t.status.find(v => v.type == "poison")
@@ -332,6 +333,104 @@ moves.set("support_absorption", new Move("Support: Iron Dome Defense System", "s
 }).setDesc(formatString("Grants all alies [a]100% efficient Absorption[r] equal to [a]90%[r] of the user's [a]Special DEF[r]. If an ally already has Absorption from this move, it is refreshed.\nWhen the [a]Absorption[r] from this move is consumed, the [a]user[r] will take [a]100%[r] of the damage absorbed as [a]Special[r] damage.")))
 
 
+type GachaBuff = { name: string } & ({ type: "magic", amount: number } |
+{ type: "charge", amount: number } |
+{ type: "heal", amount: number } |
+{ type: "stage_boost", stat: ExtendedStatID, amount: number } |
+{ type: "effect", id: StatusID } |
+{ type: "absorption", amount: number } |
+{ type: "multi_stage_boost", stats: ExtendedStatID[], amount: number })
+
+const gachaCommonPool: GachaBuff[] = [
+    { type: "absorption", amount: 0.05, name: "5% Absorption" },
+    { type: "charge", amount: 5, name: "5 Charge" },
+    { type: "magic", amount: 5, name: "5 Magic" },
+    { type: "heal", amount: 0.01, name: "1% Heal" },
+    { type: "stage_boost", stat: "spd", amount: 1, name: "Small Speed Boost" },
+
+]
+const gachaUncommonPool: GachaBuff[] = [
+    { type: "absorption", amount: 0.2, name: "20% Absorption" },
+    { type: "charge", amount: 20, name: "20 Charge" },
+    { type: "magic", amount: 20, name: "20 Magic" },
+    { type: "heal", amount: 0.15, name: "15% Heal" },
+    { type: "effect", id: "bleed", name: "Regeneration" },
+    { type: "stage_boost", stat: "spd", amount: 2, name: "Mi·d Speed Boost" },
+    { type: "multi_stage_boost", stats: ["atk", "spatk"], amount: 1, name: "Small Attack Boost" },
+]
+const gachaRarePool: GachaBuff[] = [
+    { type: "absorption", amount: 1.1, name: "110% Absorption" },
+    { type: "charge", amount: 200, name: "200 Charge" },
+    { type: "magic", amount: 200, name: "200 Magic" },
+    { type: "heal", amount: 1.0, name: "100% Heal" },
+    { type: "stage_boost", stat: "spd", amount: 8, name: "Massive Speed Boost" },
+    { type: "multi_stage_boost", stats: ["atk", "spatk"], amount: 6, name: "Big Attack Boost" },
+    {
+        type: "multi_stage_boost", stats: ["atk", "spatk", "spdef", "def", "spd"],
+        amount: 2,
+        name: "All-Stat Boost"
+    }
+]
+
+const gachaRarityPools = [
+    [60, { label: "Common", pool: gachaCommonPool }],
+    [33, { label: "Uncommon", pool: gachaUncommonPool }],
+    [7, { label: "Rare", pool: gachaRarePool }]
+] as const
+function applyGachaEffect(b: Battle, p: Player, e: GachaBuff, inf?: Player) {
+    switch (e.type) {
+        case "magic":
+            p.magic += e.amount
+            b.logL("move.magic.gain", { player: p.toString(), amount: e.amount })
+            break
+        case "charge":
+            p.charge += e.amount
+            b.logL("move.charge.gain", { player: p.toString(), amount: e.amount })
+            break
+        case "absorption":
+            b.logL("move.absorption", { player: p.toString() })
+            p.addAbsorption({
+                initialValue: Math.ceil(e.amount * p.cstats.hp),
+                efficiency: 1
+            })
+            break
+        case "heal":
+            b.heal(p, Math.ceil(e.amount * p.cstats.hp))
+            break
+        case "stage_boost":
+            b.statBoost(p, e.stat, e.amount)
+            break
+        case "effect":
+            b.inflictStatus(p, e.id, inf)
+            break
+        case "multi_stage_boost":
+            for (let stat of e.stats) {
+                b.statBoost(p, stat, e.amount)
+            }
+            break
+    }
+}
+moves.set("support_gacha", new Move("Support: Gacha", "status", 0, "status").set(move => {
+    move.requiresMagic = 5
+    move.priority = 1
+    move.targetSelf = true
+    let chances = weightedDistribution(gachaRarityPools.map(v => v[0]), 1)
+    let pairs = gachaRarityPools.map((v, i) => [chances[i], v[1].label] as const)
+    move.description = formatString("Rolls 1 to 3 times for effects. The probabilities are as follows:\n" +
+        pairs.map(([chance, name], i) => `[a]${ffrac(chance)}[r] for [a]${name}[r] pulls, which may contain:\n` +
+    gachaRarityPools[i][1].pool.map(v => `· ${v.name} ([a]${ffrac(chance / gachaRarityPools[i][1].pool.length)}[r])`).join("\n")
+    ).join("\n"))
+    move.onUse = (b, u, t) => {
+        let pullCount = 1 + Math.floor(b.rng.get01()*3)
+        for (let _ = 0; _ < pullCount; _++) {
+            let pool = weightedRandom(gachaRarityPools.map(([a, b]) => [b, a] as const), b.rng.get01.bind(b.rng))
+            let result = pool.pool[Math.floor(pool.pool.length * b.rng.get01())]
+            b.logL("move.gacha", { rarity: pool.label, result: result.name })
+            applyGachaEffect(b, t, result, u)
+        }
+    }
+}))
+
 // Only usable in certain conditions
 moves.set("shield_breaker", new Move("Break: Armor-Piercing Shell", "attack", 500).set(move => {
     move.accuracy = 100
@@ -339,11 +438,11 @@ moves.set("shield_breaker", new Move("Break: Armor-Piercing Shell", "attack", 50
     move.breakshield = true
     move.power = null
     move.critMul = 2
-    move.onUse = function(b, p, t) {
+    move.onUse = function (b, p, t) {
         let dmgMult = b.critRoll(p, t, 2)
         b.logL("dmg.breakthrough", { player: p.toString() })
         p.protect = false
-        let dmg = Math.ceil(p.cstats.atk*1.2 + t.cstats.def*0.5 * dmgMult)
+        let dmg = Math.ceil(p.cstats.atk * 1.2 + t.cstats.def * 0.5 * dmgMult)
         b.takeDamageO(t, dmg, {
             inflictor: t,
             type: "physical",
@@ -358,7 +457,7 @@ moves.set("shield_breaker", new Move("Break: Armor-Piercing Shell", "attack", 50
     move.getAiAttackRank = (b, p, t) => {
         return 0
     }
-    move.checkFail = function(b, p, t) {
+    move.checkFail = function (b, p, t) {
         return t.protect
     }
 }).setDesc(formatString("A powerful move that can only be used on a [a]protected[r] target. On hit, it breaks the target's protection, deals damage equal to [a]120%[r] of your [a]ATK[r] + [a]50%[r] of the target's [a]DEF[r], and inflicts [a]Broken[r] for [a]2[r] turns.")))
@@ -371,13 +470,13 @@ moves.set("counter", new Move("Counter: Anti-Material Rifle", "attack", 0).set(m
         let dmg = move.getPower(b, p, p)
         return `ℹ️ Estimated damage: **${fnum(dmg)}**`
     }
-    move.checkFail = function(b, p, t) {
+    move.checkFail = function (b, p, t) {
         return p.damageBlockedInTurn > 0 || p.damageTakenInTurn > 0
     }
-    move.getPower = function(b, p, t) {
+    move.getPower = function (b, p, t) {
         return Math.ceil(p.damageTakenInTurn * 1.5 + p.damageBlockedInTurn * 0.9)
     }
-    
+
 }).setDesc(formatString("Deals damage equal to [a]150%[r] of the damage taken in the previous turn + [a]90%[r] of any damage blocked by shielding moves (eg. [a]Protect[r]). The target's [a]DEF[r] stat is taken into account.\nThis move has a [a]50% CRIT Rate multiplier[r].\nThis move has [a]-2 priority[r]")))
 moves.set("release", new Move("Counter: High Explosive Squash Head", "attack", 0).set(move => {
     move.accuracy = 100
@@ -388,19 +487,19 @@ moves.set("release", new Move("Counter: High Explosive Squash Head", "attack", 0
         return p.damageBlockedInTurn > 0 || p.damageTakenInTurn > 0
     }
     move.getPower = (b, u, t) => {
-        return Math.ceil(u.damageBlockedInTurn*0.9 + u.damageTakenInTurn*1.5)
+        return Math.ceil(u.damageBlockedInTurn * 0.9 + u.damageTakenInTurn * 1.5)
     }
     move.selectDialogExtra = (b, p) => {
         let dmg = Math.ceil(p.damageBlockedInTurn * 0.8)
         return `ℹ️ Estimated damage: **${fnum(dmg)}**`
     }
-    move.getAiAttackRank = function(b, p, t) {
+    move.getAiAttackRank = function (b, p, t) {
         let targets = b.players.filter(e => !e.dead && e.team == t.team)
         let dmgPerTarget = p.damageBlockedInTurn * 0.8 / targets.length
         if (targets.length == 0) return 0
         return targets.map(p => dmgPerTarget / (p.hp + p.plotArmor)).reduce((a, b) => a + b, 0) * 100
     }
-    move.onUse = function(b, p, t) {
+    move.onUse = function (b, p, t) {
         let damage = Math.ceil(p.damageBlockedInTurn * 0.8)
         let enemies = b.players.filter(e => !e.dead && b.isEnemy(p, e) && e.team == t.team)
         let dist = weightedDistribution(enemies.map(e => e.hp), damage)

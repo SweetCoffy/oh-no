@@ -149,11 +149,12 @@ client.on("error", (error) => {
 
 let minv = Infinity
 let maxv = -Infinity
+let mv = 0xffffffff
 
-let rng = new RNG()
+let rng = new RNG(Math.floor(Math.random() * 999999))
 
-for (let i = 0; i < 100000; i++) {
-    let v = rng.get()
+for (let i = 0; i < 1000000; i++) {
+    let v = rng.get() % mv
     minv = Math.min(minv, v)
     maxv = Math.max(maxv, v)
 }

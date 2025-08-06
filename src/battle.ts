@@ -705,8 +705,8 @@ export class Player {
     /** The player's status conditions */
     status: Status[] = []
     /** The player's stat modifiers */
-    statStages: Stats = makeStats()
-    private statStageModifiers: { [x in StatID]: StatModifier }
+    statStages: ExtendedStats = makeExtendedStats()
+    private statStageModifiers: { [x in ExtendedStatID]: StatModifier }
     /** The ID of the player */
     id: string
     /** The player's current held items */
@@ -965,6 +965,8 @@ export class Battle extends EventEmitter {
             }
             p.aiState = new BotAI(this, p, p.aiSettings)
             p.prevHp = p.hp
+            p.charge = 20
+            p.magic = 30
         }
         let start = BattleTypeInfo[this.type].onStart
         if (start) start(this)
@@ -1088,7 +1090,7 @@ export class Battle extends EventEmitter {
         }
         let msg = await channel.send({
             files,
-            content: this.lobby?.users.map(el => el.toString()).join(" "),
+            content: this.players.filter(v => !v.dead && v.user).map(v => v.user?.toString()).join(" "),
             embeds: [
                 {
                     
@@ -1127,7 +1129,7 @@ export class Battle extends EventEmitter {
     /**
      * Increases `player`'s `stat` stages by `stages` and shows the respective message if `silent` is false
      */
-    statBoost(player: Player, stat: StatID, stages: number, silent = false) {
+    statBoost(player: Player, stat: ExtendedStatID, stages: number, silent = false) {
         if (stages == 0) return
         if (!silent && stat == "atk" && stages > 0) {
             player.charge += Math.floor(stages * 5 * player.cstats.chgbuildup / 100)
@@ -1156,7 +1158,7 @@ export class Battle extends EventEmitter {
     /**
      * Increases `player`'s statStages by the stages set in `stats` and shows the respective messages if `silent` is false
      */
-    multiStatBoost(player: Player, stats: { [x in StatID]?: number }, silent: boolean = false) {
+    multiStatBoost(player: Player, stats: { [x in ExtendedStatID]?: number }, silent: boolean = false) {
         for (let k in stats) {
             this.statBoost(player, k as StatID, stats[k as StatID] as number, silent)
         }

@@ -68,9 +68,9 @@ export class RNG {
     }
     get() {
         const maxvalue = 0xffffffff
-        this.seed = (this.seed ^ (this.seed << 13)) & maxvalue
-        this.seed = (this.seed ^ (this.seed >> 17)) & maxvalue
-        this.seed = (this.seed ^ (this.seed << 5)) & maxvalue
+        this.seed = (this.seed ^ (this.seed << 13)) % maxvalue
+        this.seed = (this.seed ^ (this.seed >> 17)) % maxvalue
+        this.seed = (this.seed ^ (this.seed << 5)) % maxvalue
         this.seed = Math.abs(this.seed % 0xffffffff)
         return this.seed
    }
