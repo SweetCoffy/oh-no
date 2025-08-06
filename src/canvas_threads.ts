@@ -1,25 +1,35 @@
 import { Worker } from "worker_threads"
-import type { Battle } from "./battle"
-import { WorkerMsg } from "./canvas_types"
+import { statusTypes, teamNames, type Battle } from "./battle"
+import { PartialInfo, WorkerMsg } from "./canvas_types"
 const threads: Worker[] = []
 const busy: number[] = []
-const THREAD_COUNT = 1
+const THREAD_COUNT = 2
+// I don't trust my own code in battle.ts to play nicely in worker threads,
+// so instead of importing it directly, I'll just do whatever the hell happens here
+const info: PartialInfo = {
+    statusType: [...statusTypes.mapValues(s => ({
+        name: s.name,
+        short: s.short,
+        fillStyle: s.fillStyle
+    })).entries()],
+    teamNames: teamNames
+}
 for (let i = 0; i < THREAD_COUNT; i++) {
-    let worker = new Worker("./src/canvas_worker.ts")
+    let worker = new Worker("./src/canvas_worker.ts", { workerData: { info } })
     worker.on("error", (err) => {
         console.error(err)
     })
     busy.push(0)
     threads.push(worker)
 }
-function findThread() {
+function findThread(): [Worker, number] {
     let lowest = Math.min(...busy)
     let idx = busy.indexOf(lowest)
-    return threads[idx]
+    return [threads[idx], idx]
 }
 export function generateImage(b: Battle): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-        let thread = findThread()
+        let [thread, idx] = findThread()
         let msg: WorkerMsg = {
             type: "generate",
             id: Bun.randomUUIDv7(),
@@ -32,13 +42,17 @@ export function generateImage(b: Battle): Promise<Buffer> {
                     name: p.name,
                     level: p.level,
                     stats: p.stats,
+                    dead: p.dead,
                     hp: p.hp,
                     prevHp: p.prevHp,
                     absorb: p.getTotalAbsorption(),
+                    dmgBlocked: p.damageBlockedInTurn,
+                    prevAbsorb: p.prevAbsorption,
                     team: p.team,
                     cstats: p.cstats,
                     charge: p.charge,
                     magic: p.magic,
+                    vaporized: p.vaporized,
                     status: p.status.map(s => ({
                         type: s.type,
                         turnsLeft: s.turnsLeft
@@ -49,12 +63,13 @@ export function generateImage(b: Battle): Promise<Buffer> {
         function listener(m: WorkerMsg) {
             if (m.type != "result") return
             if (m.id != msg.id) return
-            console.log(m)
+            busy[idx]--
             thread.removeListener("message", listener)
             let buf = Buffer.from(m.buf)
             resolve(buf)
         }
         thread.on("message", listener)
         thread.postMessage(msg)
+        busy[idx]++
     })
 }

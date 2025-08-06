@@ -11,7 +11,6 @@ import { FG_Gray, Start, Reset, LogColor, LogColorWAccent } from "./ansi.js"
 import { abilities } from "./abilities.js"
 import { BotAI, BotAISettings } from "./battle-ai.js"
 import { dispDelta, fnum } from "./number-format.js"
-import { generateImage } from "./canvas_threads.js"
 
 export const BASELINE_DEF = 250
 
@@ -173,6 +172,7 @@ export class StatusType<T = undefined> {
     upgradeTo?: string
     icon?: string
     negative: boolean = true
+    fillStyle: string = "#ffffff"
     onStart?: typeof this.start
     onTurn?: typeof this.turn
     onEnd?: typeof this.end
@@ -236,6 +236,7 @@ statusTypes.set("broken", new StatusType<BrokenStatusData>("Broken", "Break", (b
     }
 }).set(s => {
     s.duration = 2
+    s.fillStyle = "#656670"
     s.description = formatString("[a]DEF[r] is reduced to [a]0[r]")
 }))
 statusTypes.set("poison", new StatusType("Poison", "Poison", statusMessageEffect("status.poison.start"),
@@ -254,6 +255,7 @@ statusTypes.set("poison", new StatusType("Poison", "Poison", statusMessageEffect
         })
     }, undefined).set(s => {
         s.description = formatString("[a]DoT[r] that scales with the inflictor's [a]Special ATK[r].")
+        s.fillStyle = "#c14dff"
     }))
 statusTypes.set("regen", new StatusType("Regeneration", "Regen", (b, p, s) => {
     statusTypes.get(s.type)?.onTurn?.(b, p, s)
@@ -263,6 +265,7 @@ statusTypes.set("regen", new StatusType("Regeneration", "Regen", (b, p, s) => {
     b.heal(p, Math.ceil(base * mult), false, "heal.regeneration")
 }, undefined).set(s => {
     s.description = formatString("Heals for [a]6.25%[r] of [a]MAX HP[r] every turn")
+    s.fillStyle = "#68ff4d"
 }))
 type DelayedPainData = { damage: number };
 statusTypes.set("delayed_pain", new StatusType<DelayedPainData>("Delayed Pain", "D. Pain", (b, p, s) => {
@@ -279,6 +282,7 @@ statusTypes.set("delayed_pain", new StatusType<DelayedPainData>("Delayed Pain", 
         return 0
     }
     e.description = formatString("Becomes [a]completely invulnerable[r] for the duration of the effect. However, [a]all would-be damage taken[r] is accumulated and is dealt [a]all at once[r] when the effect ends.")
+    e.fillStyle = "#fff64d"
 }))
 statusTypes.set("bleed", new StatusType("Bleeding", "Bleed", (b, p) => b.logL("status.bleed.start", { player: p.toString() }), (b, p, s) => {
     let base = s.infStats?.atk ?? calcStat(STATUS_BASELINE_SPATK, p.level)
@@ -292,6 +296,7 @@ statusTypes.set("bleed", new StatusType("Bleeding", "Bleed", (b, p) => b.logL("s
     })
 }).set(s => {
     s.description = formatString("[a]Prevents healing[r] and deals [a]DoT[r] that scales with the inflictor's [a]ATK[r]")
+    s.fillStyle = "#ff4d74"
 }))
 type StatusModifierData = {
     mods: (StatModifier & { id: string, stat: ExtendedStatID })[]
@@ -315,6 +320,7 @@ let rush = new StatusType<StatusModifierData>("Reckless Rush", "Rush", (b, p, s)
     }
 }).set(s => {
     s.description = formatString("[a]ATK[r] is greatly boosted")
+    s.fillStyle = "#ff774d"
 })
 let overclock = new StatusType<StatusModifierData>("Overclock", "Overclock", (b, p, s) => {
     let magic = p.magic
@@ -338,6 +344,7 @@ let overclock = new StatusType<StatusModifierData>("Overclock", "Overclock", (b,
     p.magic = 0
 }).set(s => {
     s.description = formatString("[a]Special ATK[r] is boosted and [a]Magic[r] is fully regenerated every turn.")
+    s.fillStyle = "#4d9dff"
 })
 
 statusTypes.set("rush", rush)
@@ -440,7 +447,7 @@ const defaultDamageTakenModifiers: DamageTakenModifier[] = [
             if (opts.bypassAbsorb) return dmg
             dmg = Math.ceil(dmg)
             let initial = dmg
-            dmg = p.subAbsorptionAll(dmg)
+            dmg = p.subAbsorptionAll(dmg, b)
             let absorbed = initial - dmg
             if (absorbed > 0) {
                 b.logL("dmg.absorb", { player: p.toString(), damage: fnum(absorbed) })
@@ -470,9 +477,11 @@ const defaultStats: ExtendedStats = {
 }
 export type AbsorptionMod = {
     initialValue: number,
-    efficiency: number
+    efficiency: number,
+    dmgRedirect?: Player,
+    dmgRedirectFrac?: number,
 }
-export type AbsorptionModWithID = AbsorptionMod & { id: string, value: number, active: boolean, dmg: number }
+export type AbsorptionModWithID = AbsorptionMod & { id: string, value: number, active: boolean, dmg: number, dmgRedirectFrac: number }
 /**
  * Represents an in-battle player
  */
@@ -480,6 +489,7 @@ export class Player {
     /** The player's current HP */
     hp: number = 0
     prevHp: number = 0
+    prevAbsorption: number = 0
     /** The player's Max HP */
     get maxhp() {
         return this.cstats.hp;
@@ -685,6 +695,7 @@ export class Player {
     get dead() {
         return this.hp <= -this.plotArmor
     }
+    vaporized: boolean = false
     /** The player's true (unmodified) stats */
     stats: ExtendedStats = makeExtendedStats()
     /** The player's base stats, usually taken from their preset */
@@ -767,8 +778,8 @@ export class Player {
         setKeys(defaultStats, this.stats)
         let resourceBaseline = calcStat(100, this.level)
         setKeys(calcStats(this.level, this.baseStats), this.stats)
-        this.stats.chglimit = Math.ceil(Math.max(30 + this.stats.atk / resourceBaseline * 40, 50) / 5) * 5
-        this.stats.maglimit = Math.ceil(Math.max(30 + this.stats.spatk / resourceBaseline * 40, 50) / 5) * 5
+        this.stats.chglimit = Math.ceil(Math.max(40 + (this.stats.atk + this.stats.def*0.76) / resourceBaseline * 40, 60) / 5) * 5
+        this.stats.maglimit = Math.ceil(Math.max(40 + (this.stats.spatk + this.stats.spdef*0.76) / resourceBaseline * 40, 60) / 5) * 5
         this.stats.crit = Math.min(Math.ceil(this.stats.spd / resourceBaseline * 10), 100)
         this.recalculateStats()
         this.cstats.crit = Math.min(this.cstats.crit, 200)
@@ -808,28 +819,40 @@ export class Player {
             value: a.initialValue,
             efficiency: a.efficiency,
             dmg: 0,
-            active: true
+            active: true,
+            dmgRedirectFrac: a.dmgRedirectFrac ?? 1,
+            dmgRedirect: a.dmgRedirect,
         }
         this.absorptionMods.push(mod)
         this.absorptionMods.sort((a, b) => a.efficiency - b.efficiency)
+        this.prevAbsorption = this.getTotalAbsorption()
         return mod
     }
-    subAbsorption(mod: AbsorptionModWithID, amt: number): number {
+    subAbsorption(mod: AbsorptionModWithID, amt: number, b: Battle): number {
         let v = Math.min(Math.ceil(mod.value * mod.efficiency), amt)
         mod.value -= v
         mod.dmg += v
         let leftover = amt - v
+        let lvl = this.level
+        if (mod.dmgRedirect) {
+            b.takeDamageO(mod.dmgRedirect, v * mod.dmgRedirectFrac, {
+                type: "special",
+                atkLvl: lvl,
+                defStat: "spdef",
+                bypassAbsorb: true
+            })
+        }
         if (mod.value <= 0) {
             mod.active = false
         }
         return leftover
     }
-    subAbsorptionAll(amt: number): number {
+    subAbsorptionAll(amt: number, b: Battle): number {
         let leftover = amt
         for (let mod of this.absorptionMods) {
             if (leftover <= 0) break
             if (!mod.active) continue
-            leftover = this.subAbsorption(mod, leftover)
+            leftover = this.subAbsorption(mod, leftover, b)
         }
         return leftover
     }
@@ -941,6 +964,7 @@ export class Battle extends EventEmitter {
                 itemType.onBattleStart?.(this, p, item)
             }
             p.aiState = new BotAI(this, p, p.aiSettings)
+            p.prevHp = p.hp
         }
         let start = BattleTypeInfo[this.type].onStart
         if (start) start(this)
@@ -1050,25 +1074,28 @@ export class Battle extends EventEmitter {
         }
         let files: AttachmentBuilder[] = []
         if (experimental.battle_info_canvas) {
-            let img = await generateImage(this)
-            console.log(img)
+            let canvas_threads = await import("./canvas_threads.js")
+            let img = await canvas_threads.generateImage(this)
             files = [
                 new AttachmentBuilder(img, { name: "h.png" })
             ]
             summaryEmbed = {
                 title: "Summary",
+                image: {
+                    url: "attachment://h.png",
+                }
             }
         }
         let msg = await channel.send({
             files,
             content: this.lobby?.users.map(el => el.toString()).join(" "),
             embeds: [
-                summaryEmbed,
                 {
                     
                     title: "Log",
                     description: "```ansi" + "\n" + b.logs.slice(-35).join("\n").slice(-1900) + "\n```"
-                }
+                },
+                summaryEmbed,
             ],
             //files: [new AttachmentBuilder(Buffer.from(b.logs.join("\n"))).setName("log.ansi")],
             components: [
@@ -1201,8 +1228,10 @@ export class Battle extends EventEmitter {
         this.logL(opts.message ?? "dmg.generic", { player: target.toString(), damage: Math.floor(dmg), Inf: opts.inflictor?.toString?.() ?? "unknown" }, "red")
         if (target.hp <= -target.plotArmor) {
             let deathMsg = "dmg.death"
+            target.vaporized = false
             if (target.hp < -target.plotArmor - target.maxhp) {
                 deathMsg = "dmg.overkill"
+                target.vaporized = true
             }
             if (opts.inflictor) {
                 deathMsg += ".player"
@@ -1425,6 +1454,7 @@ export class Battle extends EventEmitter {
         for (let u of this.players) {
             u.protect = false
             u.prevHp = u.hp
+            u.prevAbsorption = u.getTotalAbsorption()
         }
         this.log("> Item/Ability phase", "accent")
         for (let p of this.players) {

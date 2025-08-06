@@ -305,30 +305,35 @@ moves.set("protect", new Move("Protect", "protect", 0, "status").set(move => {
 })
     .setDesc(formatString("Significantly reduces [a]all damage[r] taken by the user for the whole turn. [a]Repeated uses decrease the move's success rate.[r]\nThe maximum damage blocked per instance is equal to [a]70%[r] of the [a]incoming damage[r] plus the user's [a]DEF[r]/[a]Special DEF[r] for [a]Physical[r]/[a]Special[r] damage.\nFor [a]Status[r] damage, a fixed [a]50%[r] is blocked instead.")))
 
-moves.set("support_absorption", new Move("Support: Absorption", "status", 0, "status", 100).set(move => {
+moves.set("support_absorption", new Move("Support: Iron Dome Defense System", "status", 0, "status", 100).set(move => {
     move.requiresMagic = 20
     move.targetSelf = true
-    move.onUse = (b, p, t) => {
+    move.onUse = (b, p, _) => {
         let id = p.id = "_support_absorption"
-        let mod = t.absorptionMods.find(v => v.id == id)
         let v = p.cstats.spdef * 0.9
-        if (!mod) {
-            mod = t.addAbsorption({
-                initialValue: v,
-                efficiency: 0.9
-            })
-            mod.id = id
-        } else {
-            mod.initialValue = v
-            mod.value = v
+        for (let player of b.players) {
+            if (b.isEnemy(player, p)) continue
+            let mod = player.absorptionMods.find(v => v.id == id)
+            if (!mod) {
+                mod = player.addAbsorption({
+                    initialValue: v,
+                    efficiency: p == player ? 0.5 : 1.0,
+                    dmgRedirect: p == player ? undefined : p,
+                    dmgRedirectFrac: 1.0,
+                })
+                mod.id = id
+            } else {
+                mod.initialValue = v
+                mod.value = v
+            }
+            b.logL("move.absorption", { player: player.toString() })
         }
-        b.logL("move.absorption", { player: t.toString() })
     }
-}).setDesc(formatString("Grants the target [a]90% efficient Absorption[r] equal to [a]90%[r] of the user's [a]Special DEF[r]. If the target already has Absorption from this move, it is refreshed.")))
+}).setDesc(formatString("Grants all alies [a]100% efficient Absorption[r] equal to [a]90%[r] of the user's [a]Special DEF[r]. If an ally already has Absorption from this move, it is refreshed.\nWhen the [a]Absorption[r] from this move is consumed, the [a]user[r] will take [a]100%[r] of the damage absorbed as [a]Special[r] damage.")))
 
 
 // Only usable in certain conditions
-moves.set("shield_breaker", new Move("Anti-Tank Guided Missile", "attack", 500).set(move => {
+moves.set("shield_breaker", new Move("Break: Armor-Piercing Shell", "attack", 500).set(move => {
     move.accuracy = 100
     move.priority = -2
     move.breakshield = true
@@ -357,7 +362,7 @@ moves.set("shield_breaker", new Move("Anti-Tank Guided Missile", "attack", 500).
         return t.protect
     }
 }).setDesc(formatString("A powerful move that can only be used on a [a]protected[r] target. On hit, it breaks the target's protection, deals damage equal to [a]120%[r] of your [a]ATK[r] + [a]50%[r] of the target's [a]DEF[r], and inflicts [a]Broken[r] for [a]2[r] turns.")))
-moves.set("counter", new Move("Counter", "attack", 0).set(move => {
+moves.set("counter", new Move("Counter: Anti-Material Rifle", "attack", 0).set(move => {
     move.accuracy = 100
     move.priority = -2
     move.critMul = 0.5
@@ -374,7 +379,7 @@ moves.set("counter", new Move("Counter", "attack", 0).set(move => {
     }
     
 }).setDesc(formatString("Deals damage equal to [a]150%[r] of the damage taken in the previous turn + [a]90%[r] of any damage blocked by shielding moves (eg. [a]Protect[r]). The target's [a]DEF[r] stat is taken into account.\nThis move has a [a]50% CRIT Rate multiplier[r].\nThis move has [a]-2 priority[r]")))
-moves.set("release", new Move("Release", "attack", 0).set(move => {
+moves.set("release", new Move("Counter: High Explosive Squash Head", "attack", 0).set(move => {
     move.accuracy = 100
     move.priority = -2
     move.setDamage = "set"
