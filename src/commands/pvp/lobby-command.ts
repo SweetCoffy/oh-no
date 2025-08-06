@@ -198,15 +198,18 @@ export let command: Command = {
                 if (i.customId == "join") {
                     try {
                         let team = undefined
-                        lobby.join(i.user, { team }, i.channel || undefined)
                         if (lobby.isTeamMatch()) {
                             team = await teamPrompt(i, lobby.teamCount)
+                            lobby.join(i.user, { team }, i.channel || undefined)
                             await i.followUp({
                                 content: `${i.user.username} has joined`,
                             })
-                        } else await i.reply({
-                            content: `${i.user.username} has joined`,
-                        })
+                        } else {
+                            lobby.join(i.user, { team }, i.channel || undefined)
+                            await i.reply({
+                                content: `${i.user.username} has joined`,
+                            })
+                        }
                     } catch {
                         await i.reply({
                             content: "Could not join the lobby",

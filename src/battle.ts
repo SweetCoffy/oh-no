@@ -251,7 +251,7 @@ statusTypes.set("poison", new StatusType("Poison", "Poison", statusMessageEffect
             message: "dmg.poison",
             inflictor: s.inflictor,
             type: "status",
-            defStat: "spdef",
+            //defStat: "spdef",
         })
     }, undefined).set(s => {
         s.description = formatString("[a]DoT[r] that scales with the inflictor's [a]Special ATK[r].")
@@ -292,7 +292,7 @@ statusTypes.set("bleed", new StatusType("Bleeding", "Bleed", (b, p) => b.logL("s
         inflictor: s.inflictor,
         message: "dmg.bleed",
         type: "status",
-        defStat: "def",
+        //defStat: "def",
     })
 }).set(s => {
     s.description = formatString("[a]Prevents healing[r] and deals [a]DoT[r] that scales with the inflictor's [a]ATK[r]")
