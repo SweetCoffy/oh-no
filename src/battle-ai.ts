@@ -63,13 +63,13 @@ export class BotAI {
                 score: ai.rankMove(move, target)
             }
         }))
-        let filtered = options.filter(v => !isNaN(v.score))
+        let filtered = options.filter(v => !isNaN(v.score) && v.score > 0)
         if (filtered.length == 0) filtered = options
         filtered.sort((a, b) => b.score - a.score)
         //console.log(this.player.name)
         //console.log(filtered.map(v => `${v.move} -> ${v.target.toString()}: ${v.score}`))
-        let opts = filtered.map(v => [v, v.score]) as [AIActionWithScore, number][]
-        let choice = weightedRandom(opts)
+        //let opts = filtered.map(v => [v, v.score]) as [AIActionWithScore, number][]
+        let choice = filtered[Math.floor(Math.random() * Math.min(filtered.length, 4))]
         return choice
     }
 }

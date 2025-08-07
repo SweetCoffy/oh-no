@@ -66,16 +66,17 @@ export class RNG {
     constructor(seed?: number) {
         this.seed = seed ?? Date.now()
     }
-    get() {
-        const maxvalue = 0xffffffff
-        this.seed = (this.seed ^ (this.seed << 13)) % maxvalue
-        this.seed = (this.seed ^ (this.seed >> 17)) % maxvalue
-        this.seed = (this.seed ^ (this.seed << 5)) % maxvalue
-        this.seed = Math.abs(this.seed % 0xffffffff)
-        return this.seed
-   }
+//     get() {
+//         const maxvalue = 0xffffffff
+//         this.seed = (this.seed ^ (this.seed << 13)) % maxvalue
+//         this.seed = (this.seed ^ (this.seed >> 17)) % maxvalue
+//         this.seed = (this.seed ^ (this.seed << 5)) % maxvalue
+//         this.seed = Math.abs(this.seed % 0xffffffff)
+//         return this.seed
+//    }
     get01() {
-        return (this.get() / 0xffffffff) % 1
+        return Math.random()
+        //return (this.get() / 0xffffffff) % 1
     }
 }
 export let rng = new RNG()

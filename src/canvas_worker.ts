@@ -179,7 +179,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     ctx.lineWidth = 4
     if (heartIcon) {
         ctx.shadowColor = "#0000007a"
-        ctx.shadowOffsetY = 2
+        ctx.shadowOffsetY = 4
         ctx.drawImage(heartIcon, tx, iconY, iconSize, iconSize)
         ctx.globalCompositeOperation = "normal"
         ctx.shadowColor = "#00000000"
@@ -187,15 +187,15 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     }
     ctx.strokeText(hpText, tx, barMiddle)
     ctx.fillText(hpText, tx, barMiddle)
+    tx += Math.max(measured.width, 64) + pad
     if (p.absorb > 0) {
         let absorbText = numFormat.format(p.absorb)
-        measured = ctx.measureText(absorbText)
         let ptx = tx
-        tx += Math.max(measured.width, 64) + pad
+        measured = ctx.measureText(absorbText)
         if (tx + measured.width + iconPad + iconSize < barWidth) {
             if (shieldIcon) {
                 ctx.shadowColor = "#0000007a"
-                ctx.shadowOffsetY = 2
+                ctx.shadowOffsetY = 4
                 ctx.drawImage(shieldIcon, tx, iconY, iconSize, iconSize)
                 ctx.globalCompositeOperation = "normal"
                 ctx.shadowColor = "#00000000"
@@ -315,7 +315,10 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
         ctx.fillStyle = "#fff"
         let iconImg = icon(statusIcons[s.type])
         if (iconImg) {
+            ctx.shadowColor = "#0000007a"
+            ctx.shadowOffsetY = 4
             ctx.drawImage(iconImg, x + statusPad, iconY, iconSize, iconSize)
+            ctx.shadowColor = "#00000000"
         }
         ctx.strokeText(statusText, x + statusPad + iconSize + iconPad, statusH / 2)
         ctx.fillText(statusText, x + statusPad + iconSize + iconPad, statusH / 2)
@@ -358,7 +361,7 @@ function generate(b: PartialBattle) {
         let mostPlayers = Math.max(...teams.map(v => v.length))
         let playerH = playerHeight + pad
         let hMult = Math.ceil(teams.length / cols)
-        let wantedHeight = hMult * mostPlayers*playerH
+        let wantedHeight = hMult * mostPlayers*playerH + 32
         canvas.height = Math.max(minCanvasHeight, wantedHeight)
         let cx = 0
         let height = 0

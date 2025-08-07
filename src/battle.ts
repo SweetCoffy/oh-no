@@ -220,24 +220,29 @@ function statusMessageEffect(message: LocaleString): StatusCallback {
 }
 export let statusTypes: Collection<string, StatusType<any>> = new Collection()
 const STATUS_BASELINE_SPATK = 50
-type BrokenStatusData = { mods: StatModifierWithID[] };
+type BrokenStatusData = StatusModifierData;
 statusTypes.set("broken", new StatusType<BrokenStatusData>("Broken", "Break", (b, p, s) => {
     let mods = [p.addModifier("def", {
-        value: 0,
+        value: 0.1,
+        type: "multiply",
+        multCombine: "multiply",
+        label: "Broken"
+    }), p.addModifier("spdef", {
+        value: 0.1,
         type: "multiply",
         multCombine: "multiply",
         label: "Broken"
     })]
     s.data = { mods }
 }, undefined, (b, p, s) => {
-    let d = s.data as { mods: StatModifierWithID[] }
+    let d = s.data as BrokenStatusData
     for (let mod of d.mods) {
-        p.removeModifier("def", mod.id)
+        p.removeModifier(mod.stat, mod.id)
     }
 }).set(s => {
-    s.duration = 2
+    s.duration = 3
     s.fillStyle = "#656670"
-    s.description = formatString("[a]DEF[r] is reduced to [a]0[r]")
+    s.description = formatString("[a]DEF[r] and [a]Special DEF[r] decreased by [a]90%[r]")
 }))
 statusTypes.set("poison", new StatusType("Poison", "Poison", statusMessageEffect("status.poison.start"),
     function (b, p, s) {
@@ -260,7 +265,7 @@ statusTypes.set("poison", new StatusType("Poison", "Poison", statusMessageEffect
 statusTypes.set("regen", new StatusType("Regeneration", "Regen", (b, p, s) => {
     statusTypes.get(s.type)?.onTurn?.(b, p, s)
 }, function (b, p, s) {
-    let base = p.maxhp
+    let base = s.infStats?.hp ?? p.maxhp
     let mult = 1 / 16
     b.heal(p, Math.ceil(base * mult), false, "heal.regeneration")
 }, undefined).set(s => {
@@ -824,7 +829,7 @@ export class Player {
             dmgRedirect: a.dmgRedirect,
         }
         this.absorptionMods.push(mod)
-        this.absorptionMods.sort((a, b) => a.efficiency - b.efficiency)
+        this.absorptionMods.sort((a, b) => b.efficiency - a.efficiency)
         this.prevAbsorption = this.getTotalAbsorption()
         return mod
     }
@@ -835,7 +840,10 @@ export class Player {
         let leftover = amt - v
         let lvl = this.level
         if (mod.dmgRedirect) {
-            b.takeDamageO(mod.dmgRedirect, v * mod.dmgRedirectFrac, {
+            let d = v * mod.dmgRedirectFrac
+            let mmult = mod.dmgRedirect.cstats.magbuildup / 100
+            mod.dmgRedirect.magic += Math.floor(mmult * 30 * d / mod.dmgRedirect.cstats.hp)
+            b.takeDamageO(mod.dmgRedirect, d, {
                 type: "special",
                 atkLvl: lvl,
                 defStat: "spdef",
@@ -1095,7 +1103,7 @@ export class Battle extends EventEmitter {
                 {
                     
                     title: "Log",
-                    description: "```ansi" + "\n" + b.logs.slice(-35).join("\n").slice(-1900) + "\n```"
+                    description: "```ansi" + "\n" + b.logs.slice(-50).join("\n").slice(-3500) + "\n```"
                 },
                 summaryEmbed,
             ],
@@ -1293,8 +1301,11 @@ export class Battle extends EventEmitter {
                 let user = action.player
                 let move = moves.get(action.move)
                 if (!move) return this.log(`What`)
-                if (move.type != "protect") {
-                    action.player.protectTurns = 0
+                if (move.type != "protect" && action.player.protectTurns > 0) {
+                    if (action.player.protectTurns > 5) {
+                        action.player.protectTurns = 5
+                    }
+                    action.player.protectTurns--
                 }
                 this.log(getString("move.use", { player: action.player.toString(), MOVE: move.name }))
                 let mOpts: MoveCastOpts = {
@@ -1374,6 +1385,7 @@ export class Battle extends EventEmitter {
                     action.player.magic += Math.floor(action.player.cstats.magbuildup / 100 * 10)
                 if (move.recoil) {
                     let recoilDmg = Math.ceil(action.player.maxhp * move.recoil)
+                    recoilDmg = Math.min(recoilDmg, action.player.hp - 1)
                     this.takeDamage(action.player, recoilDmg, false, "dmg.recoil")
                 }
                 if (this.rng.get01() < move.userStatChance) {

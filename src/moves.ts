@@ -311,9 +311,9 @@ moves.set("support_absorption", new Move("Support: Iron Dome Defense System", "s
     move.targetSelf = true
     move.onUse = (b, p, _) => {
         let id = p.id = "_support_absorption"
-        let v = p.cstats.spdef * 0.9
         for (let player of b.players) {
             if (b.isEnemy(player, p)) continue
+            let v = p.cstats.spdef * 0.9
             let mod = player.absorptionMods.find(v => v.id == id)
             if (!mod) {
                 mod = player.addAbsorption({
@@ -354,8 +354,8 @@ const gachaUncommonPool: GachaBuff[] = [
     { type: "charge", amount: 20, name: "20 Charge" },
     { type: "magic", amount: 20, name: "20 Magic" },
     { type: "heal", amount: 0.15, name: "15% Heal" },
-    { type: "effect", id: "bleed", name: "Regeneration" },
-    { type: "stage_boost", stat: "spd", amount: 2, name: "Mi·d Speed Boost" },
+    { type: "effect", id: "regen", name: "Regeneration" },
+    { type: "stage_boost", stat: "spd", amount: 2, name: "Mid Speed Boost" },
     { type: "multi_stage_boost", stats: ["atk", "spatk"], amount: 1, name: "Small Attack Boost" },
 ]
 const gachaRarePool: GachaBuff[] = [

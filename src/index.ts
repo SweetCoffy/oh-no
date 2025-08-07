@@ -154,7 +154,7 @@ let mv = 0xffffffff
 let rng = new RNG(Math.floor(Math.random() * 999999))
 
 for (let i = 0; i < 1000000; i++) {
-    let v = rng.get() % mv
+    let v = Math.floor(rng.get01() * mv)
     minv = Math.min(minv, v)
     maxv = Math.max(maxv, v)
 }
