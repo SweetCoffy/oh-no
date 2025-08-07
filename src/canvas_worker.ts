@@ -16,7 +16,25 @@ const statusIcons: { [x in string]: string } = {
 }
 console.log("alive")
 const assetsRoot = resolve("./assets")
-const fontPath = join(assetsRoot, "font", "AtkinsonHyperlegibleNext-VariableFont_wght.ttf")
+const fontPath = join(assetsRoot, "font")
+const fontName = "Oxanium"
+const variants = [
+    ["Regular", 400],
+    ["Medium", 500],
+    ["SemiBold", 600],
+    ["Bold", 700],
+    ["ExtraBold", 800],
+] as const
+
+for (let [n, w] of variants) {
+    let path = join(fontPath, fontName + "-" + n + ".ttf")
+    console.log(path)
+    registerFont(path, {
+        family: fontName,
+        weight: w + "",
+        style: "normal"
+    })
+}
 // registerFont(fontPath, {
 //     family: "Atkinson Hyperlegible Next",
 //     weight: "normal",
@@ -35,7 +53,7 @@ Promise.all(iconFiles.map(file => loadImage(join(iconRoot, file)).then(image =>
             console.log(`loaded icon ${name}`)
         }
     })
-const fontFamily = "sans-serif"
+const fontFamily = "Oxanium"
 const normalCanvas = createCanvas(512 + 64, 512 + 96)
 const wideCanvas = createCanvas(768 + 64, 512 + 96)
 const minCanvasHeight = 480
