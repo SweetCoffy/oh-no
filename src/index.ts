@@ -12,9 +12,10 @@ import { writeFileSync, readFileSync } from "fs"
 import { shopItems } from "./items.js"
 
 import { resolve } from "path"
-import { Stats, calcStat, limitStats } from "./stats.js"
+import { Stats, baseStats, calcStat, limitStats, makeExtendedStats } from "./stats.js"
 import { calcMoveDamage } from "./battle.js"
 import { generate } from "./codegen.js"
+import { PartialBattle, PartialPlayer } from "./canvas_types.js"
 
 let config = JSON.parse(readFileSync(resolve("./.config.json"), "utf8"))
 
@@ -164,4 +165,59 @@ console.log(maxv)
 // get real
 if (experimental.april_fools) import("./april-fools.js")
 if (experimental.codegen) generate()
+if (experimental.test_canvas) {
+    const battle = await import("./battle.js")
+    const lobby = await import("./lobby.js")
+    const canvas_threads = await import("./canvas_threads.js")
+    //const l = new lobby.BattleLobby(null)
+    //const b = new battle.Battle()
+    const players: PartialPlayer[] = []
+    for (let i = 0; i < 16; i++) {
+        let p: PartialPlayer = {
+            hp: 0,
+            prevHp: 0,
+            prevAbsorb: 0,
+            absorb: 0,
+            dead: Math.random() < 0.125,
+            stats: { ...makeExtendedStats(), ...baseStats },
+            cstats: { ...makeExtendedStats(), ...baseStats },
+            status: [],
+            vaporized: false,
+            dmgBlocked: 0,
+            magic: 0,
+            charge: 0,
+            level: 50 + Math.floor(Math.random() * 51),
+            team: Math.floor(i / 2),
+            name: "player " + (i + 1)
+        }
+        p.cstats.maglimit = 100
+        p.cstats.chglimit = 100
+        p.prevHp = p.cstats.hp
+        p.hp = Math.ceil(Math.random() * p.cstats.hp)
+        for (let [k, _] of battle.statusTypes) {
+            p.status.push({
+                type: k,
+                turnsLeft: Math.ceil(Math.random()*5)
+            })
+        }
+        if (Math.random() < 0.5) {
+            p.absorb = Math.floor(p.hp / 2)
+        }
+        if (Math.random() < 0.25) {
+            p.hp += p.cstats.hp
+        }
+        p.prevHp = p.hp * (Math.random() - 0.5)
+        players.push(p)
+    }
+    const testBattle: PartialBattle = {
+        isPve: true,
+        logs: [],
+        type: "team_match",
+        turn: 0,
+        players: players
+    }
+    const buf = await canvas_threads.generateImage(testBattle)
+    await Bun.write("/tmp/ohno_canvas_test.png", buf)
+    //Bun.$`xdg-open /tmp/ohno_canvas_test.png`
+}
 // pain

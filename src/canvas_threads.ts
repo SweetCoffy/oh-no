@@ -1,6 +1,6 @@
 import { Worker } from "worker_threads"
-import { statusTypes, teamNames, type Battle } from "./battle"
-import { PartialInfo, WorkerMsg } from "./canvas_types"
+import { statusTypes, teamNames, Battle } from "./battle"
+import { PartialBattle, PartialInfo, WorkerMsg } from "./canvas_types"
 const threads: Worker[] = []
 const busy: number[] = []
 const THREAD_COUNT = 2
@@ -27,13 +27,13 @@ function findThread(): [Worker, number] {
     let idx = busy.indexOf(lowest)
     return [threads[idx], idx]
 }
-export function generateImage(b: Battle): Promise<Buffer> {
+export function generateImage(b: Battle | PartialBattle): Promise<Buffer> {
     return new Promise((resolve, reject) => {
         let [thread, idx] = findThread()
         let msg: WorkerMsg = {
             type: "generate",
             id: Bun.randomUUIDv7(),
-            battle: {
+            battle: (b instanceof Battle) ? {
                 type: b.type,
                 isPve: b.isPve,
                 turn: b.turn,
@@ -58,7 +58,7 @@ export function generateImage(b: Battle): Promise<Buffer> {
                         turnsLeft: s.turnsLeft
                     }))
                 }))
-            }
+            } : b
         }
         function listener(m: WorkerMsg) {
             if (m.type != "result") return

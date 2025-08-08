@@ -7,8 +7,8 @@ if (!parentPort) process.exit(1)
 const info = workerData.info as PartialInfo
 const statusTypes = new Map(info.statusType)
 const statusIcons: { [x in string]: string } = {
-    bleed: "poison",
-    poison: "bleed",
+    bleed: "bleed",
+    poison: "poison",
     mind_overwork: "boost",
     rush: "boost",
     regen: "regen",
@@ -61,7 +61,7 @@ const playerWidth = 320
 const playerHeight = 80
 const pad = 8
 console.log("still alive")
-const numFormat = new Intl.NumberFormat("en-US", { style: "decimal", maximumFractionDigits: 2 })
+const numFormat = new Intl.NumberFormat("en-US", { style: "decimal", maximumFractionDigits: 2, signDisplay: "exceptZero" })
 const teamColors = [
     "#0051ff",
     "#ff0015",
@@ -74,7 +74,7 @@ function icon(name: string): Image | null {
 }
 function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) {
     ctx.font = `bold 20px ${fontFamily}`
-    
+    ctx.lineWidth = 4
     ctx.textAlign = "left"
     ctx.textBaseline = "top"
     ctx.fillStyle = "#fff"
@@ -86,7 +86,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     ctx.strokeText(p.name, playerPad + 2, 0)
     ctx.fillText(p.name, playerPad + 2, 0)
     let measured = ctx.measureText(p.name)
-    ctx.translate(playerPad, 20 + 12)
+    ctx.translate(playerPad, 20 + 8)
     let barWidth = (w - 16) - playerPad
     let barHeight = 24
     //let barRadius = 2
@@ -122,23 +122,35 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
             Math.min(p.absorb / p.cstats.hp, 1) * (barWidth + absorbSizeE),
             barHeight + absorbSizeE)
     }
-    ctx.fillStyle = "#111"
-    ctx.fillRect(0, 0, barWidth, barHeight)
     let barColor = "#ff0015"
     let dmgColor = "#6b0009"
     let healColor = "#73f5eaff"
-    let blockColor = "#0011ff5d"
+    let blockColor = "#c9c9c9ff"
+    let bgColor = "#111"
     let hpPercent = p.hp / p.cstats.hp
     let iconSize = barHeight - 4
     let iconY = barHeight / 2 - iconSize / 2
     let iconPad = pad /2
-    let prevPercent = Math.min(p.prevHp / p.cstats.hp, 1)
+    let prevPercent = p.prevHp
+    let hpOver = false
     if (hpPercent > 0.2) {
         barColor = "#ffe44a"
     }
     if (hpPercent > 0.5) {
         barColor = "#4aff62"
     }
+    if (hpPercent > 1) {
+        hpOver = true
+        prevPercent -= Math.floor(hpPercent)
+        prevPercent = Math.max(prevPercent, 0)
+        hpPercent = hpPercent % 1
+        dmgColor = "#ff8791ff"
+        bgColor = "#25702fff"
+        barColor = "#4aff62"
+    }
+    prevPercent = Math.max(Math.min(prevPercent, 1), 0)
+    ctx.fillStyle = bgColor
+    ctx.fillRect(0, 0, barWidth, barHeight)
     let hpWidth = Math.max(Math.min(hpPercent, 1), -1) * barWidth
     ctx.fillStyle = barColor
     if (hpWidth < 0) {
@@ -316,7 +328,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
         let iconImg = icon(statusIcons[s.type])
         if (iconImg) {
             ctx.shadowColor = "#0000007a"
-            ctx.shadowOffsetY = 4
+            ctx.shadowOffsetY = 2
             ctx.drawImage(iconImg, x + statusPad, iconY, iconSize, iconSize)
             ctx.shadowColor = "#00000000"
         }
