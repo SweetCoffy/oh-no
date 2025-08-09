@@ -23,7 +23,7 @@ export let command: Command = {
                                     value: k,
                                     label: v.name,
                                     default: getUser(i.user).moveset.includes(k),
-                                    description: `POW: ${v.power || "-"} ACC: ${v.accuracy || "-"} | ${v.description || "N/A"}`.slice(0, 100)
+                                    description: `${v.description || "N/A"}`.slice(0, 100)
                                 }
                             })
                         }),

@@ -234,7 +234,7 @@ moves.set("reckless_rush", new Move("Reckless Rush", "status", 0, "status").set(
     move.onUse = (b, p) => {
         let s = b.inflictStatus(p, "rush")
         if (!s) return
-        s.turnsLeft = s.duration = 3
+        s.turnsLeft = s.duration = 2
     }
     move.getAiSupportRank = (b, p, t) => {
         if (t != p) return 0

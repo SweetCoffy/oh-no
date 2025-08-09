@@ -143,7 +143,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
         hpOver = true
         prevPercent -= Math.floor(hpPercent)
         prevPercent = Math.max(prevPercent, 0)
-        hpPercent = hpPercent % 1
+        hpPercent = ((hpPercent - 0.005) % 1) + 0.005
         dmgColor = "#ff8791ff"
         bgColor = "#25702fff"
         barColor = "#4aff62"
@@ -158,13 +158,6 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
         ctx.fillRect(barWidth - hpWidth, 0, hpWidth, barHeight)
     } else {
         let delta = hpPercent - prevPercent
-        if (delta < 0) {
-            const dmgGradient = ctx.createLinearGradient(hpWidth-delta*barWidth - 48, 0, hpWidth-delta*barWidth, 0)
-            dmgGradient.addColorStop(0, dmgColor)
-            dmgGradient.addColorStop(1, "#ff5b84ff")
-            ctx.fillStyle = dmgGradient
-            ctx.fillRect(hpWidth, 0, -delta * barWidth, barHeight)
-        }
         const bgGradient = ctx.createLinearGradient(hpWidth, 0, hpWidth + 48, 0)
         const hpGradient = ctx.createLinearGradient(hpWidth - 48, 0, hpWidth, 0)
         bgGradient.addColorStop(0, "rgba(55, 55, 55, 1)")
@@ -181,6 +174,13 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
         ctx.fillStyle = hpGradient
         ctx.fillRect(0, 0, hpWidth, barHeight)
         ctx.globalCompositeOperation = "normal"
+        if (delta < 0) {
+            const dmgGradient = ctx.createLinearGradient(hpWidth-delta*barWidth - 32, 0, hpWidth-delta*barWidth, 0)
+            dmgGradient.addColorStop(0, dmgColor)
+            dmgGradient.addColorStop(1, "#ff5b84ff")
+            ctx.fillStyle = dmgGradient
+            ctx.fillRect(hpWidth, 0, -delta * barWidth, barHeight)
+        }
         if (delta > 0) {
             ctx.fillStyle = healColor
             let healW = delta * barWidth

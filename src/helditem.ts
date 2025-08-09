@@ -57,9 +57,9 @@ export let items: Collection<string, HeldItemType> = new Collection()
 items.set("eggs",
     new HeldItemType("Eggs", (b, p, item) => {
         if (p.dead) return
-        b.heal(p, Math.floor(p.maxhp * 0.05), false, "heal.eggs")
+        b.heal(p, Math.floor(p.maxhp * 0.025), false, "heal.eggs")
     })
-        .setEffect(formatString("Every turn:\nHeals the user by [a]5%[r] of their [a]MAX HP[r].")).setIcon("🥚"))
+        .setEffect(formatString("Every turn:\nHeals the user by [a]2.5%[r] of their [a]MAX HP[r].")).setIcon("🥚"))
 
 items.set("shield",
     new HeldItemType("Shield", function (b, p, i) {
@@ -194,31 +194,33 @@ items.set("bruh_orb",
     new HeldItemType("Bruh Orb").set((v) => {
         v.onBattleStart = bruhOrbEffect("")
     }).setEffect(DescriptionBuilder.new()
-        .bruhOrbMod(bruhOrbBoosts[""]).build()).setIcon("🔴").setClass("bruh_orb"))
+        .bruhOrbMod(bruhOrbBoosts[""]).line("").build()).setIcon("🔴").setClass("bruh_orb"))
 
 items.set("bruh_orb_attack",
     new HeldItemType("Bruh Orb (Attack)").set((v) => {
         v.onBattleStart = bruhOrbEffect("attack")
     }).setEffect(DescriptionBuilder.new()
-        .bruhOrbMod(bruhOrbBoosts.attack).build()).setIcon("🗡️").setClass("bruh_orb"))
+        .bruhOrbMod(bruhOrbBoosts.attack).line("Refer to the standard [a]Bruh Orb[r] for details.").build()).setIcon("🗡️").setClass("bruh_orb"))
 
 items.set("bruh_orb_speed",
     new HeldItemType("Bruh Orb (Speed)").set((v) => {
         v.onBattleStart = bruhOrbEffect("speed")
     }).setEffect(DescriptionBuilder.new()
-        .bruhOrbMod(bruhOrbBoosts.speed).build()).setIcon("👟").setClass("bruh_orb"))
+        .bruhOrbMod(bruhOrbBoosts.speed).line("Refer to the standard [a]Bruh Orb[r] for details.").build()).setIcon("👟").setClass("bruh_orb"))
 
 items.set("bruh_orb_defense",
     new HeldItemType("Bruh Orb (Defense)").set((v) => {
         v.onBattleStart = bruhOrbEffect("defense")
     }).setEffect(DescriptionBuilder.new()
-        .bruhOrbMod(bruhOrbBoosts.defense).build()).setIcon("🛡️").setClass("bruh_orb"))
+        .bruhOrbMod(bruhOrbBoosts.defense).line("Refer to the standard [a]Bruh Orb[r] for details.").build()).setIcon("🛡️").setClass("bruh_orb"))
 
 items.set("bruh_orb_hp",
     new HeldItemType("Bruh Orb (HP)").set((v) => {
         v.onBattleStart = bruhOrbEffect("hp")
     }).setEffect(DescriptionBuilder.new()
-        .bruhOrbMod(bruhOrbBoosts.hp).build()).setIcon("❤️").setClass("bruh_orb"))
+        .bruhOrbMod(bruhOrbBoosts.hp)
+        .line("Refer to the standard [a]Bruh Orb[r] for details.")
+        .build()).setIcon("❤️").setClass("bruh_orb"))
 
 const MIRROR_BASE_MAX_HP = 150
 const MIRROR_TEST_LEVELS = [1, 10, 25, 50, 100]

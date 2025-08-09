@@ -40,6 +40,7 @@ function genWikiEntries<
         entry.register()
     }
 }
+let sp_entry_list = new WikiEntry("Special: List of Terms").register()
 new WikiEntry("Stat: CRIT Rate",
     formatString("Determines the chance of a critical hit. When it exceeds 100%, all attacks are guaranteed to be critical hits, and" +
         "the excess [a]CRIT Rate[r] is converted into [a]Super CRIT Rate[r].\n" +
@@ -74,3 +75,4 @@ genWikiEntries("Move: ", moves)
 genWikiEntries("Status: ", statusTypes)
 genWikiEntries("Item: ", items)
 genWikiEntries("Ability: ", abilities)
+sp_entry_list.content = [...wikiEntries.keys()].join(", ")
