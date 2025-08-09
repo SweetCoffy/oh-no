@@ -208,7 +208,7 @@ if (experimental.test_canvas) {
             p.hp += p.cstats.hp
         }
         //p.prevHp = p.hp * (Math.random() - 0.5)
-        console.log(`${p.prevHp} / ${p.hp}`)
+        //console.log(`${p.prevHp} / ${p.hp}`)
         players.push(p)
     }
     const testBattle: PartialBattle = {

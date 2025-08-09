@@ -131,7 +131,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     let iconSize = barHeight - 4
     let iconY = barHeight / 2 - iconSize / 2
     let iconPad = pad / 2
-    let prevPercent = p.prevHp
+    let prevPercent = p.prevHp / p.cstats.hp
     let hpOver = false
     if (hpPercent > 0.2) {
         barColor = "#ffe44a"
