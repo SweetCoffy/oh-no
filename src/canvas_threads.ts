@@ -55,7 +55,8 @@ export function generateImage(b: Battle | PartialBattle): Promise<Buffer> {
                     vaporized: p.vaporized,
                     status: p.status.map(s => ({
                         type: s.type,
-                        turnsLeft: s.turnsLeft
+                        turnsLeft: s.turnsLeft,
+                        duration: s.duration
                     }))
                 }))
             } : b

@@ -55,13 +55,13 @@ Promise.all(iconFiles.map(file => loadImage(join(iconRoot, file)).then(image =>
     })
 const fontFamily = "Oxanium"
 const normalCanvas = createCanvas(512 + 64, 512 + 96)
-const wideCanvas = createCanvas(768 + 64, 512 + 96)
+const wideCanvas = createCanvas(768 + 128, 512 + 96)
 const minCanvasHeight = 480
 const playerWidth = 320
 const playerHeight = 80
 const pad = 8
 console.log("still alive")
-const numFormat = new Intl.NumberFormat("en-US", { style: "decimal", maximumFractionDigits: 2, signDisplay: "exceptZero" })
+const numFormat = new Intl.NumberFormat("en-US", { style: "decimal", maximumFractionDigits: 2, signDisplay: "auto" })
 const teamColors = [
     "#0051ff",
     "#ff0015",
@@ -130,7 +130,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     let hpPercent = p.hp / p.cstats.hp
     let iconSize = barHeight - 4
     let iconY = barHeight / 2 - iconSize / 2
-    let iconPad = pad /2
+    let iconPad = pad / 2
     let prevPercent = p.prevHp
     let hpOver = false
     if (hpPercent > 0.2) {
@@ -231,7 +231,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     }
     ctx.translate(0, barHeight + pad)
     ctx.textAlign = "left"
-    let statusH = 20
+    let statusH = 24
     let x = 0
     let statusPad = pad / 2
     let maxStatusTextW = barWidth / 6
@@ -324,6 +324,45 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
         }
         ctx.fillStyle = type.fillStyle
         ctx.fillRect(x, 0, width + statusPad * 2, statusH)
+        //ctx.globalCompositeOperation = "destination-out"
+        let segmentCount = s.duration
+        let segmentFillCount = s.turnsLeft
+        let segmentStart = statusPad / 2
+        let segmentSpacing = 2
+        let segmentH = 4
+        let segmentY = statusH - (segmentH + statusPad / 2)
+        let segmentW = 0
+        let sx = x + segmentStart
+        function recalculateAvailSpace() {
+            return (width + statusPad*2 - segmentStart - statusPad/2)
+                - (Math.max((segmentCount - 1) * segmentSpacing, 0)
+                    + segmentW * segmentCount)
+        }
+        let availSpace = recalculateAvailSpace()
+        while (availSpace > 0) {
+            let expand = availSpace / segmentCount
+            segmentW += expand
+            availSpace = recalculateAvailSpace()
+        }
+        ctx.globalCompositeOperation = "hard-light"
+        const lengthGradient = ctx.createLinearGradient(0, statusH - (segmentH + 4), 0, statusH)
+        lengthGradient.addColorStop(0, "rgb(127, 127, 127)")
+        lengthGradient.addColorStop(1, "#464646ff")
+        ctx.fillStyle = lengthGradient
+        ctx.fillRect(x, statusH - (segmentH + 4), width + statusPad*2, segmentH + 4)
+        for (let i = 0; i < segmentCount; i++) {
+            if (i < segmentFillCount) {
+                //do something here
+                ctx.fillStyle = "#eee"
+                ctx.globalCompositeOperation = "hard-light"
+            } else {
+                ctx.fillStyle = "#999"
+                ctx.globalCompositeOperation = "hard-light"
+            }
+            ctx.fillRect(sx, segmentY, segmentW, segmentH)
+            sx += segmentW + segmentSpacing
+        }
+        ctx.globalCompositeOperation = "normal"
         ctx.fillStyle = "#fff"
         let iconImg = icon(statusIcons[s.type])
         if (iconImg) {
@@ -373,7 +412,7 @@ function generate(b: PartialBattle) {
         let mostPlayers = Math.max(...teams.map(v => v.length))
         let playerH = playerHeight + pad
         let hMult = Math.ceil(teams.length / cols)
-        let wantedHeight = hMult * mostPlayers*playerH + 32
+        let wantedHeight = hMult * mostPlayers * playerH + 32
         canvas.height = Math.max(minCanvasHeight, wantedHeight)
         let cx = 0
         let height = 0

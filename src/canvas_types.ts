@@ -28,7 +28,7 @@ export type PartialPlayer = {
     absorb: number,
     stats: ExtendedStats,
     cstats: ExtendedStats,
-    status: { type: string, turnsLeft: number }[],
+    status: { type: string, turnsLeft: number, duration: number }[],
     team: number,
     level: number,
     name: string,

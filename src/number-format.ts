@@ -2,7 +2,7 @@ import { formats } from "./formats.js"
 import type { ExtendedStatID } from "./stats.js"
 
 export const CURRENCY_ICON = "$"
-export const numfmt = new Intl.NumberFormat("en-US", { style: "decimal", maximumFractionDigits: 2, signDisplay: "exceptZero" })
+export const numfmt = new Intl.NumberFormat("en-US", { style: "decimal", maximumFractionDigits: 2, signDisplay: "auto" })
 export const fracfmt = new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 2 })
 export const numdeltafmt = new Intl.NumberFormat("en-US", { style: "decimal", maximumFractionDigits: 2, signDisplay: "always" })
 export const fracdeltafmt = new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 2, signDisplay: "always" })

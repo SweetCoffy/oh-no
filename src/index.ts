@@ -197,7 +197,8 @@ if (experimental.test_canvas) {
         for (let [k, _] of battle.statusTypes) {
             p.status.push({
                 type: k,
-                turnsLeft: Math.ceil(Math.random()*5)
+                turnsLeft: Math.floor(Math.random()*5),
+                duration: battle.statusTypes.get(k)?.duration ?? 2
             })
         }
         if (Math.random() < 0.5) {
