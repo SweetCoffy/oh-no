@@ -1172,9 +1172,10 @@ export class Battle extends EventEmitter {
         }
     }
     fullLog: string[] = []
+    logIndent: number = 0
     log(str: string, color: LogColorWAccent = "white") {
         this.fullLog.push(str)
-        this.logs.push(formatString(str, color))
+        this.logs.push(" ".repeat(this.logIndent) + formatString(str, color))
         this.emit("log", str)
     }
     logL(str: LocaleString, vars: Dictionary<any> | any[], color: LogColorWAccent = "white") {
@@ -1308,6 +1309,7 @@ export class Battle extends EventEmitter {
                     action.player.protectTurns--
                 }
                 this.log(getString("move.use", { player: action.player.toString(), MOVE: move.name }))
+                this.logIndent++
                 let mOpts: MoveCastOpts = {
                     category: move.category,
                     requiresCharge: move.requiresCharge,
@@ -1366,8 +1368,10 @@ export class Battle extends EventEmitter {
                     }
                     let hitCount = mOpts.multihit
                     dmg = Math.ceil(dmg / move.multihit)
+                    let prevIndent = this.logIndent++
                     for (let i = 0; i < hitCount; i++) {
                         dmg = Math.ceil(dmg * this.critRoll(action.player, action.target, mOpts.critMul))
+                        this.logIndent = prevIndent
                         this.takeDamageO(action.target, dmg, opts)
                     }
                 } else if (move.type == "protect") {
@@ -1464,15 +1468,17 @@ export class Battle extends EventEmitter {
         if (this.ended) return
         this.turn++
         this.logs = []
+        this.logIndent = 0
         this.log(`Turn ${this.turn}`)
         for (let u of this.players) {
             u.protect = false
             u.prevHp = u.hp
             u.prevAbsorption = u.getTotalAbsorption()
         }
-        this.log("> Item/Ability phase", "accent")
+        this.log("Item/Ability", "accent")
         for (let p of this.players) {
             if (p.dead) continue;
+            this.logIndent++
             p.positionInTurn = 9999
             p.updateItems()
             let ab = abilities.get(p.ability || "")
@@ -1488,6 +1494,8 @@ export class Battle extends EventEmitter {
             p.updateItems()
             p.absorptionMods = p.absorptionMods.filter(el => el.active)
         }
+        this.logIndent = 0
+        this.log("Action")
         let actionQueue = new Set(this.actions)
         let i = 0
         while (actionQueue.size > 0) {
@@ -1504,8 +1512,10 @@ export class Battle extends EventEmitter {
             actionQueue.delete(a)
             if (a.player.dead) continue
             a.player.positionInTurn = i++
+            this.logIndent = 1
             try {
-                this.log(`> ${a.player.name}'s turn`, "accent")
+                this.log(`${a.player.name}'s turn`, "accent")
+                this.logIndent++
                 this.doAction(a)
                 a.player.damageBlockedInTurn = 0
                 a.player.damageTakenInTurn = 0
@@ -1516,8 +1526,10 @@ export class Battle extends EventEmitter {
         while (this.actions.length > 0) {
             this.actions.pop()
         }
-        this.log("> Status phase", "accent")
+        this.logIndent = 0
+        this.log("Status", "accent")
         for (let u of this.players) {
+            this.logIndent = 1
             for (let s of u.status) {
                 this.doStatusUpdate(u, s)
             }
@@ -1528,6 +1540,7 @@ export class Battle extends EventEmitter {
                 return el.turnsLeft > 0
             })
         }
+        this.logIndent = 0
         // Discourage stalling until the heat death of the universe by doing some stuff
         if (this.lengthPunishmentsStart > 0) {
             let start = this.lengthPunishmentsStart
