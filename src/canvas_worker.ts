@@ -126,7 +126,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     let dmgColor = "#6b0009"
     let healColor = "#73f5eaff"
     let blockColor = "#c9c9c9ff"
-    let bgColor = "#111"
+    let bgColor = "#2b2b2bff"
     let hpPercent = p.hp / p.cstats.hp
     let iconSize = barHeight - 4
     let iconY = barHeight / 2 - iconSize / 2
@@ -158,11 +158,29 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
         ctx.fillRect(barWidth - hpWidth, 0, hpWidth, barHeight)
     } else {
         let delta = hpPercent - prevPercent
-        ctx.fillRect(0, 0, hpWidth, barHeight)
         if (delta < 0) {
-            ctx.fillStyle = dmgColor
+            const dmgGradient = ctx.createLinearGradient(hpWidth-delta*barWidth - 48, 0, hpWidth-delta*barWidth, 0)
+            dmgGradient.addColorStop(0, dmgColor)
+            dmgGradient.addColorStop(1, "#ff5b84ff")
+            ctx.fillStyle = dmgGradient
             ctx.fillRect(hpWidth, 0, -delta * barWidth, barHeight)
         }
+        const bgGradient = ctx.createLinearGradient(hpWidth, 0, hpWidth + 48, 0)
+        const hpGradient = ctx.createLinearGradient(hpWidth - 48, 0, hpWidth, 0)
+        bgGradient.addColorStop(0, "rgba(55, 55, 55, 1)")
+        bgGradient.addColorStop(1, "rgb(127, 127, 127)")
+        hpGradient.addColorStop(0, "rgb(127, 127, 127)")
+        hpGradient.addColorStop(1, "rgb(200, 200, 200)")
+        ctx.fillStyle = bgGradient
+        ctx.globalCompositeOperation = "hard-light"
+        ctx.fillRect(0, 0, barWidth, barHeight)
+        ctx.globalCompositeOperation = "normal"
+        ctx.fillStyle = barColor
+        ctx.fillRect(0, 0, hpWidth, barHeight)
+        ctx.globalCompositeOperation = "hard-light"
+        ctx.fillStyle = hpGradient
+        ctx.fillRect(0, 0, hpWidth, barHeight)
+        ctx.globalCompositeOperation = "normal"
         if (delta > 0) {
             ctx.fillStyle = healColor
             let healW = delta * barWidth
@@ -231,10 +249,10 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     }
     ctx.translate(0, barHeight + pad)
     ctx.textAlign = "left"
-    let statusH = 24
+    let statusH = 26
     let x = 0
     let statusPad = pad / 2
-    let maxStatusTextW = barWidth / 6
+    let maxStatusTextW = barWidth / 3
     ctx.textBaseline = "middle"
     ctx.font = `bold 16px ${fontFamily}`
     ctx.strokeStyle = "#0000007a"
@@ -299,18 +317,20 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     //     }
     // ]
     let sorted = p.status.sort((a, b) => b.turnsLeft - a.turnsLeft)
-    iconSize = statusH - 4
+    iconSize = statusH - 6
     iconY = statusH / 2 - iconSize / 2
     //iconPad = pad /2
     for (let s of sorted) {
         let type = statusTypes.get(s.type)
         if (!type) continue
         let statusText = type.name
-        ctx.font = `bold 16px ${fontFamily}`
+        ctx.font = `bold 14px ${fontFamily}`
         measured = ctx.measureText(statusText)
-        if (measured.width > maxStatusTextW) {
-            ctx.font = `bold 12px ${fontFamily}`
+        let fsize = 12
+        while (measured.width > maxStatusTextW && fsize > 8) {
+            ctx.font = `bold ${fsize}px ${fontFamily}`
             measured = ctx.measureText(statusText)
+            fsize -= 2
         }
         let width = measured.width + iconSize + iconPad
         if (overflowCount > 0 || x + width + statusPad * 2 > statusMaxW) {
