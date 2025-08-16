@@ -146,7 +146,7 @@ export function calcStats(level: number, baseStats: Stats): Stats {
     for (let k in baseStats) {
         s[k as StatID] = calcStat(baseStats[k as StatID], level)
     }
-    s.hp += level*50 + Math.ceil(s.hp * 2.5)
+    s.hp += level*75
     return s
 }
 export function getPreset(name: string, user?: User) {

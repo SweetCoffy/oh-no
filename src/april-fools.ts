@@ -4,7 +4,8 @@ import { enemies } from "./enemies.js"
 import { items } from "./helditem.js"
 import { shopItems } from "./items.js"
 import { moves } from "./moves.js"
-import { experimental, loadRecursive, RNG } from "./util.js"
+import { experimental, loadRecursive, owoSpecial, RNG } from "./util.js"
+import { abilities } from "./abilities.js"
 // April fools tomfoolery
 
 let seed = 69
@@ -28,7 +29,7 @@ function shuffleCollection(col: Collection<any, any>) {
 
 // Get a list of all the stuff names
 let names: string[] = []
-let namecols: Collection<string, {name: string}>[] = [items, shopItems, enemies, statusTypes, moves]
+let namecols: Collection<string, {name: string}>[] = [items, shopItems, enemies, statusTypes, moves, abilities]
 for (let c of namecols) {
     for (let [k, v] of c) {
         names.push(v.name)
@@ -43,6 +44,7 @@ shuffleCollection(shopItems)
 shuffleCollection(moves)
 shuffleCollection(enemies)
 shuffleCollection(statusTypes)
+shuffleCollection(abilities)
 
 let namesleft = new Set(names)
 function getName() {
@@ -55,6 +57,7 @@ function getName() {
 for (let c of namecols) {
     for (let [k, v] of c) {
         v.name = getName()
+        v.name = owoSpecial(v.name)
         console.log(`${k}: ${v.name}`)
     }
 }
@@ -65,6 +68,5 @@ for (let k in experimental) {
     experimental[k] = rng.get01() < 0.5
 }
 experimental.april_fools = true
-
 // April fools exclusive items and stuff shouldn't be shuffled by the tomfoolery
 loadRecursive("april_fools")

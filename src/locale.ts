@@ -13,12 +13,14 @@ export type Locales = {
 export let locales: Locales = {
     en_US: {},
 }
+let replacer = (str: string) => str
 export function getString(key: string, obj: { [key: string]: any } | string[] = {}) {
     // @ts-ignore
     let str: string = locales[locale]?.[key]
     // @ts-ignore
     if (!str) str = locales.en_US?.[key]
     if (!str) return key
+    str = replacer(str)
     if (!Array.isArray(obj)) {
         for (let k in obj) {
             let v = obj[k]
@@ -34,3 +36,9 @@ export function getString(key: string, obj: { [key: string]: any } | string[] = 
         return v + ""
     })
 }
+(async () => {
+    let util = await import("./util")
+    if (util.experimental.april_fools) {
+        replacer = (str) => util.owoSpecial(str)
+    }
+})()

@@ -18,8 +18,8 @@ export function calcDamage(dmg: number, def: number, level: number) {
     return dmg * getDamageDEFMul(def, level)
 }
 export function getDamageDEFMul(def: number, level: number) {
-    let lf = calcStat(BASELINE_DEF, level)
-    return lf / (lf + def)
+    //let lf = calcStat(BASELINE_DEF, level)
+    return 1 - (def / (def + (level + 1)*20))
 }
 export function calcMoveDamage(pow: number, atk: number, def: number, level: number) {
     return calcDamage((atk * pow / 100), def, level)

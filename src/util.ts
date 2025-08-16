@@ -418,3 +418,20 @@ export function playerSelectorComponent(player: Player, battle: Battle, customId
             }
         }))
 }
+const specialRegex = /\[\w+\]|[a-zA-Z]\:.+;|\$\.[a-zA-Z_]+/gm
+const fRegex = /{(\d+)}/gm
+export function owoSpecial(str: string) {
+    let list: string[] = []
+    let replaced = str.replaceAll(specialRegex, (sub) => {
+        list.push(sub)
+        return `{${list.length - 1}}`
+    }).toLowerCase()
+    .replaceAll("r", "w")
+    .replaceAll("l", "w")
+    .replaceAll("ck", "k")
+    .replaceAll(/[bcdfghjklmnpqrstvxz]t/gm, "t")
+    .replaceAll(/([bcdfghjklmnpqrstvxz])e\b/gm, "$1")
+    return replaced.replaceAll(fRegex, (_sub, g1) => {
+        return list[parseInt(g1)]
+    })
+}

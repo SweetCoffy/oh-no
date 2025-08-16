@@ -1,6 +1,6 @@
 // "stable" version info command
 import { ActionRowBuilder, ApplicationCommandOptionType, ApplicationCommandType, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, codeBlock, StringSelectMenuBuilder } from "discord.js"
-import { calcMul, Player, StatModifier, statusTypes, teamNames } from "../../battle.js"
+import { calcMul, getDamageDEFMul, Player, StatModifier, statusTypes, teamNames } from "../../battle.js"
 import { Command } from "../../command-loader.js"
 import { ExtendedStatID, StatID } from "../../stats.js"
 import { getUser } from "../../users.js"
@@ -8,7 +8,7 @@ import { bar, barDelta, formatString, playerSelectorComponent } from "../../util
 import { getString } from "../../locale.js"
 import { moves } from "../../moves.js"
 import { dispDelta, dispMul, ffrac, fnum, fstat, modStatDisp } from "../../number-format.js"
-function playerInfoString(player: Player, details: boolean) {
+function playerInfoString(player: Player, details: boolean, refPlayer?: Player) {
     let finalStats = player.getFinalStats()
     function dispMod(mod: StatModifier) {
         if (mod.type == "add") {
@@ -26,8 +26,17 @@ function playerInfoString(player: Player, details: boolean) {
         .map(el => {
             let stat = el as ExtendedStatID
             let mds = player.modifiers[stat]
-
-            return formatString(`[a]${getString("stat." + stat).padEnd(12, " ")}[r] [a]${fstat(player.stats[stat], stat)}[r] -> ${modStatDisp(player.stats[stat], finalStats[stat], true, stat)}`
+            let extra = ""
+            if (stat == "def" || stat == "spdef") {
+                let refLvl = player.level
+                if (refPlayer) {
+                    refLvl = refPlayer.level
+                }
+                let mult = getDamageDEFMul(finalStats[stat], refLvl)
+                let dr = 1 - mult
+                extra = ` (${ffrac(dr)} effective DR)`
+            }
+            return formatString(`[a]${getString("stat." + stat).padEnd(12, " ")}[r] [a]${fstat(player.stats[stat], stat)}[r] -> ${modStatDisp(player.stats[stat], finalStats[stat], true, stat)}${extra}`
                 + (details ? `\n${mds.filter(el => !el.disabled)
                     .map(el => {
                         return `· ${el.label || "Unknown Modifier"}: ${dispMod(el)}`
@@ -84,7 +93,7 @@ export let command: Command = {
                 return await i.update(({ content: codeBlock(`Player not found.`) }))
             let details = currentPlayer && !battle.isEnemy(player, currentPlayer)
             return await i.update({
-                content: playerInfoString(player, details),
+                content: playerInfoString(player, details, currentPlayer),
             })
         }
     },
@@ -115,7 +124,7 @@ export let command: Command = {
         let details = userPlayer && !lobby.battle.isEnemy(player, userPlayer)
         await i.reply({
             ephemeral: true,
-            content: playerInfoString(player, !!details),
+            content: playerInfoString(player, !!details, userPlayer),
         })
     }
 }
