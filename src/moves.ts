@@ -188,7 +188,7 @@ export let moves: Collection<string, Move> = new Collection()
 
 // Physical/Special basic attacks
 moves.set("bonk", new Move("Bonk", "attack", 110))
-moves.set("needle", new Move("Needle", "attack", 100 / 20, "physical", 80).set(move => {
+moves.set("needle", new Move("Needle", "attack", 100 / 20, "physical", 100).set(move => {
     move.inflictStatus.push({ status: "bleed", chance: 1 })
     move.setDamage = "percent"
 }).setDesc(formatString("Deals fixed damage equal to [a]5%[r] of the target's [a]MAX HP[r] and inflicts them with [a]Bleed[r]")))
@@ -204,11 +204,27 @@ moves.set("ping", new Move("Ping Attack", "attack", 290, "special").set(move => 
 moves.set("slap", new Move("Slap", "attack", 300).set(move => {
     move.requiresCharge = 15
 }).setDesc(formatString("A strong [a]Physical[r] move that requires [a]Charge[r] to use.")))
-
+moves.set("boulder", new Move("Break: Tactical Homing Boulder", "attack", 0, "physical", 100).set(move => {
+    move.requiresCharge = 30
+    move.requiresMagic = 30
+    move.critMul = 0
+    const mult = 1.3
+    const multstr = (mult * 100).toFixed(1)
+    move.description = 
+    formatString(`Deals [a]defense-ignoring[r] damage equal to [a]${multstr}%[r] of [a]ATK[r] + [a]${multstr}%[r] of [a]Special ATK[r] and inflicts [a]Broken[r].\nThis move [a]cannot CRIT[r].`)
+    move.onUse = (b, p, t) => {
+        const dmg = (p.cstats.atk + p.cstats.spatk)*mult
+        b.inflictStatus(t, "broken")
+        b.takeDamageO(t, dmg, {
+            inflictor: p,
+            type: "none",
+        })
+    }
+}))
 // Status inflicting moves
-moves.set("twitter", new Move("Twitter", "status", 0, "status", 90).set(move => {
+moves.set("twitter", new Move("Twitter", "status", 0, "status", 100).set(move => {
     move.inflictStatus.push({ chance: 1, status: "poison" })
-    move.requiresMagic = 20
+    move.requiresMagic = 10
     move.getAiAttackRank = (b, p, t) => {
         let s = t.status.find(v => v.type == "poison")
         if (s && s.turnsLeft > 1) return -1
@@ -310,7 +326,7 @@ moves.set("support_absorption", new Move("Support: Iron Dome Defense System", "s
     move.requiresMagic = 20
     move.targetSelf = true
     move.onUse = (b, p, _) => {
-        let id = p.id = "_support_absorption"
+        let id = p.id + "_support_absorption"
         for (let player of b.players) {
             if (b.isEnemy(player, p)) continue
             let v = p.cstats.spdef * 0.9
@@ -527,7 +543,7 @@ moves.set("regen", new Move("Regeneration", "status", 0, "status", 100).set(move
         if (healAmt > t.maxhp - t.hp) healDelta -= 0.05
         return (healDelta * 100) + (1 - t.hp / t.maxhp) * 50
     }
-}).setDesc(formatString("Grants the user [a]Regeneration[r] for [a]4[r] turns, healing them by [a]6.25%[r] of their [a]MAX HP[r] every turn while the effect is active.")))
+}).setDesc(formatString("Grants the target [a]Regeneration[r] for [a]4[r] turns.")))
 moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
     move.requiresMagic = 30
     move.targetSelf = true
@@ -539,7 +555,7 @@ moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
         if (healAmt > t.maxhp - t.hp) healDelta -= 0.05
         return (healDelta * 100) + (1 - t.hp / t.maxhp) * 50
     }
-}).setDesc(formatString("Heals the target by [a]40%[r] of their [a]MAX HP[r].")))
+}).setDesc(formatString("Heals the target by [a]40%[r] of your [a]MAX HP[r].")))
 moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
     move.accuracy = 100
     move.priority = 1

@@ -244,10 +244,25 @@ statusTypes.set("broken", new StatusType<BrokenStatusData>("Broken", "Break", (b
     s.fillStyle = "#656670"
     s.description = formatString("[a]DEF[r] and [a]Special DEF[r] decreased by [a]90%[r]")
 }))
-statusTypes.set("poison", new StatusType("Poison", "Poison", statusMessageEffect("status.poison.start"),
+statusTypes.set("poison", new StatusType<StatusModifierData>("Poison", "Poison", (b, p, s) => {
+    b.logL("status.poison.start", { player: p.toString() })
+    s.data = {
+        mods: [p.addModifier("spdef", {
+            value: 0.6,
+            multCombine: "multiply",
+            type: "multiply",
+            label: "Poison"
+        }), p.addModifier("def", {
+            value: 0.8,
+            multCombine: "multiply",
+            type: "multiply",
+            label: "Poison"
+        })]
+    }
+},
     function (b, p, s) {
         let base = s.infStats?.spatk ?? calcStat(STATUS_BASELINE_SPATK, p.level)
-        let mult = 1 / 5
+        let mult = 1.55 / 4
         if (b.type == "pve" && p.team == 0) {
             mult /= 2
         }
@@ -256,21 +271,28 @@ statusTypes.set("poison", new StatusType("Poison", "Poison", statusMessageEffect
             message: "dmg.poison",
             inflictor: s.inflictor,
             type: "status",
-            //defStat: "spdef",
+            defStat: "spdef",
+            atkLvl: s.inflictor?.level ?? p.level
         })
-    }, undefined).set(s => {
-        s.description = formatString("[a]DoT[r] that scales with the inflictor's [a]Special ATK[r].")
+    }, (b, p, s) => {
+        for (let mod of s.data.mods) {
+            p.removeModifier(mod.stat, mod.id)
+        }
+    }).set(s => {
+        s.description = formatString("Deals [a]DoT[r] equal to [a]38.75%[r] of inflictor's [a]Special ATK[r] (at the time of application) every turn and reduces [a]DEF[r]/[a]Special DEF[r] by [a]20%[r]/[a]40%[r].")
         s.fillStyle = "#c14dff"
+        s.duration = 4
     }))
 statusTypes.set("regen", new StatusType("Regeneration", "Regen", (b, p, s) => {
     statusTypes.get(s.type)?.onTurn?.(b, p, s)
 }, function (b, p, s) {
     let base = s.infStats?.hp ?? p.maxhp
-    let mult = 1 / 16
+    let mult = 0.6 / 5
     b.heal(p, Math.ceil(base * mult), false, "heal.regeneration")
 }, undefined).set(s => {
-    s.description = formatString("Heals for [a]6.25%[r] of [a]MAX HP[r] every turn")
+    s.description = formatString("Heals for [a]12%[r] of the inflictor's [a]MAX HP[r] (at the time of application) every turn")
     s.fillStyle = "#68ff4d"
+    s.duration = 5
 }))
 type DelayedPainData = { damage: number };
 statusTypes.set("delayed_pain", new StatusType<DelayedPainData>("Delayed Pain", "D. Pain", (b, p, s) => {
@@ -289,19 +311,40 @@ statusTypes.set("delayed_pain", new StatusType<DelayedPainData>("Delayed Pain", 
     e.description = formatString("Becomes [a]completely invulnerable[r] for the duration of the effect. However, [a]all would-be damage taken[r] is accumulated and is dealt [a]all at once[r] when the effect ends.")
     e.fillStyle = "#fff64d"
 }))
-statusTypes.set("bleed", new StatusType("Bleeding", "Bleed", (b, p) => b.logL("status.bleed.start", { player: p.toString() }), (b, p, s) => {
+statusTypes.set("bleed", new StatusType<StatusModifierData>("Bleeding", "Bleed", (b, p, s) => {
+    b.logL("status.bleed.start", { player: p.toString() })
+    s.data = {
+        mods: [p.addModifier("def", {
+            value: 0.7,
+            multCombine: "multiply",
+            type: "multiply",
+            label: "Bleeding"
+        }), p.addModifier("spdef", {
+            value: 0.9,
+            multCombine: "multiply",
+            type: "multiply",
+            label: "Bleeding"
+        })]
+    }
+}, (b, p, s) => {
     let base = s.infStats?.atk ?? calcStat(STATUS_BASELINE_SPATK, p.level)
-    let mult = 1 / 5
+    let mult = 1.1 / 4
     b.takeDamageO(p, base * mult, {
         silent: false,
         inflictor: s.inflictor,
         message: "dmg.bleed",
         type: "status",
-        //defStat: "def",
+        defStat: "def",
+        atkLvl: s.inflictor?.level ?? p.level
     })
+}, (b, p, s) => {
+    for (let mod of s.data.mods) {
+        p.removeModifier(mod.stat, mod.id)
+    }
 }).set(s => {
-    s.description = formatString("[a]Prevents healing[r] and deals [a]DoT[r] that scales with the inflictor's [a]ATK[r]")
+    s.description = formatString("Deals [a]DoT[r] equal to [a]27.5%[r] of inflictor's [a]ATK[r] (at the time of application) every turn, reduces [a]DEF[r]/[a]Special DEF[r] by [a]30%[r]/[a]10%[r] and [a]disables healing[r].")
     s.fillStyle = "#ff4d74"
+    s.duration = 4
 }))
 type StatusModifierData = {
     mods: (StatModifier & { id: string, stat: ExtendedStatID })[]
@@ -876,7 +919,7 @@ export class Player {
             this.user = user
             this.baseStats = { ...getUser(user).baseStats }
         }
-        this.id = getID()
+        this.id = Bun.randomUUIDv7()
         this.stats = makeExtendedStats()
         let stageModifiers = {}
         for (let k in this.statStages) {
@@ -1103,7 +1146,7 @@ export class Battle extends EventEmitter {
                 {
                     
                     title: "Log",
-                    description: "```ansi" + "\n" + b.logs.slice(-50).join("\n").slice(-3500) + "\n```"
+                    description: "```ansi" + "\n" + b.logs.slice(-60).join("\n").slice(-3800) + "\n```"
                 },
                 summaryEmbed,
             ],
@@ -1380,7 +1423,7 @@ export class Battle extends EventEmitter {
                     supportTarget.protect = true
                 } else if (move.type == "heal") {
                     let pow = move.getPower(this, action.player, supportTarget) / 100
-                    this.heal(supportTarget, Math.floor(supportTarget.maxhp * pow), false, undefined, move.overheal)
+                    this.heal(supportTarget, Math.floor(user.maxhp * pow), false, undefined, move.overheal)
                 } else if (move.type == "absorption") {
                     let pow = move.getPower(this, action.player, supportTarget) / 100
                     //this.addAbsorption(supportTarget, Math.floor(supportTarget.maxhp * pow), move.absorptionTier)

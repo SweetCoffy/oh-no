@@ -189,9 +189,9 @@ export let settings = {
     ownerID: "",
     noSave: false,
     experimental: false,
-    unloadTimeout: 2 * 60 * 1000,
+    unloadTimeout: 10 * 60 * 1000,
     saveprefix: experimental.april_fools ? "fools_" : "",
-    maxMoves: 5,
+    maxMoves: 7,
     accentColor: 0x15deff,
 }
 export class BitArray extends Uint8Array {
