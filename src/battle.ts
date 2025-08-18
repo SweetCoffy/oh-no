@@ -68,16 +68,18 @@ function teamRanking(team: Player[], ranking: GetRankingFn) {
     return team.reduce((prev, cur) => prev + ranking(cur), 0)
 }
 function ffaRanking(p: Player) {
+    if (p.summoner) return 0
     return (p.hp + p.plotArmor) / (p.maxhp + p.plotArmor)
 }
 function sfRanking(p: Player) {
+    if (p.summoner) return 0
     return p.damageDealt
 }
 function ffaGetWinner(b: Battle, ranking: GetRankingFn) {
-    return b.players.sort((a, b) => ranking(b) - ranking(a))[0]
+    return b.players.filter(p => !p.summoner).sort((a, b) => ranking(b) - ranking(a))[0]
 }
 function ffaEndCondition(b: Battle) {
-    let alivePlayers = b.players.filter(p => !p.dead)
+    let alivePlayers = b.players.filter(p => !p.dead && !p.summoner)
     return alivePlayers.length <= 1
 }
 function teamMatchEndCondition(b: Battle) {
@@ -607,7 +609,12 @@ export class Player {
     cleanupSummons() {
         this.summons = this.summons.filter(v => !v.dead)
     }
-    createSummon(b: Battle, preset: string): Player | null {
+    findSummon(preset: string): Player | null {
+        let found = this.summons.find(s => s.summonId == preset)
+        if (found) return found
+        return null
+    }
+    createSummon(b: Battle, preset: string, levelFrac: number = 0.9): Player | null {
         this.cleanupSummons()
         if (this.summons.length >= this.summonCap) {
             return null
@@ -624,7 +631,7 @@ export class Player {
         p.baseStats = {...e.stats}
         p.moveset = [...e.moveset]
         p.ability = e.ability
-        p.level = Math.ceil(this.level * 0.9)
+        p.level = Math.ceil(this.level * levelFrac)
         p.team = this.team
         p.summonId = preset
         p.summoner = this
@@ -921,7 +928,7 @@ export class Player {
         if (mod.dmgRedirect) {
             let d = v * mod.dmgRedirectFrac
             let mmult = mod.dmgRedirect.cstats.magbuildup / 100
-            mod.dmgRedirect.magic += Math.floor(mmult * 30 * d / mod.dmgRedirect.cstats.hp)
+            b.addMagic(mod.dmgRedirect, 50 * d / mod.dmgRedirect.cstats.hp, true)
             b.takeDamageO(mod.dmgRedirect, d, {
                 type: "special",
                 atkLvl: lvl,
@@ -1344,6 +1351,10 @@ export class Battle extends EventEmitter {
             if (target.summoner) {
                 target.summoner.cleanupSummons()
             }
+            for (let summon of target.summons) {
+                summon.hp = -summon.plotArmor
+            }
+            target.cleanupSummons()
             return
         }
         if (target.hp <= 0 && prevHp > 0) {
@@ -1402,7 +1413,7 @@ export class Battle extends EventEmitter {
     addMagic(p: Player, amt: number, silent: boolean = false) {
         let mult = p.cstats.magbuildup/100
         amt = Math.ceil(amt * mult)
-        p.charge += amt
+        p.magic += amt
         if (p.summoner) {
             this.addMagic(p.summoner, amt*0.3, true)
         }

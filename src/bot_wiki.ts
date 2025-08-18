@@ -71,6 +71,11 @@ new WikiEntry("Mechanic: Action Order", formatString(
     "The action order is determined by the [a]Speed[r] stat of the players and the priorities of the queued moves." +
     "The action order may change mid-turn if [a]Speed[r] is modified."))
     .register()
+new WikiEntry("Mechanic: Summons", formatString("Summons are entities that can be summoned mid-battle via certain moves." +
+     "They are treated just like players, but with some key differences:\n" + 
+     "· [a]They are not accounted for when checking for a win condition[r].\n" + 
+     "· When its summoner dies, the Summon dies as well.\n" + 
+     "· When a Summon gains [a]Charge[r] or [a]Magic[r], [a]30%[r] of the corresponding resource will be gained by its summoner as well.")).register()
 genWikiEntries("Move: ", moves)
 genWikiEntries("Status: ", statusTypes)
 genWikiEntries("Item: ", items)

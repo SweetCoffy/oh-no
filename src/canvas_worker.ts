@@ -84,6 +84,9 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     let playerPad = 8
     let namePad = 0
     let orderText = p.actionOrder.toString()
+    if (p.actionOrder == -1) {
+        orderText = "-"
+    }
     let measured = ctx.measureText(orderText)
     namePad += measured.width + 4
     ctx.textAlign = "left"
@@ -103,6 +106,9 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     ctx.translate(playerPad, 20 + 8)
     let barWidth = (w - 16) - playerPad
     let barHeight = 24
+    if (p.summoner) {
+        barHeight -= 2
+    }
     //let barRadius = 2
     let prevAbsorb = p.prevAbsorb
     let teamColor = teamColors[p.team]
@@ -436,8 +442,13 @@ function generate(b: PartialBattle) {
     let y = 0
     let curPlayerW = playerWidth
     let speedSorted = [...b.players].sort((a, b) => b.cstats.spd - a.cstats.spd)
+    let j = 0
     for (let i = 0; i < speedSorted.length; i++) {
-        speedSorted[i].actionOrder = i
+        if (speedSorted[i].dead) {
+            speedSorted[i].actionOrder = -1
+            continue
+        }
+        speedSorted[i].actionOrder = j++
     }
     if (teams.length > 1) {
         let tallest = 0
@@ -474,8 +485,8 @@ function generate(b: PartialBattle) {
                 let ofs = 0
                 let pw = curPlayerW
                 if (p.summoner) {
-                    ofs += 24
-                    pw -= 24
+                    ofs += 16
+                    pw -= 16
                 }
                 ctx.translate(cx * colWidth + ofs, y + yOfs)
                 drawPlayer(ctx, p, pw)
@@ -494,8 +505,14 @@ function generate(b: PartialBattle) {
                 y += playerHeight + pad
             }
             ctx.resetTransform()
-            ctx.translate(x, y)
-            drawPlayer(ctx, p, curPlayerW)
+            let ofs = 0
+            let pw = curPlayerW
+            if (p.summoner) {
+                ofs += 16
+                pw -= 16
+            }
+            ctx.translate(x + ofs, y)
+            drawPlayer(ctx, p, pw)
             totalW += curPlayerW + pad
             x += curPlayerW + pad
         }

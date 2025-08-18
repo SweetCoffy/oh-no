@@ -1,10 +1,12 @@
 import { Collection } from "discord.js"
 import { Battle, calcDamage, getATK, getDEF, Player } from "./battle.js"
-import { ExtendedStatID, makeStats, StatID, Stats } from "./stats.js"
+import { calcStats, ExtendedStatID, makeStats, StatID, Stats } from "./stats.js"
 import { formatString, weightedDistribution, weightedRandom } from "./util.js"
 import { moveCursor } from "readline"
 import { ffrac, fnum } from "./number-format.js"
 import { StatusID } from "./gen.js"
+import { enemies } from "./enemies.js"
+import { getString } from "./locale.js"
 
 export type MoveType = "attack" | "status" | "protect" | "heal" | "absorption" | "noop"
 export type Category = "physical" | "special" | "status"
@@ -191,6 +193,7 @@ moves.set("bonk", new Move("Bonk", "attack", 110))
 moves.set("needle", new Move("Needle", "attack", 100 / 20, "physical", 100).set(move => {
     move.inflictStatus.push({ status: "bleed", chance: 1 })
     move.setDamage = "percent"
+    move.requiresCharge = 5
 }).setDesc(formatString("Deals fixed damage equal to [a]5%[r] of the target's [a]MAX HP[r] and inflicts them with [a]Bleed[r]")))
 moves.set("nerf_gun", new Move("Nerf Gun", "attack", 90, "special").set(move => {
     move.multihit = 2
@@ -221,11 +224,48 @@ moves.set("boulder", new Move("Break: Tactical Homing Boulder", "attack", 0, "ph
         })
     }
 }))
+function summonOnUse(summonType: string, levelFrac: number = 0.9) {
+    return function(b: Battle, p: Player, t: Player) {
+        let found = p.findSummon(summonType)
+        if (!found) {
+            let s = p.createSummon(b, summonType, levelFrac)
+            if (!s) b.logL("move.fail", {})
+            return
+        }
+        let healAmount = found.cstats.hp - found.hp
+        b.heal(found, healAmount)
+    }
+}
+function summonDesc(summonType: string, levelFrac: number = 0.9) {
+    let testLevels = [20, 50, 100]
+    let e = enemies.get(summonType)
+    if (!e) return ""
+    let testStats = testLevels.map(level => calcStats(Math.ceil(level*levelFrac), e.stats))
+    let statList = Object.keys(testStats[0]) as StatID[]
+    let pad = 6
+    let statsString = `${"(Levels:".padEnd(14)} ${testLevels.map(level => `[a]${level.toString().padStart(pad)}[r]`).join("/")})\n` + statList.map(stat => {
+        let name = getString(`stat.${stat}`)
+        return `${(name + ":").padEnd(14)} ${testLevels.map((_, i) => {
+            let val = testStats[i][stat]
+            return `[a]${fnum(val).padStart(pad)}[r]`
+        }).join("/")}`
+    }).join("\n")
+    let movesString = e.moveset.map(m => moves.get(m)?.name).join(", ")
+    return formatString(`[a]${e.name}[r]:\n${e.description}\n${statsString}\nMoves: ${movesString}`)
+}
 moves.set("summon_eh", new Move("Summon: Egg Hater", "status", 0, "status").set(move => {
     move.requiresMagic = 30
-    move.onUse = (b, p, t) => {
-        p.createSummon(b, "egg_hater")
-    }
+    move.onUse = summonOnUse("egg_hater", 1.0)
+    queueMicrotask(() => {
+        move.description = summonDesc("egg_hater")
+    })
+}))
+moves.set("summon_u", new Move("Summon: ú", "status", 0, "status").set(move => {
+    move.requiresMagic = 40
+    move.onUse = summonOnUse("u", 0.6)
+    queueMicrotask(() => {
+        move.description = summonDesc("u", 0.6)
+    })
 }))
 // Status inflicting moves
 moves.set("twitter", new Move("Twitter", "status", 0, "status", 100).set(move => {
@@ -585,22 +625,29 @@ moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
 //}).setDesc("Heals 150% of the user's max HP, but severely lowers attack, special attack and speed"))
 
 
-moves.set("pingcheck", new Move("Pingcheck", "attack", 200, "special", 100).set(el => {
+moves.set("pingcheck", new Move("Pingcheck", "attack", 0, "special", 100).set(el => {
     el.critMul = 0
-    el.priority = -999
+    el.priority = -2
     el.selectable = false
     el.recoil = 0.25
-    el.setDamage = "percent"
-    el.userStat = {
-        hp: 0,
-        atk: -1,
-        def: -1,
-        spatk: -1,
-        spdef: -1,
-        spd: -1,
+    el.requiresCharge = 30
+    el.setDamage = "set"
+    el.getPower = (b, u, t) => {
+        return u.cstats.hp * 1.5
+    }
+    el.onUse = (b, u, t) => {
+        let pow = el.getPower(b, u, t)
+        if (u.summoner) {
+            u.moveset = u.moveset.filter(m => m != "pingcheck")
+        }
+        b.takeDamageO(t, pow, {
+            atkLvl: u.level,
+            defStat: "def",
+            type: "physical"
+        })
     }
     el.inflictStatus.push({ status: "bleed", chance: 1 })
-}).setDesc(formatString("[a]ú[r]'s exclusive move that deals [a]200%[r] of the user's [a]MAX HP[r] in damage. The user takes [a]25%[r] of their [a]MAX HP[r] in damage and their [a]ATK, DEF, SPATK, SPDEF and SPD[r] are decreased by [a]1[r] stage when used.")))
+}).setDesc(formatString("[a]ú[r]'s exclusive move that deals damage equal to [a]150%[r] of its own [a]Max HP[r], while consuming [a]HP[r] equal to [a]25%[r] of its [a]Max HP[r]. If ú was summoned by a player, this move cannot be used again.")))
 
 moves.set("sf_slap", new Move("SF Slap", "attack", 50).set(move => {
     move.selectable = false
