@@ -82,10 +82,24 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
         ctx.fillStyle = "#777"
     }
     let playerPad = 8
+    let namePad = 0
+    let orderText = p.actionOrder.toString()
+    let measured = ctx.measureText(orderText)
+    namePad += measured.width + 4
+    ctx.textAlign = "left"
+    ctx.textBaseline = "middle"
+    ctx.fillStyle = "#000000"
+    ctx.fillRect(playerPad, 0, namePad + 4, 20)
+    ctx.fillStyle = "#ffffff"
+    ctx.fillText(orderText, playerPad + 4, 10)
+    namePad += 8
+    ctx.textAlign = "left"
+    ctx.textBaseline = "top"
+
     ctx.strokeStyle = "#00000094"
-    ctx.strokeText(p.name, playerPad + 2, 0)
-    ctx.fillText(p.name, playerPad + 2, 0)
-    let measured = ctx.measureText(p.name)
+    ctx.strokeText(p.name, namePad + playerPad + 2, 0)
+    ctx.fillText(p.name, namePad + playerPad + 2, 0)
+    measured = ctx.measureText(p.name)
     ctx.translate(playerPad, 20 + 8)
     let barWidth = (w - 16) - playerPad
     let barHeight = 24
@@ -421,6 +435,10 @@ function generate(b: PartialBattle) {
     let x = 0
     let y = 0
     let curPlayerW = playerWidth
+    let speedSorted = [...b.players].sort((a, b) => b.cstats.spd - a.cstats.spd)
+    for (let i = 0; i < speedSorted.length; i++) {
+        speedSorted[i].actionOrder = i
+    }
     if (teams.length > 1) {
         let tallest = 0
         let yOfs = 0
@@ -453,8 +471,14 @@ function generate(b: PartialBattle) {
             height += 4 + pad
             for (let p of players) {
                 ctx.resetTransform()
-                ctx.translate(cx * colWidth, y + yOfs)
-                drawPlayer(ctx, p, curPlayerW)
+                let ofs = 0
+                let pw = curPlayerW
+                if (p.summoner) {
+                    ofs += 24
+                    pw -= 24
+                }
+                ctx.translate(cx * colWidth + ofs, y + yOfs)
+                drawPlayer(ctx, p, pw)
                 y += playerHeight + pad
                 height += playerHeight + pad
             }

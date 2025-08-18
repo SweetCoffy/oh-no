@@ -52,7 +52,11 @@ export function generateImage(b: Battle | PartialBattle): Promise<Buffer> {
                     cstats: p.cstats,
                     charge: p.charge,
                     magic: p.magic,
+                    summoner: p.summoner?.id,
+                    summons: p.summons.map(s => s.id),
+                    id: p.id,
                     vaporized: p.vaporized,
+                    actionOrder: 0,
                     status: p.status.map(s => ({
                         type: s.type,
                         turnsLeft: s.turnsLeft,

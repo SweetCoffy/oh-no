@@ -132,6 +132,13 @@ export let command: Command = {
         if (!player)
             return await i.reply({ flags: ["Ephemeral"], content: "????" })
         let tmp = getTempData(i.user.id, "choose", { move: null, target: null })
+        let missingActions = battle.getMissingActionsFor(i.user)
+        let first = missingActions[0]
+        if (!first) {
+            return await i.reply({ flags: ["Ephemeral"], content: ":(" })
+        }
+        let userPlayer = player
+        player = first
         let moveset = player.moveset
         function moveSelectorComponent(moveset: string[]) {
             return new ActionRowBuilder<StringSelectMenuBuilder>()
@@ -149,17 +156,20 @@ export let command: Command = {
                         }
                     })))
         }
+        let mSelectorString = `Selecting for **${player.name}**.`
         if (i.isButton()) {
             if (i.customId == "choose:open_selector") {
                 tmp.move = null
                 return await i.reply({
-                    flags: ["Ephemeral"], components: [moveSelectorComponent(moveset)]
+                    flags: ["Ephemeral"], 
+                    content: mSelectorString, 
+                    components: [moveSelectorComponent(moveset)]
                 })
             }
             if (i.customId == "choose:back") {
                 tmp.move = null
                 return await i.update({
-                    content: "",
+                    content: mSelectorString,
                     components: [moveSelectorComponent(moveset)]
                 })
             }
@@ -176,6 +186,7 @@ export let command: Command = {
             }
         }
         if (i.isStringSelectMenu()) {
+            
             if (i.customId == "choose:move") {
                 tmp.move = i.values[0]
                 let moveInfo = moves.get(tmp.move)
@@ -224,10 +235,17 @@ export let command: Command = {
                         content: `${i.user.displayName} has chosen the move ${moveInfo.name} targeted at ${target.name}`
                     })
                 } else {
-                    p = i.update({
-                        content: "Move selected.",
-                        components: []
-                    })
+                    if (missingActions.length > 1) {
+                        p = i.update({
+                            content: `Still missing actions for ${missingActions.length - 1} summon(s). Press **Attack** again to choose for your next summon.`,
+                            components: []
+                        })
+                    } else {
+                        p = i.update({
+                            content: "Move selected.",
+                            components: []
+                        })
+                    }
                 }
                 battle.moveAction(player, tmp.move, target)
                 await p

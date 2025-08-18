@@ -221,6 +221,12 @@ moves.set("boulder", new Move("Break: Tactical Homing Boulder", "attack", 0, "ph
         })
     }
 }))
+moves.set("summon_eh", new Move("Summon: Egg Hater", "status", 0, "status").set(move => {
+    move.requiresMagic = 30
+    move.onUse = (b, p, t) => {
+        p.createSummon(b, "egg_hater")
+    }
+}))
 // Status inflicting moves
 moves.set("twitter", new Move("Twitter", "status", 0, "status", 100).set(move => {
     move.inflictStatus.push({ chance: 1, status: "poison" })

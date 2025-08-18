@@ -11,6 +11,7 @@ import { FG_Gray, Start, Reset, LogColor, LogColorWAccent } from "./ansi.js"
 import { abilities } from "./abilities.js"
 import { BotAI, BotAISettings } from "./battle-ai.js"
 import { dispDelta, fnum } from "./number-format.js"
+import { enemies } from "./enemies.js"
 
 export const BASELINE_DEF = 250
 
@@ -542,6 +543,7 @@ export class Player {
     get maxhp() {
         return this.cstats.hp;
     }
+    summonId: string = ""
     /** HP can reach up to`overheal` × `maxhp` */
     overheal: number = 1
     /** The total damage taken in the battle */
@@ -599,6 +601,40 @@ export class Player {
     }
     abilityData: any = {}
     ability?: string
+    summoner?: Player
+    summons: Player[]
+    summonCap: number = 1
+    cleanupSummons() {
+        this.summons = this.summons.filter(v => !v.dead)
+    }
+    createSummon(b: Battle, preset: string): Player | null {
+        this.cleanupSummons()
+        if (this.summons.length >= this.summonCap) {
+            return null
+        }
+        if (b.players.length + 1 > 25 ) {
+            return null
+        }
+        let e = enemies.get(preset)
+        if (!e) {
+            return null
+        }
+        let p = new Player()
+        p._nickname = `${this.name}'s ${e.name}`
+        p.baseStats = {...e.stats}
+        p.moveset = [...e.moveset]
+        p.ability = e.ability
+        p.level = Math.ceil(this.level * 0.9)
+        p.team = this.team
+        p.summonId = preset
+        p.summoner = this
+        this.summons.push(p)
+        p.aiState = new BotAI(b, p)
+        b.players.push(p)
+        p.updateStats()
+        p.prevHp = p.hp
+        return p
+    }
     toString() {
         return `[${teamColors[this.team] || "a"}]${this.name}[r]`
     }
@@ -914,6 +950,7 @@ export class Player {
         return this.absorptionMods.filter(v => v.active).reduce((prev, cur) => prev + cur.initialValue, 0)
     }
     constructor(user?: User) {
+        this.summons = []
         this.absorptionMods = []
         if (user) {
             this.user = user
@@ -1004,8 +1041,19 @@ export class Battle extends EventEmitter {
     logs: string[] = []
     rng: RNG
     ended: boolean = false
+    sortPlayers() {
+        //this.players = this.players.filter(p => !p.summoner || !p.dead)
+        let nonSummons = this.players.filter(p => !p.summoner)
+        nonSummons.sort((a, b) => a.team - b.team)
+        let sorted: Player[] = []
+        for (let player of nonSummons) {
+            sorted.push(player)
+            sorted.push(...player.summons)
+        }
+        this.players = sorted
+    }
     start() {
-        this.players.sort((a, b) => a.team - b.team)
+        this.sortPlayers()
         for (let p of this.players) {
             p.helditems = [...new Set(p.helditems.map(el => el.id))].map(el => ({ id: el }))
             p.updateItems()
@@ -1026,6 +1074,7 @@ export class Battle extends EventEmitter {
         return isTeamMatch(this.type)
     }
     isEnemy(player: Player, target: Player) {
+        if (player.summoner == target || target.summoner == player) return false
         if (player == target) return false
         if (!this.hasTeams) return true
         return player.team != target.team
@@ -1183,7 +1232,7 @@ export class Battle extends EventEmitter {
     statBoost(player: Player, stat: ExtendedStatID, stages: number, silent = false) {
         if (stages == 0) return
         if (!silent && stat == "atk" && stages > 0) {
-            player.charge += Math.floor(stages * 5 * player.cstats.chgbuildup / 100)
+            this.addCharge(player, stages * 5)
         }
         player.statStages[stat] += stages;
         if (silent) return
@@ -1229,7 +1278,7 @@ export class Battle extends EventEmitter {
     }
     checkActions() {
         for (let p of this.players) {
-            if (!p.user) {
+            if (!p.user && !p.summoner?.user) {
                 this.addAction({
                     type: "move",
                     player: p,
@@ -1292,6 +1341,9 @@ export class Battle extends EventEmitter {
             }
             this.logL(deathMsg as LocaleString, { player: target.toString(), Inf: opts.inflictor?.toString?.() ?? "unknown" }, "red")
             target.hp = -target.plotArmor
+            if (target.summoner) {
+                target.summoner.cleanupSummons()
+            }
             return
         }
         if (target.hp <= 0 && prevHp > 0) {
@@ -1339,6 +1391,23 @@ export class Battle extends EventEmitter {
         }
         return fmult
     }
+    addCharge(p: Player, amt: number, silent: boolean = false) {
+        let mult = p.cstats.chgbuildup/100
+        amt = Math.ceil(amt * mult)
+        p.charge += amt
+        if (p.summoner) {
+            this.addCharge(p.summoner, amt*0.3, true)
+        }
+    }
+    addMagic(p: Player, amt: number, silent: boolean = false) {
+        let mult = p.cstats.magbuildup/100
+        amt = Math.ceil(amt * mult)
+        p.charge += amt
+        if (p.summoner) {
+            this.addMagic(p.summoner, amt*0.3, true)
+        }
+    }
+
     doAction(action: TurnAction) {
         switch (action.type) {
             case "move": {
@@ -1391,9 +1460,10 @@ export class Battle extends EventEmitter {
                     let pow = mOpts.pow
                     let atk = getATK(action.player, cat)
                     if (cat == "physical" && !requiresCharge) {
-                        action.player.charge += Math.floor(pow / 6 * action.player.cstats.chgbuildup / 100)
-                    } else if (cat == "special" && !requiresMagic)
-                        action.player.magic += Math.floor(pow / 6 * action.player.cstats.magbuildup / 100)
+                        this.addCharge(action.player, pow / 6, true)
+                    } else if (cat == "special" && !requiresMagic) {
+                        this.addMagic(action.player, pow / 6, true)
+                    }
                     let dmg = pow / 100 * atk
                     let opts: TakeDamageOptions = {
                         silent: false,
@@ -1619,6 +1689,7 @@ export class Battle extends EventEmitter {
             this.emit("end", winner)
             return
         }
+        this.sortPlayers()
         this.emit("newTurn")
     }
     getTeams() {
@@ -1629,12 +1700,28 @@ export class Battle extends EventEmitter {
         }
         return teams
     }
+    getMissingActionsFor(u: User): Player[] {
+        let userPlayer = this.players.find(p => p.user?.id == u.id)
+        if (!userPlayer) return []
+        let players = [userPlayer, ...userPlayer.summons]
+        let missing: Player[] = []
+        for (let p of players) {
+            if (this.actions.some(el => el.player.id == p.id)) {
+                continue
+            }
+            if (p.dead) {
+                continue
+            }
+            missing.push(p)
+        }
+        return missing
+    }
     addAction(action: TurnAction) {
         if (action.player.dead) return
         if (this.actions.some(el => el.player.id == action.player.id)) return
         this.actions.push(action)
         this.emit("actionAdded", action)
-        if (action.player.user) this.checkActions()
+        if (action.player.user || action.player.summoner?.user) this.checkActions()
     }
     moveAction(player: Player, move: string, target: Player) {
         this.addAction({

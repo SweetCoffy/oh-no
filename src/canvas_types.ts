@@ -36,4 +36,8 @@ export type PartialPlayer = {
     charge: number,
     dead: boolean,
     vaporized: boolean,
+    id: string,
+    summoner?: string,
+    summons: string[],
+    actionOrder: number
 }
