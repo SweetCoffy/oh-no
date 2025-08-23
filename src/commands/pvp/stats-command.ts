@@ -34,22 +34,22 @@ function statAllocationComponent(user: User, presetId: string) {
     }
     root.addTextDisplayComponents(
         new TextDisplayBuilder()
-            .setContent("## Primary Stat"))
+            .setContent("## Primary Stats (+4)"))
     root.addActionRowComponents(
         new ActionRowBuilder<StringSelectMenuBuilder>()
-            .addComponents(statSelectComponent("stats:allocation_main", 1, 1)))
+            .addComponents(statSelectComponent("stats:allocation_main", 1, 3)))
     root.addTextDisplayComponents(
         new TextDisplayBuilder()
-            .setContent("## Secondary Stats"))
+            .setContent("## Secondary Stats (+2)"))
     root.addActionRowComponents(
         new ActionRowBuilder<StringSelectMenuBuilder>()
-            .addComponents(statSelectComponent("stats:allocation_secondary", 0, 2)))
+            .addComponents(statSelectComponent("stats:allocation_secondary", 0, 3)))
     root.addTextDisplayComponents(
         new TextDisplayBuilder()
-            .setContent("## Tertiary Stats"))
+            .setContent("## Tertiary Stats (+1)"))
     root.addActionRowComponents(
         new ActionRowBuilder<StringSelectMenuBuilder>()
-            .addComponents(statSelectComponent("stats:allocation_tertiary", 0, 2)))
+            .addComponents(statSelectComponent("stats:allocation_tertiary", 0, 3)))
 
     return [root, new ActionRowBuilder<ButtonBuilder>()
         .addComponents(
@@ -300,9 +300,9 @@ export let command: Command = {
             }
             if (i.customId == "stats:allocation_save") {
                 let stats = makeStats()
-                let primaryWeight = 100 / tmp.main.length
-                let secondaryWeight = 60 / tmp.secondary.length
-                let tertiaryWeight = 30 / tmp.tertiary.length
+                let primaryWeight = 4 /// tmp.main.length
+                let secondaryWeight = 2 /// tmp.secondary.length
+                let tertiaryWeight = 1 /// tmp.tertiary.length
                 for (let k of tmp.main) {
                     stats[k as StatID] += primaryWeight
                 }
@@ -503,6 +503,7 @@ export let command: Command = {
                 if (itemList) {
                     if (preset) {
                         preset.helditems = itemList
+			itemList
                     } else u.helditems = itemList
                 } else {
                     await i.reply(`Items: ${u.helditems.join(", ")}`)

@@ -574,6 +574,13 @@ export class Player {
     //absorption: number = 0
     private _charge: number = 0
     private _magic: number = 0
+    isBot() {
+    	if (this.user) return false
+    	if (this.summoner && !this.summoner.isBot()) {
+    		return false
+    	}
+    	return true
+    }
     get maxMagic() {
         return this.cstats.maglimit
     }
@@ -1285,7 +1292,7 @@ export class Battle extends EventEmitter {
     }
     checkActions() {
         for (let p of this.players) {
-            if (!p.user && !p.summoner?.user) {
+            if (p.isBot()) {
                 this.addAction({
                     type: "move",
                     player: p,
@@ -1443,9 +1450,9 @@ export class Battle extends EventEmitter {
                     multihit: move.multihit,
                 }
                 let supportTarget = action.player
-                if (this.hasTeams) supportTarget = action.target
-                if (move.targetSelf && (!this.hasTeams || action.target.team != action.player.team)) {
-                    action.target = action.player
+                if (!this.isEnemy(action.player, action.target)) supportTarget = action.target
+                if (move.targetSelf) {
+                    action.target = supportTarget
                 }
                 mOpts.pow = move.getPower(this, action.player, action.target)
                 if (user.itemSlots.offense) {
@@ -1717,6 +1724,9 @@ export class Battle extends EventEmitter {
         let players = [userPlayer, ...userPlayer.summons]
         let missing: Player[] = []
         for (let p of players) {
+            if (p.isBot()) {
+                continue
+            }
             if (this.actions.some(el => el.player.id == p.id)) {
                 continue
             }
@@ -1732,7 +1742,7 @@ export class Battle extends EventEmitter {
         if (this.actions.some(el => el.player.id == action.player.id)) return
         this.actions.push(action)
         this.emit("actionAdded", action)
-        if (action.player.user || action.player.summoner?.user) this.checkActions()
+        if (!action.player.isBot()) this.checkActions()
     }
     moveAction(player: Player, move: string, target: Player) {
         this.addAction({

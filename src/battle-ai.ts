@@ -56,6 +56,7 @@ export class BotAI {
     }
     getAction(): AIAction {
         let ai = this
+        
         let options: AIActionWithScore[] = this.player.moveset.flatMap(move => ai.battle.players.map(target => {
             return {
                 move,
@@ -69,7 +70,7 @@ export class BotAI {
         //console.log(this.player.name)
         //console.log(filtered.map(v => `${v.move} -> ${v.target.toString()}: ${v.score}`))
         //let opts = filtered.map(v => [v, v.score]) as [AIActionWithScore, number][]
-        let choice = filtered[Math.floor(Math.random() * Math.min(filtered.length, 4))]
+        let choice = filtered[Math.floor(Math.random() * Math.min(filtered.length, 5))]
         return choice
     }
 }
