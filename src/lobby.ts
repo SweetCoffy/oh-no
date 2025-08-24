@@ -105,6 +105,10 @@ export class BattleLobby {
             let play = new Player(u)
             play.level = this.level
             play.moveset = (getUser(u).moveset).slice(0, settings.maxMoves)
+            let enhance = getUser(u).movesetEnhance
+            for (let i = 0; i < enhance.length; i++) {
+                play.movesetEnhance[play.moveset[i]] = enhance[i] + 1
+            }
             play.helditems = (getUser(u).helditems || []).slice(0, settings.maxMoves).map(el => ({id: el}))
             play.ability = getUser(u).ability
             let e = this.usersE[i]
@@ -117,7 +121,7 @@ export class BattleLobby {
                 }
             }
             if (this.flags.T) {
-                play.team = e.team ?? this.isTeamMatch() ? Math.floor(Math.random() * 4) : 0
+                play.team = e.team ?? this.isTeamMatch() ? Math.floor(Math.random() * this.teamCount) : 0
             }
             play.updateStats()
             if (e.nickname) play._nickname = e.nickname;

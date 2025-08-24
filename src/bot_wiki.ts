@@ -3,7 +3,7 @@ import { moves } from "./moves";
 import { statusTypes } from "./battle";
 import { items } from "./helditem";
 import { abilities } from "./abilities";
-import { formatString } from "./util";
+import { formatString, settings } from "./util";
 export class WikiEntry {
     keywords: Set<string>
     constructor(public title: string, public content: string = "") {
@@ -76,6 +76,7 @@ new WikiEntry("Mechanic: Summons", formatString("Summons are entities that can b
      "· [a]They are not accounted for when checking for a win condition[r].\n" + 
      "· When its summoner dies, the Summon dies as well.\n" + 
      "· When a Summon gains [a]Charge[r] or [a]Magic[r], [a]30%[r] of the corresponding resource will be gained by its summoner as well.")).register()
+new WikiEntry("Mechanic: Move Points (MP)", formatString(`Move Points (✦) are a resource spent during moveset creation to [a]add[r] or [a]enhance[r] moves. You always start with ${settings.maxMoves + settings.leftoverMp}✦.`)).register()
 genWikiEntries("Move: ", moves)
 genWikiEntries("Status: ", statusTypes)
 genWikiEntries("Item: ", items)

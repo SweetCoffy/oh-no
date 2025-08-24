@@ -1,5 +1,5 @@
 import { Start, Reset, color2ANSIAlias, color2ANSITable, LogColor, LogColorWAccent } from "./ansi.js"
-import { ActionRowBuilder, APIActionRowComponent, ButtonBuilder, ButtonInteraction, ButtonStyle, CommandInteraction, ComponentType, ContextMenuCommandInteraction, Message, StringSelectMenuBuilder } from "discord.js"
+import { ActionRowBuilder, APIActionRowComponent, AutocompleteInteraction, ButtonBuilder, ButtonInteraction, ButtonStyle, Collection, CommandInteraction, ComponentType, ContextMenuCommandInteraction, Message, StringSelectMenuBuilder } from "discord.js"
 import { abilities } from "./abilities.js"
 import { ItemResponse, ItemStack, shopItems } from "./items.js"
 import { BASE_STAT_TOTAL } from "./params.js"
@@ -192,6 +192,7 @@ export let settings = {
     unloadTimeout: 10 * 60 * 1000,
     saveprefix: experimental.april_fools ? "fools_" : "",
     maxMoves: 7,
+    leftoverMp: 1,
     accentColor: 0x15deff,
 }
 export class BitArray extends Uint8Array {
@@ -284,7 +285,24 @@ export function min(...numbers: bigint[]): bigint {
     }
     return m || 0n
 }
-
+export async function collectionAutocomplete<T extends { name: string }>
+    (i: AutocompleteInteraction, c: Collection<string, T>) {
+    let focused = i.options.getFocused(true)
+    let query = focused.value.toLowerCase()
+    let results = c.map((v, k) => ({ name: v.name, value: k }))
+        .filter(v => v.name.toLowerCase().includes(query))
+        .slice(0, 25)
+    await i.respond(results)
+}
+export async function dictAutocomplete<T extends { name: string }>
+    (i: AutocompleteInteraction, c: { [k in string]: T }) {
+    let focused = i.options.getFocused(true)
+    let query = focused.value.toLowerCase()
+    let results = Object.entries(c).map(([k, v]) => ({ name: v.name, value: k }))
+        .filter(v => v.name.toLowerCase().includes(query))
+        .slice(0, 25)
+    await i.respond(results)
+}
 let idCounter = 0
 const ID_MAX = 2 ** 16 - 1
 export function getID(): string {

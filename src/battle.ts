@@ -356,10 +356,11 @@ let rush = new StatusType<StatusModifierData>("Reckless Rush", "Rush", (b, p, s)
     let charge = p.charge
     p.charge = 0
     let mods = []
+    let modValue = 1 + Math.min((charge + 20) / 100, 1)
     mods.push(p.addModifier("atk", {
         label: "Reckless Rush",
         type: "multiply",
-        value: 1 + Math.min((charge + 20) / 100, 1),
+        value: modValue,
     }))
     let data: StatusModifierData = { mods }
     s.data = data
@@ -377,10 +378,11 @@ let overclock = new StatusType<StatusModifierData>("Overclock", "Overclock", (b,
     let magic = p.magic
     p.magic = p.maxMagic
     let mods = []
+    let modValue = 1 + Math.min((magic + 25) / 200, 1)
     mods.push(p.addModifier("spatk", {
         label: "Overclock",
         type: "multiply",
-        value: 1 + Math.min((magic + 25) / 200, 1),
+        value: modValue,
     }))
     let data: StatusModifierData = { mods }
     s.data = data
@@ -592,6 +594,7 @@ export class Player {
     positionInTurn: number = 9999
     /** The list of usable moves for the player, only used for user-controlled players */
     moveset: string[] = ["bonk", "nerf_gun", "stronk", "spstronk"]
+    movesetEnhance: Dictionary<number>
     absorptionMods: AbsorptionModWithID[]
     modifiers: { [x in ExtendedStatID]: (StatModifier & { id: string })[] } = {
         hp: [],
@@ -816,12 +819,12 @@ export class Player {
     xpYield: number = 0
 
     // for compatibility
-    get atk() { return this.cstats.atk }
-    get def() { return this.cstats.def }
-    get spatk() { return this.cstats.spatk }
-    get spdef() { return this.cstats.spdef }
-    get spd() { return this.cstats.spd }
-    get dr() { return this.cstats.dr }
+    // get atk() { return this.cstats.atk }
+    // get def() { return this.cstats.def }
+    // get spatk() { return this.cstats.spatk }
+    // get spdef() { return this.cstats.spdef }
+    // get spd() { return this.cstats.spd }
+    // get dr() { return this.cstats.dr }
 
     cstats: ExtendedStats = {
         ...makeExtendedStats(),
@@ -845,6 +848,9 @@ export class Player {
      */
     events: PlayerEvent[][] = []
     critMod: StatModifierWithID
+    getEnhanceLevel(move: string) {
+        return this.movesetEnhance[move] ?? 1
+    }
     addEvent(event: PlayerEvent, turn: number) {
         if (!(turn in this.events)) this.events[turn] = []
         this.events[turn].push(event)
@@ -965,6 +971,7 @@ export class Player {
     }
     constructor(user?: User) {
         this.summons = []
+        this.movesetEnhance = {}
         this.absorptionMods = []
         if (user) {
             this.user = user
@@ -1031,6 +1038,7 @@ export type MoveCastOpts = {
     pow: number,
     critMul: number,
     multihit: number,
+    enhance: number,
 }
 export type TakeDamageType = "none" | Category | "ability"
 export interface TakeDamageOptions {
@@ -1448,13 +1456,15 @@ export class Battle extends EventEmitter {
                     pow: move.power || 0,
                     critMul: move.critMul,
                     multihit: move.multihit,
+                    enhance: action.player.getEnhanceLevel(action.move)
                 }
+                move.applyEnhance(mOpts, mOpts.enhance)
                 let supportTarget = action.player
                 if (!this.isEnemy(action.player, action.target)) supportTarget = action.target
                 if (move.targetSelf) {
                     action.target = supportTarget
                 }
-                mOpts.pow = move.getPower(this, action.player, action.target)
+                mOpts.pow = move.getPower(this, action.player, action.target, mOpts.enhance)
                 if (user.itemSlots.offense) {
                     let item = user.itemSlots.offense
                     let itemType = items.get(item.id)
@@ -1469,8 +1479,8 @@ export class Battle extends EventEmitter {
                 action.player.addEvent({ type: "move", move: action.move, failed: failed || missed, target: action.target }, this.turn)
                 if (failed || missed) return
                 let onUse = move.onUse
-                if (onUse) {
-                    onUse(this, action.player, action.target)
+                if (onUse && move.onUseOverride) {
+                    onUse(this, action.player, action.target, mOpts)
                 } else if (move.type == "attack") {
                     let cat = mOpts.category
                     let requiresCharge = mOpts.requiresCharge
@@ -1537,6 +1547,9 @@ export class Battle extends EventEmitter {
                     if (this.rng.get01() < i.chance) {
                         this.inflictStatus(action.target, i.status, action.player)
                     }
+                }
+                if (onUse) {
+                    onUse(this, action.player, action.target, mOpts)
                 }
                 break;
             }

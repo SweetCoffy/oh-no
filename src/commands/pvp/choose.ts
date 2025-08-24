@@ -5,11 +5,11 @@ import { Move, moves } from '../../moves.js';
 import { getString } from '../../locale.js';
 import { items } from '../../helditem.js';
 import { abilities } from '../../abilities.js';
-import { formatString, playerSelectorComponent, snapTo } from '../../util.js';
+import { collectionAutocomplete, formatString, playerSelectorComponent, snapTo } from '../../util.js';
 import { ffrac, dispDelta } from '../../number-format.js';
-function moveDescription(move: Move) {
+function moveDescription(move: Move, enhance: number = 1) {
     //@ts-ignore
-    let desc = formatString(`Accuracy: [a]${ffrac(move.accuracy / 100)}[r]\nCategory: [a]${getString("move.category." + move.category)}[r]`)
+    let desc = formatString(`Enhancement Level: [a]${enhance}[r] — [a]${"✦".repeat(enhance)}[r][u]${"✧".repeat(move.maxEnhance - enhance)}[r]\nAccuracy: [a]${ffrac(move.accuracy / 100)}[r]\nCategory: [a]${getString("move.category." + move.category)}[r]`)
     if (move.type == "attack") {
         //@ts-ignore
         desc += formatString(`\nDamage Type: [a]${getString("move.dmgtype." + move.setDamage)}[r]`)
@@ -17,12 +17,13 @@ function moveDescription(move: Move) {
             let atkStat = move.category == "physical" ? "atk" : "spatk"
             let dispMult = ""
             let dispMultSuffix = ""
+            let power = move.getBasePower(enhance)
             if (move.setDamage == "percent") {
-                dispMult = `${ffrac(move.power / 100)}`
+                dispMult = `${ffrac(power / 100)}`
                 dispMultSuffix = ` of target's [a]MAX HP[r]`
             }
             if (move.setDamage == "regular") {
-                dispMult = `${ffrac(move.power / 100)}`
+                dispMult = `${ffrac(power / 100)}`
                 dispMultSuffix = ` of [a]${getString("stat." + atkStat)}[r]`
             }
             if (move.multihit > 1) {
@@ -33,7 +34,7 @@ function moveDescription(move: Move) {
             desc += formatString(`\nDamage Multiplier: [a]Varies[r]`)
         }
     }
-    desc += `\n\n${move.description}`
+    desc += `\n\n${move.getDescription(enhance)}`
     if (move.requiresCharge) {
         desc += formatString(`\nThis move requires [a]${move.requiresCharge}[r] [red]Charge[r] to use.`)
     }
@@ -42,15 +43,19 @@ function moveDescription(move: Move) {
     }
     return desc
 }
-async function collectionAutocomplete<T extends { name: string }>
-(i: AutocompleteInteraction, c: Collection<string, T>) 
-{
-    let focused = i.options.getFocused(true)
-    let query = focused.value.toLowerCase()
-    let results = c.map((v, k) => ({ name: v.name, value: k }))
-    .filter(v => v.name.toLowerCase().includes(query))
-    .slice(0, 20)
-    await i.respond(results)
+function enhanceLevelComponent(current: number, max: number, mid: string) {
+    let actionRow = new ActionRowBuilder<ButtonBuilder>()
+    for (let i = 1; i <= max; i++) {
+        let button = new ButtonBuilder().setLabel(`${i}✦`).setCustomId(`choose:h/${mid}/${i}`)
+        button.setDisabled(i == current)
+        if (i == current) {
+            button.setStyle(ButtonStyle.Secondary)
+        } else {
+            button.setStyle(ButtonStyle.Primary)
+        }
+        actionRow.addComponents(button)
+    }
+    return actionRow
 }
 export let command: Command = {
     name: "choose",
@@ -124,6 +129,28 @@ export let command: Command = {
         }
     ],
     async interaction(i) {
+        if (i.isButton()) {
+            if (i.customId.startsWith("choose:h/")) {
+                let splits = i.customId.split("/")
+                let mid = splits[1]
+                let e = Number(splits[2])
+                let moveInfo = moves.get(mid)
+                if (!moveInfo || isNaN(e)) {
+                    return await i.reply({
+                        flags: ["Ephemeral"],
+                        content: "huh?"
+                    })
+                }
+                let component = enhanceLevelComponent(e, moveInfo.maxEnhance, mid)
+                return await i.update({
+                    components: [component], embeds: [{
+                        title: `${moveInfo.name}`,
+                        description: codeBlock("ansi", moveDescription(moveInfo, e)),
+                        //footer: move.maxEnhance > 1 ? { text: "Use the buttons below to view different Enhancement Levels." } : undefined
+                    }]
+                })
+            }
+        }
         let u = getUser(i.user)
         let battle = u.lobby?.battle
         if (!battle)
@@ -181,7 +208,7 @@ export let command: Command = {
                 })
                 return await i.reply({
                     flags: ["Ephemeral"],
-                    content: codeBlock("ansi", moveDescription(info))
+                    content: codeBlock("ansi", moveDescription(info, player.getEnhanceLevel(tmp.move)))
                 })
             }
         }
@@ -198,7 +225,7 @@ export let command: Command = {
                     warning = "\n⚠️ **You may not have enough resources to use this move.**"
                     veryBad = true
                 }
-                let extra = moveInfo.selectDialogExtra(battle, player)
+                let extra = moveInfo.selectDialogExtra(battle, player, player.getEnhanceLevel(tmp.move))
                 if (extra) {
                     warning += `\n${extra}`
                 }
@@ -335,11 +362,17 @@ export let command: Command = {
                 let moveId = i.options.getString("move", true);
                 let move = moves.get(moveId)
                 if (move) {
+                    let components = []
+                    if (move.maxEnhance > 1) {
+                        components.push(enhanceLevelComponent(1, move.maxEnhance, moveId))
+                    }
                     await i.reply({
                         embeds: [{
                             title: `${move.name}`,
                             description: codeBlock("ansi", moveDescription(move)),
-                        }]
+                            //footer: move.maxEnhance > 1 ? { text: "Use the buttons below to view different Enhancement Levels." } : undefined
+                        }],
+                        components
                     })
                 } else return new Error(`Unknown move: '${moveId}'`)
                 break;

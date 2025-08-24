@@ -462,7 +462,7 @@ function generate(b: PartialBattle) {
         let playerH = playerHeight + pad
         let hMult = Math.ceil(teams.length / cols)
         let wantedHeight = hMult * mostPlayers * playerH + 32
-        canvas.height = Math.max(minCanvasHeight, wantedHeight)
+        canvas.height = Math.ceil(Math.max(minCanvasHeight, wantedHeight))
         let cx = 0
         let height = 0
         for (let i = 0; i < teams.length; i++) {
@@ -473,6 +473,9 @@ function generate(b: PartialBattle) {
                 tallest = 0
             }
             let players = teams[i]
+            if (players == undefined) {
+                continue
+            }
             y = 0
             height = 0
             ctx.resetTransform()
