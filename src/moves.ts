@@ -105,6 +105,7 @@ export class Move {
     inflictStatus: InflictStatus[] = []
     description: string
     maxEnhance: number = 1
+    specialEnhance: number[]
     enhanceFactor: number = 0.35
     /**
      * Whether or not this move can be selected by players
@@ -164,6 +165,7 @@ export class Move {
         this.name = name
         this.category = category
         this.description = `N/A`
+        this.specialEnhance = []
     }
     getDamage(power: number, atk: number, target: Player) {
         if (this.setDamage == "regular") {
@@ -215,6 +217,7 @@ moves.set("bonk", new Move("Bonk", "attack", 110).set(move => {
     move.maxEnhance = 2
     move.onUseOverride = false
     let blastMult = 0.25
+    move.specialEnhance = [2]
     move.getDescription = (el) => {
         let desc = move.description
         if (el >= 2) {
@@ -270,6 +273,7 @@ moves.set("nerf_gun", new Move("Nerf Gun", "attack", 90, "special").set(move => 
 
         })
     }
+    move.specialEnhance = [4]
     move.getDescription = (el) => {
         let bounceMul = baseBounceMul
         let crit = move.critMul * (1 + critEnhance * (el - 1))
@@ -293,6 +297,7 @@ moves.set("slap", new Move("Slap", "attack", 300).set(move => {
     move.onUseOverride = false
     let blastMult = 0.4
     let blastSummonMult = 0.6
+    move.specialEnhance = [2, 4]
     move.getDescription = (el) => {
         let desc = move.description
         if (el >= 2) {
@@ -752,6 +757,7 @@ moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
     move.maxEnhance = 4
     move.enhanceFactor = 0.6
     move.onUseOverride = false
+    move.specialEnhance = [4]
     move.getDescription = (el) => {
         let pow = move.getBasePower(el)
         let desc = `Heals the target by [a]${ffrac(pow / 100)}[r] of the user's [a]Max HP[r].`

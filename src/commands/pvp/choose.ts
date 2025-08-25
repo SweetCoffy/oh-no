@@ -45,13 +45,15 @@ function moveDescription(move: Move, enhance: number = 1) {
 }
 function enhanceLevelComponent(current: number, max: number, mid: string) {
     let actionRow = new ActionRowBuilder<ButtonBuilder>()
+    let move = moves.get(mid)!
+    let specials = move.specialEnhance
     for (let i = 1; i <= max; i++) {
         let button = new ButtonBuilder().setLabel(`${i}✦`).setCustomId(`choose:h/${mid}/${i}`)
         button.setDisabled(i == current)
-        if (i == current) {
-            button.setStyle(ButtonStyle.Secondary)
-        } else {
+        if (specials.includes(i)) {
             button.setStyle(ButtonStyle.Primary)
+        } else {
+            button.setStyle(ButtonStyle.Secondary)
         }
         actionRow.addComponents(button)
     }

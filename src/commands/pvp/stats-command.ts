@@ -1,12 +1,12 @@
-import { ApplicationCommandType, ApplicationCommandOptionType, ChatInputCommandInteraction, codeBlock, ModalBuilder, StringSelectMenuBuilder, ContainerBuilder, ActionRowBuilder, TextDisplayBuilder, User, ButtonBuilder, ButtonStyle, ComponentType } from "discord.js";
+import { ApplicationCommandType, ApplicationCommandOptionType, ChatInputCommandInteraction, codeBlock, ModalBuilder, StringSelectMenuBuilder, ContainerBuilder, ActionRowBuilder, TextDisplayBuilder, User, ButtonBuilder, ButtonStyle, ComponentType, ContainerComponent } from "discord.js";
 import { abilities } from "../../abilities.js";
 import { Command } from "../../command-loader.js"
 import { ItemClass, items } from "../../helditem.js";
 import { getString } from "../../locale.js";
-import { getPresetList, makeStats, getPreset, presets, StatID, limitStats, calcStat, calcStats, StatPreset } from "../../stats.js";
+import { getPresetList, makeStats, getPreset, presets, StatID, limitStats, calcStat, calcStats, StatPreset, baseStats } from "../../stats.js";
 import { applyPreset, getTempData, getUser } from "../../users.js";
 import { bar, confirmation, getMaxTotal, helditemString, indent } from "../../util.js"
-import { fnum } from "../../number-format.js";
+import { ffrac, fnum } from "../../number-format.js";
 function getWeighted(weights: number[], total: number = 600) {
     let totalW = weights.reduce((prev, cur) => prev + cur, 0)
     let ar = []
@@ -195,6 +195,52 @@ function initItemTmp(iid: string, preset: StatPreset, presetId: string) {
         stats: { preset: presetId, ability: preset.ability, itemSlots: slots, stats: preset.stats }
     }
 }
+function granularAllocationComponent(presetId: string, user: User) {
+    let u = getUser(user)
+    let preset = u.presets[presetId]
+    if (!preset) {
+        return new ContainerBuilder().addTextDisplayComponents(new TextDisplayBuilder({ content: ":(" }))
+    }
+    let tmp = getTempData(`${user.id}_preset`)
+    if (!tmp[presetId]) {
+        tmp[presetId] = {...preset.stats}
+    }
+    let testLevel = 100
+    let cap = getMaxTotal(preset)
+    //let stats = limitStats(preset.stats, cap)
+    let stats = preset.stats
+    let calc = calcStats(testLevel, stats)
+    let root = new ContainerBuilder()
+    let amounts = [0.0625, 0.125, 0.25, 0.5, 0.75, 1.0].map(v => Math.round(v * cap))
+    let maxStat = Math.max(...Object.values(stats))
+    let maxDisp = Math.max(Math.ceil(maxStat / 150) * 150, 300)
+    for (let k in stats) {
+        let stat = k as StatID
+        let name = getString(`stat.${stat}`)
+        let value = stats[stat]
+        let cidprefix = `stats:edit/${presetId}/g/m/${stat}`
+        root.addTextDisplayComponents(new TextDisplayBuilder({
+            content: `**\`${name.padEnd(12)} ${value.toString().padEnd(4)} ${bar(value, maxDisp, 12)}\`**\n`
+        }))
+        root.addActionRowComponents(
+            new ActionRowBuilder<StringSelectMenuBuilder>()
+                .addComponents(
+                    new StringSelectMenuBuilder().addOptions(...amounts.map(a => ({
+                        label: ffrac(a / cap),
+                        value: a.toString(),
+                        default: a == tmp[presetId][stat]
+                    }))).setMinValues(1).setMaxValues(1).setCustomId(cidprefix)
+                )
+        )
+    }
+    root.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+            .setEmoji("↩️")
+            .setLabel("Reset")
+            .setCustomId(`stats:edit/${presetId}/g/r`)
+            .setStyle(ButtonStyle.Secondary)))
+    return root
+}
 export let command: Command = {
     type: ApplicationCommandType.ChatInput,
     name: "stats",
@@ -317,13 +363,39 @@ export let command: Command = {
             }
             if (mode == "allocate") {
                 initAllocateTmp(i.id, presetId)
-                let components = statAllocationComponent(i.user, presetId)
+                //let components = statAllocationComponent(i.user, presetId)
+                let components = [granularAllocationComponent(presetId, i.user)]
                 return await i.reply({ flags: ["IsComponentsV2", "Ephemeral"], components })
             }
             if (mode == "items") {
                 let roots = heldItemComponent(i.user, presetId)
                 initItemTmp(i.id, preset, presetId)
                 return await i.reply({ flags: ["IsComponentsV2", "Ephemeral"], components: roots })
+            }
+            if (mode == "g") {
+                let op = splits[3]
+                let arg = splits[4] as StatID
+                
+                let tmp = getTempData(`${i.user.id}_preset`)
+                if (!tmp[presetId]) {
+                    tmp[presetId] = {...preset.stats}
+                }
+                let final = tmp[presetId]
+                let cap = getMaxTotal(preset)
+                if (op == "r") {
+                    for (let k in final) {
+                        final[k] = 1
+                    }
+                } else if (op == "m" && i.isStringSelectMenu()) {
+                    let v = parseFloat(i.values[0])
+                    if (arg in final && !isNaN(v)) {
+                        final[arg] = v
+                    }
+                }
+                preset.stats = limitStats(final, cap)
+                return await i.update({ components: [
+                    granularAllocationComponent(presetId, i.user)
+                ] })
             }
             return
         }
@@ -377,8 +449,8 @@ export let command: Command = {
                         new ContainerBuilder().addTextDisplayComponents(
                             new TextDisplayBuilder().setContent(
                                 `## Final Base Stats:\n` + codeBlock("ansi", Object.entries(stats).map(([k, v]) => {
-                        return `${getString("stat." + k).padEnd(12)} ${v.toString().padEnd(4)}${bar(v, maxDisp, 16)}`
-                    }).join("\n"))
+                                    return `${getString("stat." + k).padEnd(12)} ${v.toString().padEnd(4)}${bar(v, maxDisp, 16)}`
+                                }).join("\n"))
                             )
                         )
                     ]
@@ -426,10 +498,11 @@ export let command: Command = {
                 if (tmp.preset == u.preset) {
                     applyPreset(i.user, tmp.preset)
                 }
-                return await i.update({ 
+                return await i.update({
                     components: [
                         new ContainerBuilder().
-                        addTextDisplayComponents(new TextDisplayBuilder().setContent("Saved."))] })
+                            addTextDisplayComponents(new TextDisplayBuilder().setContent("Saved."))]
+                })
             }
         }
         await i.deferUpdate()
@@ -463,9 +536,9 @@ export let command: Command = {
                             return b - a
                         }).slice(0, 3)
                     return `- ${list[el].name} \`${el}\` `
-                        + "(" + statsSorted.map(([k, v]) => {
-                            return getString(`stat.${k}`)
-                        }).join(" > ") + ")"
+                        + "\n  - " + statsSorted.map(([k, v]) => {
+                            return `**${getString(`stat.${k}`)}**`
+                        }).join(" > ")
                         + (el == cur ? " (current)" : "")
                 }
                 await i.reply({
