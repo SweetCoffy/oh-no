@@ -34,7 +34,7 @@ function genWikiEntries<
     for (let [_, v] of c) {
         let entry = new WikiEntry(prefix + v.name)
         if (v.wikiHeader) {
-            entry.content += v.wikiHeader + "\n "
+            entry.content += v.wikiHeader + "\n"
         }
         entry.content += v.description
         entry.register()

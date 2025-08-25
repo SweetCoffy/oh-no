@@ -156,6 +156,7 @@ export class Move {
     hitAll: boolean = false
     targetSelf: boolean = false
     multihit: number = 1
+    wikiHeader: string = "This is a move, which may not have all of its information shown here. Please use /choose help move:<move name> to see the full description."
     constructor(name: string, type: MoveType = "attack", power: number, category: Category = "physical", accuracy: number = 100) {
         this.type = type
         this.power = power
@@ -616,7 +617,7 @@ function applyGachaEffect(b: Battle, p: Player, e: GachaBuff, inf?: Player) {
 }
 moves.set("support_gacha", new Move("Support: Gacha", "status", 0, "status").set(move => {
     move.requiresMagic = 5
-    move.maxEnhance = 5
+    move.maxEnhance = 2
     move.priority = 1
     move.targetSelf = true
     let baseMinRolls = 1
@@ -635,7 +636,7 @@ moves.set("support_gacha", new Move("Support: Gacha", "status", 0, "status").set
     move.onUse = (b, u, t, { enhance }) => {
         let minRolls = baseMinRolls + enhance - 1
         let maxRolls = baseMaxRolls + enhance - 1
-        let pullCount = minRolls + Math.floor(b.rng.get01()*(maxRolls-minRolls))
+        let pullCount = minRolls + Math.floor(b.rng.get01()*(maxRolls-minRolls-1))
         for (let _ = 0; _ < pullCount; _++) {
             let pool = weightedRandom(gachaRarityPools.map(([a, b]) => [b, a] as const), b.rng.get01.bind(b.rng))
             let result = pool.pool[Math.floor(pool.pool.length * b.rng.get01())]
@@ -755,17 +756,14 @@ moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
         let pow = move.getBasePower(el)
         let desc = `Heals the target by [a]${ffrac(pow / 100)}[r] of the user's [a]Max HP[r].`
         if (el >= 4) {
-            desc += `\n${enhanceLevelDesc(4)}: The target gains [a]80% Efficient Absorption[r] equal to [a]40%[r] user's [a]Max HP[r]`
+            desc += `\n${enhanceLevelDesc(4)}: The target's [a]Max HP[r] is increased by [a]15%[r] of the user's [a]Max HP[r] for [a]4[r] turns.`
         }
         return formatString(desc)
     }
     move.description = move.getDescription(1)
     move.onUse = (b, u, t, {enhance}) => {
         if (enhance >= 4) {
-            t.addAbsorption({
-                initialValue: Math.ceil(u.cstats.hp*0.4),
-                efficiency: 0.8,
-            })
+            b.inflictStatus(t, "health_boost", u)
         }
     }
     move.getAiSupportRank = (b, p, t) => {

@@ -187,12 +187,6 @@ export let command: Command = {
             description: "Set held items and ability for a preset",
             options: [
                 {
-                    name: "items",
-                    type: ApplicationCommandOptionType.String,
-                    description: "A comma separated list of held items",
-                    required: false
-                },
-                {
                     name: "preset",
                     type: ApplicationCommandOptionType.String,
                     description: "A",
@@ -424,7 +418,7 @@ export let command: Command = {
                         return `· ${iteminfo.name}\n${indent(iteminfo.passiveEffect, 4)}`
                     }).join("\n") : "None"}`)
                 // @ts-ignore
-                await i.reply({ embeds: [
+                await i.reply({ flags: ["Ephemeral"], embeds: [
                     {
                         description: `Preset: **${p.name}**\n${string}\nJSON: \`${json}\``,
                     }
@@ -473,40 +467,27 @@ export let command: Command = {
                 break;
             }
             case "held_items": {
-                let item = i.options.getString("items", false)
+                //let item = i.options.getString("items", false)
                 let u = getUser(i.user)
                 let presetId = i.options.getString("preset", false) as string
                 let preset = u.presets[presetId]
                 if (!preset && i.options.getString("preset", false)) return await i.reply(`Unknown preset`)
-                let itemList
-                if (item) {
-                    itemList = item.split(",").map(el => el.trim()).filter(el => items.has(el))
-                } else {
-                    if (preset) {
-                        let roots = heldItemComponent(i.user, presetId)
-                        let tmp = getTempData(i.id)
-                        let slots: any = {}
-                        if (preset.helditems) {
-                            for (let item of preset.helditems) {
-                                let itemType = items.get(item)
-                                if (!itemType) continue
-                                slots[itemType.class] = item
-                            }
+                if (preset) {
+                    let roots = heldItemComponent(i.user, presetId)
+                    let tmp = getTempData(i.id)
+                    let slots: any = {}
+                    if (preset.helditems) {
+                        for (let item of preset.helditems) {
+                            let itemType = items.get(item)
+                            if (!itemType) continue
+                            slots[itemType.class] = item
                         }
-                        tmp.data = {
-                            stats: { preset: presetId, ability: preset.ability, itemSlots: slots, stats: preset.stats }
-                        }
-                        await i.reply({ flags: ["IsComponentsV2", "Ephemeral"], components: roots })
-                        return
                     }
-                }
-                if (itemList) {
-                    if (preset) {
-                        preset.helditems = itemList
-			itemList
-                    } else u.helditems = itemList
-                } else {
-                    await i.reply(`Items: ${u.helditems.join(", ")}`)
+                    tmp.data = {
+                        stats: { preset: presetId, ability: preset.ability, itemSlots: slots, stats: preset.stats }
+                    }
+                    await i.reply({ flags: ["IsComponentsV2", "Ephemeral"], components: roots })
+                    return
                 }
                 break;
             }

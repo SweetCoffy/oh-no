@@ -74,6 +74,10 @@ export class BattleLobby {
         for (let u of this.users) {
             getUser(u).lobby = undefined
         }
+        if (this.battle) {
+            this.battle.removeAllListeners()
+            this.battle.ended = true
+        }
     }
     leave(user: User) {
         if (user.id == this.host.id) {

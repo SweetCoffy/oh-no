@@ -367,6 +367,7 @@ export let command: Command = {
                         components.push(enhanceLevelComponent(1, move.maxEnhance, moveId))
                     }
                     await i.reply({
+                        flags: ["Ephemeral"],
                         embeds: [{
                             title: `${move.name}`,
                             description: codeBlock("ansi", moveDescription(move)),

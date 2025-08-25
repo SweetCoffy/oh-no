@@ -399,7 +399,34 @@ let overclock = new StatusType<StatusModifierData>("Overclock", "Overclock", (b,
     s.description = formatString("[a]Special ATK[r] is boosted and [a]Magic[r] is fully regenerated every turn.")
     s.fillStyle = "#4d9dff"
 })
-
+let healthBoost = new StatusType<StatusModifierData>("Health Boost", "HP Boost", (b, p, s) => {
+    let mods = []
+    let base = (s.infStats?.hp ?? p.cstats.hp)
+    // if (p == s.inflictor) {
+    //     base = p.stats.hp
+    // }
+    let modValue = base * 0.15
+    let oldMax = p.cstats.hp
+    mods.push(p.addModifier("hp", {
+        label: "Health Boost",
+        type: "add",
+        value: modValue,
+    }))
+    let delta = p.cstats.hp - oldMax
+    b.heal(p, delta)
+    let data: StatusModifierData = { mods }
+    s.data = data
+}, undefined, (b, p, s) => {
+    let data = s.data
+    for (let mod of data.mods) {
+        p.removeModifier(mod.stat, mod.id)
+    }
+}).set(s => {
+    s.description = formatString("[a]Max HP[r] is increased.")
+    s.fillStyle = "#68ff4d"
+    s.duration = 4
+})
+statusTypes.set("health_boost", healthBoost)
 statusTypes.set("rush", rush)
 statusTypes.set("mind_overwork", overclock)
 let categories: { [key: string]: CategoryStats } = {
@@ -1577,11 +1604,13 @@ export class Battle extends EventEmitter {
                     a.duration = 0;
                     return this.inflictStatus(u, sType.upgradeTo, inf)
                 }
+                sType.end(this, u, a)
                 a.duration = Math.max(a.duration, o.duration)
                 if (inf) {
                     a.inflictor = inf
                     a.infStats = inf.getFinalStats()
                 }
+                sType.start(this, u, a)
                 return a
             }
             u.status.push(o)
@@ -1622,7 +1651,7 @@ export class Battle extends EventEmitter {
         this.log("Item/Ability", "accent")
         for (let p of this.players) {
             if (p.dead) continue;
-            this.logIndent++
+            this.logIndent = 1
             p.positionInTurn = 9999
             p.updateItems()
             let ab = abilities.get(p.ability || "")

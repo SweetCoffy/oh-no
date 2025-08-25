@@ -25,6 +25,7 @@ export let command: Command = {
         let entry = wikiEntries.get(i.options.getString("term", true))
         if (!entry) return await i.reply({ flags: ["Ephemeral"], content: "Not found" })
         await i.reply({
+            flags: ["Ephemeral"],
             embeds: [
                 {
                     title: entry.title,
