@@ -19,9 +19,9 @@ function statAllocationComponent(user: User, presetId: string) {
     function statSelectComponent(cid: string, min: number, max: number) {
         let keys = Object.keys(makeStats()) as StatID[]
         return new StringSelectMenuBuilder().setCustomId(cid)
-        .setMinValues(min)
-        .setMaxValues(max)
-        .setOptions(keys.map(k => ({ value: k, label: getString("stat." + k) })))
+            .setMinValues(min)
+            .setMaxValues(max)
+            .setOptions(keys.map(k => ({ value: k, label: getString("stat." + k) })))
     }
     let root = new ContainerBuilder()
     let presetList = getUser(user).presets
@@ -154,8 +154,46 @@ function heldItemComponent(user: User, presetId: string) {
                 new ButtonBuilder().setLabel("Save").setCustomId("stats:save_preset").setStyle(ButtonStyle.Primary)
             )]
 }
+function presetEditButtons(presetId: string) {
+    return new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`stats:edit/${presetId}/allocate`)
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji("📊")
+            .setLabel("Edit Stats"),
+        new ButtonBuilder()
+            .setCustomId(`stats:edit/${presetId}/items`)
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji("🔧")
+            .setLabel("Edit Items")
+    )
+
+}
 function normPresetName(name: string) {
     return name.toLowerCase().replace(/[^A-Za-z_\-0-9 ]/g, "-")
+}
+function initAllocateTmp(iid: string, presetId: string) {
+    let tmp = getTempData(iid, "allocation", {
+        preset: presetId,
+        main: [],
+        secondary: [],
+        tertiary: []
+    })
+    tmp.preset = presetId
+}
+function initItemTmp(iid: string, preset: StatPreset, presetId: string) {
+    let tmp = getTempData(iid)
+    let slots: any = {}
+    if (preset.helditems) {
+        for (let item of preset.helditems) {
+            let itemType = items.get(item)
+            if (!itemType) continue
+            slots[itemType.class] = item
+        }
+    }
+    tmp.data = {
+        stats: { preset: presetId, ability: preset.ability, itemSlots: slots, stats: preset.stats }
+    }
 }
 export let command: Command = {
     type: ApplicationCommandType.ChatInput,
@@ -268,6 +306,27 @@ export let command: Command = {
         },
     ],
     async interaction(i) {
+        if (i.customId.startsWith("stats:edit/")) {
+            let splits = i.customId.split("/")
+            let presetId = splits[1]
+            let mode = splits[2]
+            let u = getUser(i.user)
+            let preset = u.presets[presetId]
+            if (!preset) {
+                return await i.reply({ flags: ["Ephemeral"], content: `Unknown preset.` })
+            }
+            if (mode == "allocate") {
+                initAllocateTmp(i.id, presetId)
+                let components = statAllocationComponent(i.user, presetId)
+                return await i.reply({ flags: ["IsComponentsV2", "Ephemeral"], components })
+            }
+            if (mode == "items") {
+                let roots = heldItemComponent(i.user, presetId)
+                initItemTmp(i.id, preset, presetId)
+                return await i.reply({ flags: ["IsComponentsV2", "Ephemeral"], components: roots })
+            }
+            return
+        }
         if (i.user.id != i.message.interactionMetadata?.user.id) {
             return await i.reply({ flags: ["Ephemeral"], content: "Nope" })
         }
@@ -311,11 +370,18 @@ export let command: Command = {
                 if (tmp.preset == u.preset) {
                     applyPreset(i.user, tmp.preset)
                 }
-                await i.reply({
-                    flags: ["Ephemeral"],
-                    content: `## Final Base Stats:\n` + codeBlock("ansi", Object.keys(stats).map(k => {
-                        return `${getString("stat." + k).padEnd(12)} ${stats[k as StatID]}`
+                let maxStat = Math.max(...Object.values(stats))
+                let maxDisp = Math.ceil(maxStat / 150) * 150
+                await i.update({
+                    components: [
+                        new ContainerBuilder().addTextDisplayComponents(
+                            new TextDisplayBuilder().setContent(
+                                `## Final Base Stats:\n` + codeBlock("ansi", Object.entries(stats).map(([k, v]) => {
+                        return `${getString("stat." + k).padEnd(12)} ${v.toString().padEnd(4)}${bar(v, maxDisp, 16)}`
                     }).join("\n"))
+                            )
+                        )
+                    ]
                 })
             }
             await i.deferUpdate()
@@ -360,7 +426,10 @@ export let command: Command = {
                 if (tmp.preset == u.preset) {
                     applyPreset(i.user, tmp.preset)
                 }
-                return await i.reply({ flags: ["Ephemeral"], content: "Saved." })
+                return await i.update({ 
+                    components: [
+                        new ContainerBuilder().
+                        addTextDisplayComponents(new TextDisplayBuilder().setContent("Saved."))] })
             }
         }
         await i.deferUpdate()
@@ -377,32 +446,50 @@ export let command: Command = {
                 let u = getUser(i.user)
                 let preset = u.presets[presetId]
                 if (!preset) return await i.reply("Unknown preset")
-                let tmp = getTempData(i.id, "allocation", {
-                    preset: presetId,
-                    main: [],
-                    secondary: [],
-                    tertiary: []
-                })
-                tmp.preset = presetId
+                initAllocateTmp(i.id, presetId)
                 let components = statAllocationComponent(i.user, presetId)
                 await i.reply({ flags: ["IsComponentsV2", "Ephemeral"], components })
                 break;
             }
             case "presets": {
                 let defaultPresets = presets;
+                let cur = getUser(i.user).preset
                 let userPresets = getUser(i.user).presets;
                 let list = getPresetList(i.user)
-                let presetInfo = (el: string) => `${list[el].name} (\`${el}\`)`
-                await i.reply(`**Default Presets**:\n${defaultPresets.map((_, el) => presetInfo(el)).join("\n")}\n\n**Custom Presets**:\n${Object.keys(userPresets).map(el => presetInfo(el)).join("\n") || "None"}`)
+                let presetInfo = (el: string) => {
+                    let info = list[el]
+                    let statsSorted = Object.entries(info.stats)
+                        .sort(([_0, a], [_1, b]) => {
+                            return b - a
+                        }).slice(0, 3)
+                    return `- ${list[el].name} \`${el}\` `
+                        + "(" + statsSorted.map(([k, v]) => {
+                            return getString(`stat.${k}`)
+                        }).join(" > ") + ")"
+                        + (el == cur ? " (current)" : "")
+                }
+                await i.reply({
+                    flags: ["Ephemeral"],
+                    embeds: [
+                        {
+                            description: `## Default Presets\n` +
+                                `-# These presets cannot be modified. Please use the \`/stats create\` command if you wish to have more extensive customization.\n` +
+                                `${defaultPresets.map((_, el) => presetInfo(el)).join("\n")}\n` +
+                                `## Custom Presets` +
+                                `\n${Object.keys(userPresets).map(el => presetInfo(el)).join("\n") || "None"}`
+                        }
+                    ]
+                })
                 break;
             }
             case "preset": {
-                let p = getPreset(i.options.getString("preset", false) || getUser(i.user).preset, i.user)
+                let presetId = normPresetName(i.options.getString("preset", false) || getUser(i.user).preset)
+                let p = getPreset(presetId, i.user)
                 if (!p) return await i.reply(`Preset not found`)
                 let stats = p.stats
                 let statsL50 = calcStats(50, stats)
                 let abilityInfo = p.ability ? abilities.get(p.ability) : null
-                let json = JSON.stringify({weights: Object.values(p.stats), helditems: p.helditems, ability: p.ability})
+                let json = JSON.stringify({ weights: Object.values(p.stats), helditems: p.helditems, ability: p.ability })
                 let maxStat = Math.max(...Object.values(stats))
                 let maxDisp = Math.ceil(maxStat / 150) * 150
                 let string = codeBlock("ansi", `${"Base".padEnd(40)}Level 50` + "\n" + Object.keys(statsL50).map((key) => {
@@ -418,11 +505,15 @@ export let command: Command = {
                         return `· ${iteminfo.name}\n${indent(iteminfo.passiveEffect, 4)}`
                     }).join("\n") : "None"}`)
                 // @ts-ignore
-                await i.reply({ flags: ["Ephemeral"], embeds: [
-                    {
-                        description: `Preset: **${p.name}**\n${string}\nJSON: \`${json}\``,
-                    }
-                ] })
+                await i.reply({
+                    flags: ["Ephemeral"],
+                    components: [presetEditButtons(presetId)],
+                    embeds: [
+                        {
+                            description: `Preset: **${p.name}**\n${string}\nJSON: \`${json}\``,
+                        }
+                    ]
+                })
                 break;
             }
             case "delete": {
@@ -455,7 +546,11 @@ export let command: Command = {
                     helditems: [],
                     ability: undefined,
                 }
-                await i.reply(`Created empty preset ${name} (\`${id}\`). Use \`/stats allocate preset:${id}\` to set stat allocation and \`/stats held_item preset:${id}\` to set items and abilities.`)
+                await i.reply({
+                    flags: ["Ephemeral"],
+                    content: `Created empty preset ${name} (\`${id}\`). Use the buttons below to edit, or use the commands \`/stats allocate preset:${id}\` and \`/stats held_item preset:${id}\` if you wish to edit the preset later.`,
+                    components: [presetEditButtons(id)]
+                })
                 break
             }
             case "use": {
@@ -474,18 +569,7 @@ export let command: Command = {
                 if (!preset && i.options.getString("preset", false)) return await i.reply(`Unknown preset`)
                 if (preset) {
                     let roots = heldItemComponent(i.user, presetId)
-                    let tmp = getTempData(i.id)
-                    let slots: any = {}
-                    if (preset.helditems) {
-                        for (let item of preset.helditems) {
-                            let itemType = items.get(item)
-                            if (!itemType) continue
-                            slots[itemType.class] = item
-                        }
-                    }
-                    tmp.data = {
-                        stats: { preset: presetId, ability: preset.ability, itemSlots: slots, stats: preset.stats }
-                    }
+                    initItemTmp(i.id, preset, presetId)
                     await i.reply({ flags: ["IsComponentsV2", "Ephemeral"], components: roots })
                     return
                 }
@@ -506,7 +590,7 @@ export let command: Command = {
                     await i.reply(`Ability set to ${abilities.get(a as string)?.name || "None"}\nYou might have to do /stats use <preset> again to apply changes`)
                     return
                 }
-                if (!abilities.has(a as string ) && a) await i.reply(`Unknown ability: ${a}`)
+                if (!abilities.has(a as string) && a) await i.reply(`Unknown ability: ${a}`)
 
                 let total = getMaxTotal({ ability: a })
                 u.ability = a;
