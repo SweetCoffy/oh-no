@@ -213,9 +213,10 @@ function getAoeTargets(b: Battle, u: Player, t: Player) {
     return b.players.filter(p => b.isEnemy(p, u) && p != t && p.team == t.team && !p.dead)
 }
 // Physical/Special basic attacks
-moves.set("bonk", new Move("Bonk", "attack", 110).set(move => {
+moves.set("bonk", new Move("Bonk", "attack", 100).set(move => {
     move.maxEnhance = 2
     move.onUseOverride = false
+    move.enhanceFactor = 0.1
     let blastMult = 0.25
     move.specialEnhance = [2]
     move.getDescription = (el) => {
@@ -246,13 +247,13 @@ moves.set("needle", new Move("Needle", "attack", 5, "physical", 100).set(move =>
     move.setDamage = "percent"
     move.requiresCharge = 5
 }).setDesc(formatString("Deals fixed damage equal to [a]5%[r] of the target's [a]MAX HP[r] and inflicts them with [a]Bleed[r]")))
-moves.set("nerf_gun", new Move("Nerf Gun", "attack", 90, "special").set(move => {
+moves.set("nerf_gun", new Move("Nerf Gun", "attack", 85, "special").set(move => {
     move.multihit = 2
     move.critMul = 1.1
     move.maxEnhance = 4
-    move.enhanceFactor = 0.2
+    move.enhanceFactor = 0.1
     let critEnhance = 0.1
-    let baseBounceMul = 0.7
+    let baseBounceMul = 0.4
     move.applyEnhance = (opts, el) => {
         opts.critMul *= 1 + critEnhance * (el - 1)
     }
@@ -287,11 +288,11 @@ moves.set("nerf_gun", new Move("Nerf Gun", "attack", 90, "special").set(move => 
 }))
 
 // Physical/Special recoil attacks
-moves.set("ping", new Move("Ping Attack", "attack", 290, "special").set(move => {
+moves.set("ping", new Move("Ping Attack", "attack", 210, "special").set(move => {
     move.requiresMagic = 30
     move.maxEnhance = 4
 }).setDesc(formatString("A strong [a]Special[r] move that requires [a]Magic[r] to use.")))
-moves.set("slap", new Move("Slap", "attack", 300).set(move => {
+moves.set("slap", new Move("Slap", "attack", 220).set(move => {
     move.requiresCharge = 15
     move.maxEnhance = 4
     move.onUseOverride = false

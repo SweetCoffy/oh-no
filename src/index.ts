@@ -165,6 +165,9 @@ console.log(maxv)
 // get real
 if (experimental.april_fools) import("./april-fools.js")
 if (experimental.codegen) generate()
+queueMicrotask(() => {
+    import("./canvas_threads.js")
+})
 if (experimental.test_canvas) {
     const battle = await import("./battle.js")
     const lobby = await import("./lobby.js")
