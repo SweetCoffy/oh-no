@@ -39,5 +39,6 @@ export type PartialPlayer = {
     id: string,
     summoner?: string,
     summons: string[],
-    actionOrder: number
+    actionOrder: number,
+    healingInTurn: number
 }

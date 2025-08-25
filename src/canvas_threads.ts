@@ -56,6 +56,7 @@ export function generateImage(b: Battle | PartialBattle): Promise<Buffer> {
                     summons: p.summons.map(s => s.id),
                     id: p.id,
                     vaporized: p.vaporized,
+                    healingInTurn: p.healingInTurn,
                     actionOrder: 0,
                     status: p.status.map(s => ({
                         type: s.type,

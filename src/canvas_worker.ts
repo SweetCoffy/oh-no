@@ -105,6 +105,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     measured = ctx.measureText(p.name)
     ctx.translate(playerPad, 20 + 8)
     let barWidth = (w - 16) - playerPad
+    let finalBarWidth = Math.floor(Math.min(p.cstats.hp / p.stats.hp, 1) * barWidth)
     let barHeight = 24
     if (p.summoner) {
         barHeight -= 2
@@ -171,22 +172,29 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     prevPercent = Math.max(Math.min(prevPercent, 1), 0)
     ctx.fillStyle = bgColor
     ctx.fillRect(0, 0, barWidth, barHeight)
-    let hpWidth = Math.max(Math.min(hpPercent, 1), -1) * barWidth
+    let hpWidth = Math.max(Math.min(hpPercent, 1), -1) * finalBarWidth
     ctx.fillStyle = barColor
     if (hpWidth < 0) {
         hpWidth = -hpWidth
         ctx.fillRect(barWidth - hpWidth, 0, hpWidth, barHeight)
     } else {
-        let delta = hpPercent - prevPercent
+        let dheal = p.healingInTurn / p.cstats.hp
+        let delta = (hpPercent - prevPercent)
         const bgGradient = ctx.createLinearGradient(hpWidth, 0, hpWidth + 48, 0)
         const hpGradient = ctx.createLinearGradient(hpWidth - 48, 0, hpWidth, 0)
         bgGradient.addColorStop(0, "rgba(55, 55, 55, 1)")
         bgGradient.addColorStop(1, "rgb(127, 127, 127)")
         hpGradient.addColorStop(0, "rgb(127, 127, 127)")
         hpGradient.addColorStop(1, "rgb(200, 200, 200)")
+        if (p.cstats.hp < p.stats.hp) {
+            ctx.globalCompositeOperation = "normal"
+            ctx.fillStyle = "#b6b6b6ff"
+            let mWidth = barWidth - finalBarWidth
+            ctx.fillRect(barWidth - mWidth, 0, mWidth, barHeight)
+        }   
         ctx.fillStyle = bgGradient
         ctx.globalCompositeOperation = "hard-light"
-        ctx.fillRect(0, 0, barWidth, barHeight)
+        ctx.fillRect(0, 0, finalBarWidth, barHeight)
         ctx.globalCompositeOperation = "normal"
         ctx.fillStyle = barColor
         ctx.fillRect(0, 0, hpWidth, barHeight)
@@ -195,21 +203,32 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
         ctx.fillRect(0, 0, hpWidth, barHeight)
         ctx.globalCompositeOperation = "normal"
         if (delta < 0) {
-            const dmgGradient = ctx.createLinearGradient(hpWidth-delta*barWidth - 32, 0, hpWidth-delta*barWidth, 0)
+            const dmgGradient = ctx.createLinearGradient(hpWidth-delta*finalBarWidth - 32, 0, hpWidth-delta*finalBarWidth, 0)
             dmgGradient.addColorStop(0, dmgColor)
             dmgGradient.addColorStop(1, "#ff5b84ff")
             ctx.fillStyle = dmgGradient
-            ctx.fillRect(hpWidth, 0, -delta * barWidth, barHeight)
+            ctx.fillRect(hpWidth, 0, -delta * finalBarWidth, barHeight)
         }
-        if (delta > 0) {
+        if (dheal > 0 || delta > 0) {
             ctx.fillStyle = healColor
-            let healW = delta * barWidth
+            let healW = Math.max(dheal, delta) * finalBarWidth
             ctx.fillRect(hpWidth - healW, 0, healW, barHeight)
         }
         if (p.dmgBlocked > 0) {
             ctx.fillStyle = blockColor
-            let blockW = Math.min(p.dmgBlocked / p.cstats.hp, 1) * barWidth
+            let blockW = Math.min(p.dmgBlocked / p.cstats.hp, 1) * finalBarWidth
             ctx.fillRect(hpWidth - blockW, 0, blockW, barHeight)
+        }
+        if (p.cstats.hp != p.stats.hp) {
+            let maxHpX = Math.min(p.cstats.hp/p.stats.hp*barWidth, p.stats.hp/p.cstats.hp*barWidth)
+            let markerW = 2
+            let markerH = barHeight + 12
+            ctx.fillStyle = "#ffffffd2"
+            if (p.cstats.hp < p.stats.hp) {
+                markerH = barHeight
+                ctx.fillStyle = "#424242d2"
+            }
+            ctx.fillRect(maxHpX - markerW/2, barHeight/2 - markerH/2, markerW, markerH)
         }
     }
     let barMiddle = barHeight / 2
@@ -223,7 +242,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     measured = ctx.measureText(hpText)
     let heartIcon = icon("health_cross")
     let shieldIcon = icon("shield")
-    let maxHpText = numFormat.format(p.cstats.hp)
+    let maxHpText = numFormat.format(Math.max(p.cstats.hp, p.stats.hp))
     let tx = 4
     ctx.strokeStyle = "#00000094"
     ctx.lineWidth = 4

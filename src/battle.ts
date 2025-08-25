@@ -569,6 +569,7 @@ export class Player {
     /** The player's current HP */
     hp: number = 0
     prevHp: number = 0
+    healingInTurn: number = 0
     prevAbsorption: number = 0
     /** The player's Max HP */
     get maxhp() {
@@ -1356,6 +1357,7 @@ export class Battle extends EventEmitter {
             if (!opts.silent) this.logL("dmg.dead", { player: target.toString() }, "gray")
             return
         }
+        let prevIndent = this.logIndent
         let prevHp = target.hp
         let targetDmgMods = target.getDamageTakenModifiers()
         let infDmgMods: DamageDealtModifier[] = []
@@ -1388,6 +1390,7 @@ export class Battle extends EventEmitter {
             if (opts.inflictor) {
                 deathMsg += ".player"
             }
+            this.logIndent++
             this.logL(deathMsg as LocaleString, { player: target.toString(), Inf: opts.inflictor?.toString?.() ?? "unknown" }, "red")
             target.hp = -target.plotArmor
             if (target.summoner) {
@@ -1396,6 +1399,7 @@ export class Battle extends EventEmitter {
             for (let summon of target.summons) {
                 summon.hp = -summon.plotArmor
             }
+            this.logIndent = prevIndent
             target.cleanupSummons()
             return
         }
@@ -1415,6 +1419,7 @@ export class Battle extends EventEmitter {
         if (overheal) hp = amount;
         if (hp <= 0) return
         user.hp += hp
+        user.healingInTurn += hp
         if (!silent) this.log(getString(message, { player: user.toString(), AMOUNT: Math.floor(amount) }), "green")
     }
     get isPve() {
@@ -1538,9 +1543,9 @@ export class Battle extends EventEmitter {
                     dmg = Math.ceil(dmg / move.multihit)
                     let prevIndent = this.logIndent++
                     for (let i = 0; i < hitCount; i++) {
-                        dmg = Math.ceil(dmg * this.critRoll(action.player, action.target, mOpts.critMul))
                         this.logIndent = prevIndent
-                        this.takeDamageO(action.target, dmg, opts)
+                        let finalDmg = Math.ceil(dmg * this.critRoll(action.player, action.target, mOpts.critMul))
+                        this.takeDamageO(action.target, finalDmg, opts)
                     }
                 } else if (move.type == "protect") {
                     if (this.rng.get01() > (1 / (action.player.protectTurns + 1))) return this.log(getString("move.fail"))
@@ -1575,7 +1580,7 @@ export class Battle extends EventEmitter {
                         this.inflictStatus(action.target, i.status, action.player)
                     }
                 }
-                if (onUse) {
+                if (onUse && !move.onUseOverride) {
                     onUse(this, action.player, action.target, mOpts)
                 }
                 break;
@@ -1647,6 +1652,7 @@ export class Battle extends EventEmitter {
             u.protect = false
             u.prevHp = u.hp
             u.prevAbsorption = u.getTotalAbsorption()
+            u.healingInTurn = 0
         }
         this.log("Item/Ability", "accent")
         for (let p of this.players) {

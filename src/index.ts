@@ -188,12 +188,17 @@ if (experimental.test_canvas) {
             charge: 0,
             level: 50 + Math.floor(Math.random() * 51),
             team: Math.floor(i / 2),
-            name: "player " + (i + 1)
+            name: "player " + (i + 1),
+            healingInTurn: 0
         }
         p.cstats.maglimit = 100
         p.cstats.chglimit = 100
         p.hp = Math.ceil(Math.random() * p.cstats.hp)
         p.prevHp = p.hp + Math.random()*p.hp*0.25
+        if (Math.random() < 0.5) {
+            p.cstats.hp += Math.round(Math.random()*100 - 50)
+            p.hp = Math.round(p.cstats.hp * 0.75)
+        }
         for (let [k, _] of battle.statusTypes) {
             p.status.push({
                 type: k,
@@ -204,9 +209,9 @@ if (experimental.test_canvas) {
         if (Math.random() < 0.5) {
             p.absorb = Math.floor(p.hp / 2)
         }
-        if (Math.random() < 0.25) {
-            p.hp += p.cstats.hp
-        }
+        //if (Math.random() < 0.25) {
+        //    p.hp += p.cstats.hp
+        //}
         //p.prevHp = p.hp * (Math.random() - 0.5)
         //console.log(`${p.prevHp} / ${p.hp}`)
         players.push(p)

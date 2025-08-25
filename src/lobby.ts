@@ -148,6 +148,7 @@ export class BattleLobby {
         for (let p of this.battle.players) {
             teams[p.team]++
         }
+        let fodderEnemies = ["egg", "egg_hater"]
         for (let i = 0; i < this.botCount; i++) {
             let bot = new Player()
             bot.level = this.level
@@ -177,14 +178,21 @@ export class BattleLobby {
                             bot.baseStats = { ...enemy.stats }
                             bot.ability = enemy.ability;
                             bot.moveset = [...enemy.moveset]
-                            bot.helditems = [...enemy.helditems||[]].map(el => ({ id: el }))
                             bot._nickname = enemy.name
                             bot.aiSettings = enemy.aiSettings ?? {}
+                            bot.helditems = [...enemy.helditems||[]].map(el => ({ id: el }))
                         }
                     }
                 }
                 else {
-                    bot.team = 0
+                    let enemyType = fodderEnemies[Math.floor(Math.random() * fodderEnemies.length)]
+                    let enemy = enemies.get(enemyType)!
+                    bot.team = 1
+                    bot.baseStats = { ...enemy.stats }
+                    bot.ability = enemy.ability;
+                    bot.moveset = [...enemy.moveset]
+                    bot._nickname = enemy.name
+                    bot.aiSettings = enemy.aiSettings ?? {}
                 }
             } else {
                 for (let j = 0; j < 4; j++) {
