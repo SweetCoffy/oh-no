@@ -360,10 +360,10 @@ export function addXP(user: User, amount: number) {
     let levels = 0;
     let cap = getLevelCap(hunt.bossesDefeated)
     while (u.xp >= getLevelUpXP(user)) {
+        if (u.level >= cap) break;
         u.xp -= getLevelUpXP(user)
         levels++
         u.level++
-        if (u.level >= cap) break;
     }
     return levels;
 }

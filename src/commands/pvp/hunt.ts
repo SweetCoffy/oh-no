@@ -122,7 +122,7 @@ export let command: Command = {
         }
         //if (l.battle) l.battle.type = "pve"
         battle.start()
-        p.hp = Math.ceil(p.stats.hp * hunt.hpPercent)
+        p.hp = Math.ceil(p.cstats.hp * hunt.hpPercent)
         p.prevHp = p.hp
         let lastinfo = await battle.infoMessage(i.channel)
 
@@ -136,7 +136,7 @@ export let command: Command = {
         battle.on("end", async (winner: string) => {
             if (!i.channel) return
             if (lastinfo?.deletable) lastinfo.delete()
-            hunt.hpPercent = Math.max(Math.min(p.hp / p.stats.hp, 1), 0)
+            hunt.hpPercent = Math.max(Math.min(p.hp / p.cstats.hp, 1), 0)
             lastinfo = await battle.infoMessage(channel)
             if (winner == "Team Blue") {
                 let oldCap = getLevelCap(hunt.bossesDefeated)

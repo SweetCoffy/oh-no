@@ -20,7 +20,7 @@ queueMicrotask(() => {
     huntData.register()
 })
 
-const FULL_RECOVERY_TIME = 1000 * 120
+const FULL_RECOVERY_TIME = 1000 * 60
 const FULL_RECOVERY_INCS = Math.floor(FULL_RECOVERY_TIME / UPDATE_TIME_INC)
 export const HP_PER_INC = 1 / FULL_RECOVERY_INCS
 addSingleUpdater("Hunt HP Recovery", (u, d, i) => {
