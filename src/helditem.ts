@@ -15,6 +15,7 @@ export type ItemClass = "bruh_orb" | "defense" | "offense" | "passive"
 type HeldItemCallback = (battle: Battle, player: Player, item: HeldItem) => any
 export class HeldItemType {
     name: string
+    unlockLevel: number = 15
     passiveEffect: string = "None"
     get description() {
         return this.passiveEffect

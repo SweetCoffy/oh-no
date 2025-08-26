@@ -1,10 +1,12 @@
 import { ActionRowBuilder, APIActionRowComponent, ApplicationCommandType, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, ContainerBuilder, Message, SelectMenuBuilder, StringSelectMenuBuilder, TextDisplayBuilder, User } from "discord.js";
 import { Command } from "../../command-loader.js";
 import { moves } from "../../moves.js";
-import { getUser, UserInfo } from "../../users.js";
+import { getUser } from "../../users.js";
 import { settings } from "../../util.js";
-function getMpLeft(moveset: string[], enhance: number[]) {
-    let remMp = (settings.maxMoves - moveset.length) + settings.leftoverMp
+import { dispDelta } from "../../number-format.js";
+import { getAvailableContent, getBaseMp } from "../../unlocking.js";
+function getMpLeft(moveset: string[], enhance: number[], base: number) {
+    let remMp = base - moveset.length
     for (let l of enhance) {
         remMp -= l
     }
@@ -12,9 +14,10 @@ function getMpLeft(moveset: string[], enhance: number[]) {
 }
 function mpAllocateComponent(user: User) {
     let u = getUser(user)
-    let remMp = getMpLeft(u.moveset, u.movesetEnhance)
+    let baseMp = getBaseMp(u)
+    let remMp = getMpLeft(u.moveset, u.movesetEnhance, baseMp)
     let root = new ContainerBuilder()
-    root.addTextDisplayComponents(new TextDisplayBuilder().setContent(`Remaining: **${remMp}**✦`))
+    root.addTextDisplayComponents(new TextDisplayBuilder().setContent(`Remaining: **${remMp}**/${baseMp - u.moveset.length}✦`))
     let moveInfos = u.moveset.map(id => moves.get(id)!)
     moveInfos.forEach((v, mi) => {
         let curEnhance = u.movesetEnhance[mi]
@@ -29,6 +32,9 @@ function mpAllocateComponent(user: User) {
             let budgetDelta = (i - 1) - curEnhance
             button.setDisabled((remMp - budgetDelta) < 0)
             button.setEmoji("⚫")
+            if (budgetDelta != 0) {
+                button.setLabel(`${dispDelta(budgetDelta, false)}✦`)
+            }
             button.setStyle(ButtonStyle.Secondary)
             if ((i - 1) == curEnhance) {
                 button.setStyle(ButtonStyle.Primary)
@@ -46,19 +52,25 @@ export let command: Command = {
     type: ApplicationCommandType.ChatInput,
     associatedCustomIds: ["moveset:"],
     async interaction(i) {
+        let u = getUser(i.user)
+        let baseMp = getBaseMp(u)
         if (i.customId.startsWith("moveset:mp/")) {
             let splits = i.customId.split("/")
             let midx = parseInt(splits[1])
             let mpamt = parseInt(splits[2]) - 1
-            let u = getUser(i.user)
+            let remMp = getMpLeft(u.moveset, u.movesetEnhance, baseMp)
             if (midx >= u.moveset.length) {
                 return await i.reply({ flags: ["Ephemeral"], content: "huh?" })
             }
+            let info = moves.get(u.moveset[midx])!
             let prevamt = u.movesetEnhance[midx]
             let eDelta = mpamt - prevamt
-            let curLeft = getMpLeft(u.moveset, u.movesetEnhance)
+            let curLeft = remMp
             if ((curLeft - eDelta) < 0) {
                 return await i.reply({ flags: ["Ephemeral"], content: "Allocation exceeds your budget (you should never see this message)" })
+            }
+            if (mpamt > info.maxEnhance - 1) {
+                return await i.reply({ flags: ["Ephemeral"], content: "No." })
             }
             u.movesetEnhance[midx] = mpamt
             return await i.update({ components: [mpAllocateComponent(i.user)] })
@@ -74,31 +86,44 @@ export let command: Command = {
             return
         }
         let moveset = i.values
-        let u = getUser(i.user)
         u.moveset = moveset
         u.movesetEnhance = moveset.map(_ => 0)
-        let remMp = settings.maxMoves - moveset.length
+        let remMp = getMpLeft(u.moveset, u.movesetEnhance, baseMp)
         if (remMp <= 0) {
             return await i.reply({ content: `Zero ✦ remaining, no moves may be enhanced.`, flags: ["Ephemeral"] })
         }
         await i.reply({ flags: ["IsComponentsV2", "Ephemeral"], components: [mpAllocateComponent(i.user)] })
     },
     async run(i: ChatInputCommandInteraction) {
+        let u = getUser(i.user)
+        let baseMp = getBaseMp(u)
+        let maxMoves = Math.max(Math.min(settings.maxMoves, baseMp), 1)
+        let unlocks = getAvailableContent(u)
+        let moveset = u.moveset.slice(0, maxMoves)
+        let usableMoves = moves.filter(m => m.selectable)
+        let unlockedMoves = usableMoves.filter((_, k) => unlocks.moves.has(k))
         await i.reply({
-            content: "Choose your moveset",
+            content: `Select your moves.\n` + 
+            `Limit: **${maxMoves}**✦\n` + 
+            `🔓 **${unlockedMoves.size}**/${usableMoves.size}`,
+            flags: ["Ephemeral"],
             components: [
                 new ActionRowBuilder<StringSelectMenuBuilder>({
                     components: [
                         new StringSelectMenuBuilder ({
-                            maxValues: settings.maxMoves,
+                            maxValues: maxMoves,
                             minValues: 1,
                             customId: "moveset:selector",
-                            options: moves.filter(el => el.selectable).map((v, k) => {
+                            options: moves
+                            .filter((el, k) => el.selectable && unlocks.moves.has(k))
+                            .map((v, k) => {
+
                                 return {
                                     value: k,
                                     label: v.name,
-                                    default: getUser(i.user).moveset.includes(k),
-                                    description: `${k}`
+                                    default: moveset.includes(k),
+                                    description: `${k}`,
+                                    //disabled: ""
                                 }
                             })
                         }),

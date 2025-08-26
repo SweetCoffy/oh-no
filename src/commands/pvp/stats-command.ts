@@ -7,6 +7,7 @@ import { getPresetList, makeStats, getPreset, presets, StatID, limitStats, calcS
 import { applyPreset, getTempData, getUser } from "../../users.js";
 import { bar, confirmation, getMaxTotal, helditemString, indent } from "../../util.js"
 import { ffrac, fnum } from "../../number-format.js";
+import { getAvailableContent } from "../../unlocking.js";
 function getWeighted(weights: number[], total: number = 600) {
     let totalW = weights.reduce((prev, cur) => prev + cur, 0)
     let ar = []
@@ -68,10 +69,12 @@ function heldItemComponent(user: User, presetId: string) {
         return [root]
     }
     let defaults = new Set(preset.helditems || [])
+    let unlocks = getAvailableContent(getUser(user))
     function itemSelectComponent(itemClass: ItemClass) {
         let options = [
             { value: "none", label: "None", default: false },
-            ...items.filter(v => v.class == itemClass).map((v, k) => ({ value: k, label: v.name, emoji: v.icon, default: defaults.has(k) }))
+            ...items.filter((v, k) => v.class == itemClass && unlocks.items.has(k))
+            .map((v, k) => ({ value: k, label: v.name, emoji: v.icon, default: defaults.has(k) }))
         ]
         if (options.every(v => !v.default)) {
             options[0].default = true
@@ -108,7 +111,8 @@ function heldItemComponent(user: User, presetId: string) {
             .setContent("# Ability"))
     let abilityOptions = [
         { value: "none", label: "None", default: false },
-        ...abilities.map((v, k) => ({ value: k, label: v.name, default: preset.ability == k }))
+        ...abilities.filter((_, k) => unlocks.abilities.has(k))
+        .map((v, k) => ({ value: k, label: v.name, default: preset.ability == k }))
     ]
     if (abilityOptions.every(v => !v.default)) {
         abilityOptions[0].default = true

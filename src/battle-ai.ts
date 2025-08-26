@@ -1,4 +1,5 @@
 import { Battle, calcDamage, Player } from "./battle.js";
+import { MoveID } from "./gen.js";
 import { moves } from "./moves.js";
 import { calcStat } from "./stats.js";
 import { weightedRandom } from "./util.js";
@@ -9,7 +10,9 @@ type AIAction = {
 export type BotAISettings = {
     attackMult?: number
     supportMult?: number
-    selfSupportMult?: number
+    selfSupportMult?: number,
+    moveMult?: { [x in MoveID]?: number },
+    moveAdd?: { [x in MoveID]?: number },
 }
 type AIActionWithScore = AIAction & { score: number }
 export class BotAI {

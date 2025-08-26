@@ -7,7 +7,7 @@ for (let a of process.argv.slice(2)) {
 }
 import Discord, { GatewayIntentBits, InteractionType } from "discord.js"
 import { commands, loadDir, addCommands, customIds } from "./command-loader.js"
-import { users, getUser, UserSaveData, data, globalData, getUserSaveData, replacer } from "./users.js"
+import { users, getUser, UserSaveData, data, globalData, getUserSaveData, replacer, saveUser } from "./users.js"
 import { writeFileSync, readFileSync } from "fs"
 import { shopItems } from "./items.js"
 
@@ -148,20 +148,6 @@ client.on("error", (error) => {
     console.error(error)
 })
 
-let minv = Infinity
-let maxv = -Infinity
-let mv = 0xffffffff
-
-let rng = new RNG(Math.floor(Math.random() * 999999))
-
-for (let i = 0; i < 1000000; i++) {
-    let v = Math.floor(rng.get01() * mv)
-    minv = Math.min(minv, v)
-    maxv = Math.max(maxv, v)
-}
-console.log(minv)
-console.log(maxv)
-
 // get real
 if (experimental.april_fools) import("./april-fools.js")
 if (experimental.codegen) generate()
@@ -215,11 +201,6 @@ if (experimental.test_canvas) {
         if (Math.random() < 0.5) {
             p.absorb = Math.floor(p.hp / 2)
         }
-        //if (Math.random() < 0.25) {
-        //    p.hp += p.cstats.hp
-        //}
-        //p.prevHp = p.hp * (Math.random() - 0.5)
-        //console.log(`${p.prevHp} / ${p.hp}`)
         players.push(p)
     }
     const testBattle: PartialBattle = {
@@ -233,4 +214,9 @@ if (experimental.test_canvas) {
     await Bun.write("/tmp/ohno_canvas_test.png", buf)
     //Bun.$`xdg-open /tmp/ohno_canvas_test.png`
 }
+process.on("exit", (_) => {
+    for (let [k, v] of users) {
+        saveUser(k, v)
+    }
+})
 // pain

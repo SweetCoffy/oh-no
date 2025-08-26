@@ -7,6 +7,7 @@ import { experimental, getMaxTotal, settings } from './util.js'
 import { client } from './index.js'
 import { Enemy } from './enemies.js'
 import { RogueGame } from './rogue_mode.js'
+import { getLevelCap } from './unlocking.js'
 export let data: any = {}
 
 type TempData = {
@@ -66,7 +67,11 @@ export interface UserInfo {
     ability?: string,
     rogue?: RogueGame,
     lastUpdate: number,
-    special: Dict<any>
+    special: Dict<any>,
+    unlockCache?: {
+        level: number
+        content: {}
+    }
 }
 export interface UserSaveData {
     baseStats: Stats,
@@ -146,6 +151,7 @@ export class UserSpecialData<T extends {}> {
             sp = u.special[this.id] = structuredClone(this.defaults)
             sp.__populated = true
         }
+const defaultLevelCap = 10
         if (!sp.__populated) {
             sp.__populated = true
             let defaults = this.defaults
@@ -222,6 +228,10 @@ export function replacer(k: string, v: any) {
 }
 export const UPDATE_TIME_INC = 1000
 export const MAX_UPDATE_INCS = 120
+export function saveUser(id: string, data: UserInfo) {
+    writeFileSync(`data/${settings.saveprefix}${id}.json`, 
+        JSON.stringify(getUserSaveData(data), replacer, 4))
+}
 export function getUser(user: User | string): UserInfo {
     if (typeof user == "string") {
         user = client.users.cache.get(user) as User
@@ -231,9 +241,11 @@ export function getUser(user: User | string): UserInfo {
     if (!data.unloadTimeout) {
         // Don't unload users that are in a lobby as it can cause "funny" things to happen
         data.unloadTimeout = setTimeout(function() {
-            if (data.lobby || data.rogue) return data.unloadTimeout?.refresh()
+            saveUser(user.id, data)
+            if (data.lobby || data.rogue) {
+                return data.unloadTimeout?.refresh()
+            }
             data.unloadTimeout = undefined;
-            writeFileSync(`data/${settings.saveprefix}${(user as User).id}.json`, JSON.stringify(getUserSaveData(data), replacer, 4))
             users.delete((user as User).id);
             console.log(`User ${(user as User).username} has been unloaded`)
         }, settings.unloadTimeout)
@@ -343,12 +355,15 @@ export function addXP(user: User, amount: number) {
         amount << Math.floor(Math.cbrt(Math.random() * 50))
     }
     let u = getUser(user)
+    let hunt = specialData.get("hunt")!.get(u) as { bossesDefeated: string[] }
     u.xp += amount
     let levels = 0;
+    let cap = getLevelCap(hunt.bossesDefeated)
     while (u.xp >= getLevelUpXP(user)) {
         u.xp -= getLevelUpXP(user)
         levels++
         u.level++
+        if (u.level >= cap) break;
     }
     return levels;
 }

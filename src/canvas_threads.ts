@@ -15,12 +15,14 @@ const info: PartialInfo = {
     teamNames: teamNames
 }
 for (let i = 0; i < THREAD_COUNT; i++) {
-    let worker = new Worker("./src/canvas_worker.ts", { workerData: { info } })
-    worker.on("error", (err) => {
-        console.error(err)
-    })
-    busy.push(0)
-    threads.push(worker)
+    setTimeout(() => {
+        let worker = new Worker("./src/canvas_worker.ts", { workerData: { info } })
+        worker.on("error", (err) => {
+            console.error(err)
+        })
+        busy.push(0)
+        threads.push(worker)
+    }, i * 1000)
 }
 function findThread(): [Worker, number] {
     let lowest = Math.min(...busy)

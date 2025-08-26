@@ -9,6 +9,7 @@ import { levelUpMessage, randomRange, weightedDistribution, weightedRandom } fro
 import { getString } from "../../locale.js";
 import { fnum, money } from "../../number-format.js";
 import { huntData } from "../../save_special.js";
+import { getLevelCap } from "../../unlocking.js";
 
 export let command: Command = {
     name: "hunt",
@@ -69,11 +70,11 @@ export let command: Command = {
         let battle = l.battle
         u.lobby = l;
         let p = battle.players[0]
-        p.baseStats = {...hunt.stats}
-        p.moveset = [...hunt.moveset]
+        p.baseStats = {...u.baseStats}
+        p.moveset = [...u.moveset]
         p.updateStats()
-        p.helditems = []
-        p.ability = undefined
+        p.helditems = u.helditems.map(id => ({ id }))
+        p.ability = u.ability
         let threateningBonus = 1
         for (let enemy of e) {
             if (!enemy) continue
@@ -111,10 +112,10 @@ export let command: Command = {
             if (enemy.boss) {
                 if (enemy.boost) {
                     battle.multiStatBoost(p, enemy.boost)
-                    for (let k in enemy.boost) {
-                        //@ts-ignore
-                        battle.statBoost(p, k, enemy.boost[k] || 0)
-                    }
+                    // for (let k in enemy.boost) {
+                    //     //@ts-ignore
+                    //     battle.statBoost(p, k, enemy.boost[k] || 0)
+                    // }
                 }
             }
             battle.players.push(p)
@@ -122,6 +123,7 @@ export let command: Command = {
         //if (l.battle) l.battle.type = "pve"
         battle.start()
         p.hp = Math.ceil(p.stats.hp * hunt.hpPercent)
+        p.prevHp = p.hp
         let lastinfo = await battle.infoMessage(i.channel)
 
         let channel = i.channel
@@ -137,26 +139,41 @@ export let command: Command = {
             hunt.hpPercent = Math.max(Math.min(p.hp / p.stats.hp, 1), 0)
             lastinfo = await battle.infoMessage(channel)
             if (winner == "Team Blue") {
+                let oldCap = getLevelCap(hunt.bossesDefeated)
+                let winMessage = `Victory!`
                 let enemies = battle.players.filter(el => !el.user) || []
                 let xp = Math.ceil(
                     enemies
                     .map(el => (el.level * el.xpYield) / 5)
                     .reduce((prev, cur) => prev + cur, 0) || 0)
+                for (let enemy of e) {
+                    if (enemy.boss) {
+                        if (hunt.bossesDefeated.includes(enemy.id!)) {
+                            continue
+                        }
+                        hunt.bossesDefeated.push(enemy.id!)
+                        winMessage = `Boss Defeated!`
+                    }
+                }
+                let newCap = getLevelCap(hunt.bossesDefeated)
                 let oldLevel = u.level
                 let m = BigInt(Math.floor(xp * (xp * 0.075)))/100n*15n
                 getUser(i.user).money.points += m
-                await channel.send(`You won, gained ${fnum(xp)} XP and ${money(m)}`)
+                await channel.send(`# ${winMessage}\nGained **${fnum(xp)}** XP and **${money(m)}**`)
                 let levels = addXP(i.user, xp)
                 let newLevel = u.level
+                if (newCap > oldCap) {
+                    await channel.send(`Level cap increased to **${newCap}**!`)
+                }
                 if (levels > 0) {
-                    await channel.send(`**You leveled up!**\n` +
+                    await channel.send(`## You leveled up!\n` +
                         codeBlock("ansi",
                             levelUpMessage(u, oldLevel, newLevel)
                         )
                     )
                 }
             } else {
-                await channel.send("You lost")
+                await channel.send("## Defeat")
             }
         })
     }

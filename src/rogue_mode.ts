@@ -1,4 +1,4 @@
-import { codeBlock, Collection, SendableChannels, User } from "discord.js";
+import { codeBlock, Collection, Message, SendableChannels, User } from "discord.js";
 import { ItemID, MoveID, RogueItemID } from "./gen";
 import { baseStats, calcStats, makeStats, Stats } from "./stats";
 import { Battle, Player } from "./battle";
@@ -266,12 +266,18 @@ export class RogueGame {
             battle.infoMessage(c)
         }
     }
+    battleInfoMsgs: Message[]
     battleEnded(b: Battle, won: boolean) {
         b.removeAllListeners("newTurn")
         b.removeAllListeners("end")
         this.inBattle = false
+        for (let m of this.battleInfoMsgs) {
+            if (m.deletable) m.delete()
+        }
+        this.battleInfoMsgs = []
+        let infoMsgs = this.battleInfoMsgs
         for (let c of this.channels) {
-            b.infoMessage(c)
+            b.infoMessage(c).then(m => infoMsgs.push(m))
         }
         this.lobby?.delete()
         if (!won) {
@@ -279,6 +285,7 @@ export class RogueGame {
             this.end()
             return
         }
+        
         for (let battlePlayer of b.players) {
             if (!battlePlayer.user) continue
             let player = this.players.find(v => v.user.id == battlePlayer.id)
@@ -316,6 +323,7 @@ export class RogueGame {
         return true
     }
     constructor() {
+        this.battleInfoMsgs = []
         this.rng = new RNG()
         this.players = []
         this.inventory = []

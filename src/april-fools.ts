@@ -36,7 +36,6 @@ for (let c of namecols) {
     }
 }
 
-console.log(names)
 
 // Shuffle a whole bunch of collections
 shuffleCollection(items)
@@ -58,7 +57,6 @@ for (let c of namecols) {
     for (let [k, v] of c) {
         v.name = getName()
         v.name = owoSpecial(v.name)
-        console.log(`${k}: ${v.name}`)
     }
 }
 

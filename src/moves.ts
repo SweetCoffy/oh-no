@@ -17,6 +17,7 @@ export interface InflictStatus {
 }
 export class Move {
     id: string = ""
+    unlockLevel: number = 0
     requiresCharge: number = 0
     requiresMagic: number = 0
     name: string
@@ -246,6 +247,7 @@ moves.set("needle", new Move("Needle", "attack", 5, "physical", 100).set(move =>
     move.inflictStatus.push({ status: "bleed", chance: 1 })
     move.setDamage = "percent"
     move.requiresCharge = 5
+    move.unlockLevel = 20
 }).setDesc(formatString("Deals fixed damage equal to [a]5%[r] of the target's [a]MAX HP[r] and inflicts them with [a]Bleed[r]")))
 moves.set("nerf_gun", new Move("Nerf Gun", "attack", 85, "special").set(move => {
     move.multihit = 2
@@ -291,11 +293,13 @@ moves.set("nerf_gun", new Move("Nerf Gun", "attack", 85, "special").set(move => 
 moves.set("ping", new Move("Ping Attack", "attack", 210, "special").set(move => {
     move.requiresMagic = 30
     move.maxEnhance = 4
+    move.unlockLevel = 10
 }).setDesc(formatString("A strong [a]Special[r] move that requires [a]Magic[r] to use.")))
 moves.set("slap", new Move("Slap", "attack", 220).set(move => {
     move.requiresCharge = 15
     move.maxEnhance = 4
     move.onUseOverride = false
+    move.unlockLevel = 10
     let blastMult = 0.4
     let blastSummonMult = 0.6
     move.specialEnhance = [2, 4]
@@ -339,6 +343,7 @@ moves.set("boulder", new Move("Break: Tactical Homing Boulder", "attack", 130, "
     move.requiresMagic = 30
     move.maxEnhance = 2
     move.critMul = 0
+    move.unlockLevel = 40
     move.getDescription = (el) => {
         let multstr = ffrac(move.getBasePower(el)/100)
         return formatString(`Deals [a]defense-ignoring[r] damage equal to [a]${multstr}[r] of [a]ATK[r] + [a]${multstr}[r] of [a]Special ATK[r] and inflicts [a]Broken[r].\nThis move [a]cannot CRIT[r].`)
@@ -385,6 +390,7 @@ function summonDesc(summonType: string, levelFrac: number = 0.9) {
 moves.set("summon_eh", new Move("Summon: Egg Hater", "status", 0, "status").set(move => {
     move.requiresMagic = 30
     move.onUse = summonOnUse("egg_hater", 1.0)
+    move.unlockLevel = 40
     queueMicrotask(() => {
         move.description = summonDesc("egg_hater")
     })
@@ -392,6 +398,7 @@ moves.set("summon_eh", new Move("Summon: Egg Hater", "status", 0, "status").set(
 moves.set("summon_u", new Move("Summon: ú", "status", 0, "status").set(move => {
     move.requiresMagic = 40
     move.onUse = summonOnUse("u", 0.6)
+    move.unlockLevel = 100
     queueMicrotask(() => {
         move.description = summonDesc("u", 0.6)
     })
@@ -400,6 +407,7 @@ moves.set("summon_u", new Move("Summon: ú", "status", 0, "status").set(move => 
 moves.set("twitter", new Move("Twitter", "status", 0, "status", 100).set(move => {
     move.inflictStatus.push({ chance: 1, status: "poison" })
     move.requiresMagic = 10
+    move.unlockLevel = 30
     move.getAiAttackRank = (b, p, t) => {
         let s = t.status.find(v => v.type == "poison")
         if (s && s.turnsLeft > 1) return -1
@@ -412,6 +420,7 @@ moves.set("twitter", new Move("Twitter", "status", 0, "status", 100).set(move =>
 moves.set("stronk", new Move("Stronk", "status", 0, "status").set(move => {
     move.targetStat.atk = 1
     move.targetSelf = true
+    move.unlockLevel = 25
 }).setDesc(formatString("Increases the user's [a]ATK[r] by [a]1[r] stage.")))
 
 // moves.set("tonk", new Move("Tonk", "status", 0, "status").set(move => {
@@ -423,6 +432,7 @@ moves.set("reckless_rush", new Move("Reckless Rush", "status", 0, "status").set(
     move.targetSelf = true
     move.requiresCharge = 20
     move.maxEnhance = 2
+    move.unlockLevel = 30
     let baseDuration = 2
     move.onUse = (b, p, _, { enhance }) => {
         let s = b.inflictStatus(p, "rush")
@@ -445,6 +455,7 @@ moves.set("reckless_rush", new Move("Reckless Rush", "status", 0, "status").set(
 moves.set("spstronk", new Move("Magik Sord", "status", 0, "status").set(move => {
     move.targetStat.spatk = 1
     move.targetSelf = true
+    move.unlockLevel = 25
 }).setDesc(formatString("Increases the user's [a]SPATK[r] by [a]1[r] stage.")))
 
 // moves.set("sptonk", new Move("Magik Sheld", "status", 0, "status").set(move => {
@@ -456,6 +467,7 @@ moves.set("mind_overwork", new Move("Neuro-Overclock", "status", 0, "status").se
     move.targetSelf = true
     move.requiresMagic = 25
     move.maxEnhance = 2
+    move.unlockLevel = 30
     let baseDuration = 3
     move.onUse = (b, p, _, { enhance }) => {
         let s = p.status.find(v => v.type == "mind_overwork")
@@ -493,6 +505,7 @@ moves.set("mind_overwork", new Move("Neuro-Overclock", "status", 0, "status").se
 // P R O T E C T
 moves.set("protect", new Move("Protect", "protect", 0, "status").set(move => {
     move.priority = 4
+    move.unlockLevel = 5
     move.getAiSupportRank = (b, p, t) => {
         if (t.dead) return 0
         let effectiveHp = t.hp + t.plotArmor
@@ -514,6 +527,7 @@ moves.set("support_absorption", new Move("Support: Iron Dome Defense System", "s
     move.targetSelf = true
     move.maxEnhance = 4
     move.enhanceFactor = 0.5
+    move.unlockLevel = 35
     move.getDescription = (el) => {
         let pow = move.getBasePower(el)
         return formatString(`Grants all alies [a]100% efficient Absorption[r] equal to [a]${ffrac(pow / 100)}[r] of the user's [a]Special DEF[r]. If an ally already has Absorption from this move, it is refreshed.\nWhen the [a]Absorption[r] from this move is consumed, the [a]user[r] will take [a]100%[r] of the damage absorbed as [a]Special[r] damage.`)
@@ -623,6 +637,7 @@ moves.set("support_gacha", new Move("Support: Gacha", "status", 0, "status").set
     move.requiresMagic = 5
     move.maxEnhance = 2
     move.priority = 1
+    move.unlockLevel = 50
     move.targetSelf = true
     let baseMinRolls = 1
     let baseMaxRolls = 3
@@ -657,6 +672,7 @@ moves.set("shield_breaker", new Move("Break: Armor-Piercing Shell", "attack", 50
     move.breakshield = true
     move.power = null
     move.critMul = 2
+    move.unlockLevel = 50
     move.onUse = function (b, p, t) {
         let dmgMult = b.critRoll(p, t, 2)
         b.logL("dmg.breakthrough", { player: p.toString() })
@@ -685,6 +701,7 @@ moves.set("counter", new Move("Counter: Anti-Material Rifle", "attack", 0).set(m
     move.priority = -2
     move.critMul = 0.5
     move.setDamage = "set"
+    move.unlockLevel = 30
     move.selectDialogExtra = (b, p) => {
         let dmg = move.getPower(b, p, p)
         return `ℹ️ Estimated damage: **${fnum(dmg)}**`
@@ -702,6 +719,7 @@ moves.set("release", new Move("Counter: High Explosive Squash Head", "attack", 0
     move.priority = -2
     move.setDamage = "set"
     move.critMul = 0
+    move.unlockLevel = 40
     move.checkFail = function (b, p, t) {
         return p.damageBlockedInTurn > 0 || p.damageTakenInTurn > 0
     }
@@ -734,6 +752,7 @@ moves.set("release", new Move("Counter: High Explosive Squash Head", "attack", 0
 moves.set("regen", new Move("Regeneration", "status", 0, "status", 100).set(move => {
     move.requiresMagic = 20
     move.targetSelf = true
+    move.unlockLevel = 50
     move.inflictStatus.push({
         chance: 1,
         status: "regen"
@@ -757,6 +776,7 @@ moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
     move.enhanceFactor = 0.6
     move.onUseOverride = false
     move.specialEnhance = [4]
+    move.unlockLevel = 45
     move.getDescription = (el) => {
         let pow = move.getBasePower(el)
         let desc = `Heals the target by [a]${ffrac(pow / 100)}[r] of the user's [a]Max HP[r].`
@@ -785,7 +805,8 @@ moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
     move.priority = 1
     move.setDamage = "set"
     move.targetSelf = true
-    move.requiresMagic = 60
+    move.requiresMagic = 50
+    move.unlockLevel = 100
     move.checkFail = function (b, p, t) {
         return t.dead
     }
@@ -794,7 +815,7 @@ moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
         b.heal(t, t.maxhp - 1)
         b.logL("heal.revive", { player: t.toString() })
     }
-}).setDesc(formatString("Revives the target with their full [a]HP[r] restored. [a]The target's held items and stat modifiers will be lost.[r]")))
+}).setDesc(formatString("Revives the target with their full [a]HP[r] restored.")))
 //moves.set("overheal", new Move("Overheal", "heal", 150, "status", 100).set(move => {
 //    move.requiresMagic = 30
 //    move.userStat.atk = -12

@@ -13,6 +13,7 @@ import { getString } from "./locale.js"
 import { Battle, Player, teamEmojis } from "./battle.js"
 import { fnum, fracfmt } from "./number-format.js"
 import { huntData } from "./save_special.js"
+import { getAvailableContentForLevel, getBaseMpForLevel, getLevelCap, unlockContent, UnlockMeta } from "./unlocking.js"
 
 export function lexer(str: string) {
     let ar: string[] = []
@@ -349,17 +350,47 @@ export function loadRecursive(path: string) {
         }
     }
 }
+export function setDifference<T>(a: Set<T>, b: Set<T>): Set<T> {
+    let newSet = new Set<T>()
+    for (let item of a.values()) {
+        if (!b.has(item)) {
+            newSet.add(item)
+        }
+    }
+    for (let item of b.values()) {
+        if (!a.has(item)) {
+            newSet.add(item)
+        }
+    }
+    return newSet
+}
 export function levelUpMessage(u: UserInfo, oldLevel: number, newLevel: number) {
     let hunt = huntData.get(u)
-    let baseStats = hunt.stats
+    let baseStats = u.baseStats
+    let levelCap = getLevelCap(hunt.bossesDefeated)
+    let oldMp = getBaseMpForLevel(oldLevel)
+    let newMp = getBaseMpForLevel(newLevel)
+    let oldUnlocks = getAvailableContentForLevel(oldLevel)
+    let newUnlocks = getAvailableContentForLevel(newLevel)
     let oldStats = calcStats(oldLevel, baseStats)
     let newStats = calcStats(newLevel, baseStats)
-    return formatString(`${"Level".padEnd(12)} [a]${oldLevel.toString().padStart(5)}[r] -> [s]${newLevel.toString().padEnd(5)}[r]\n`) + "—".repeat(27) + "\n" +
+    let unlocks: UnlockMeta[] = []
+    for (let kind in newUnlocks) {
+        let newList = newUnlocks[kind]
+        let oldList = oldUnlocks[kind]
+        let col = unlockContent[kind]
+        let diff = new Array(...setDifference(newList, oldList))
+        unlocks.push(...diff.map(k => col.get(k)!))
+    }
+    return formatString(`${"Level".padEnd(12)} [a]${oldLevel.toString().padStart(5)}[r] -> [s]${newLevel.toString().padEnd(5)}[r]/${levelCap}\n`) + "—".repeat(27) + "\n" +
         Object.keys(newStats).map(stat => {
             let old = oldStats[stat as StatID]
             let newStat = newStats[stat as StatID]
             return formatString(`${getString("stat." + stat).padEnd(12)} [a]${fnum(old).padStart(5)}[r] -> [s]${fnum(newStat).padEnd(5)}[r]`)
         }).join("\n")
+         + "\n" + "—".repeat(27) + "\n"
+         + (oldMp != newMp ? `\nMove Points increased to ${newMp}✦!` : "")
+         + (unlocks.length > 0 ? `\nNew stuff unlocked!\n${unlocks.map(v => v.name).join(", ")}` : "")
 }
 export function timeFormat(seconds: number) {
     let secs = Math.floor(seconds % 60)

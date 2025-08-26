@@ -5,6 +5,7 @@ import { lerp } from "./util.js";
 
 export class Ability {
     name: string
+    unlockLevel: number = 20
     description: string
     // The ability's cost in base stat points, a negative cost increases the user's effective base stat total.
     cost: number

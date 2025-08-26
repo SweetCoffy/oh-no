@@ -14,7 +14,6 @@ const statusIcons: { [x in string]: string } = {
     regen: "regen",
     broken: "broken"
 }
-console.log("alive")
 const assetsRoot = resolve("./assets")
 const fontPath = join(assetsRoot, "font")
 const fontName = "Oxanium"
@@ -50,7 +49,6 @@ Promise.all(iconFiles.map(file => loadImage(join(iconRoot, file)).then(image =>
         for (let [k, v] of images) {
             let name = basename(k, ".png")
             icons.set(name, v)
-            console.log(`loaded icon ${name}`)
         }
     })
 const fontFamily = "Oxanium"

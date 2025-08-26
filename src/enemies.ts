@@ -28,6 +28,7 @@ export interface Enemy {
     ability?: AbilityID,
     drops?: ItemDrop[],
     moveset: MoveID[],
+    id?: string
 }
 
 export let enemies: Collection<string, Enemy> = new Collection()
@@ -278,3 +279,6 @@ enemies.set("sun", {
         maxLevel: 1.2,
     }
 })
+for (let [k, v] of enemies) {
+    v.id = k
+}
