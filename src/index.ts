@@ -192,7 +192,10 @@ if (experimental.test_canvas) {
             level: 50 + Math.floor(Math.random() * 51),
             team: Math.floor(i / 2),
             name: "player " + (i + 1),
-            healingInTurn: 0
+            healingInTurn: 0,
+            id: "",
+            summons: [],
+            actionOrder: 0
         }
         p.cstats.maglimit = 100
         p.cstats.chglimit = 100

@@ -591,12 +591,10 @@ const gachaRarityPools = [
 function applyGachaEffect(b: Battle, p: Player, e: GachaBuff, inf?: Player) {
     switch (e.type) {
         case "magic":
-            p.magic += e.amount
-            b.logL("move.magic.gain", { player: p.toString(), amount: e.amount })
+            b.addMagic(p, e.amount)
             break
         case "charge":
-            p.charge += e.amount
-            b.logL("move.charge.gain", { player: p.toString(), amount: e.amount })
+            b.addCharge(p, e.amount)
             break
         case "absorption":
             b.logL("move.absorption", { player: p.toString() })

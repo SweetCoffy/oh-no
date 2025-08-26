@@ -1453,6 +1453,9 @@ export class Battle extends EventEmitter {
         let mult = p.cstats.chgbuildup/100
         amt = Math.ceil(amt * mult)
         p.charge += amt
+        if (!silent) {
+            this.logL("move.charge.gain", { player: p.toString(), amount: amt })
+        }
         if (p.summoner) {
             this.addCharge(p.summoner, amt*0.3, true)
         }
@@ -1461,6 +1464,9 @@ export class Battle extends EventEmitter {
         let mult = p.cstats.magbuildup/100
         amt = Math.ceil(amt * mult)
         p.magic += amt
+        if (!silent) {
+            this.logL("move.magic.gain", { player: p.toString(), amount: amt })
+        }
         if (p.summoner) {
             this.addMagic(p.summoner, amt*0.3, true)
         }
