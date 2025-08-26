@@ -1617,6 +1617,7 @@ export class Battle extends EventEmitter {
                 }
                 sType.end(this, u, a)
                 a.duration = Math.max(a.duration, o.duration)
+                a.turnsLeft = a.duration
                 if (inf) {
                     a.inflictor = inf
                     a.infStats = inf.getFinalStats()

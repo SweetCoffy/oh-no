@@ -127,7 +127,7 @@ enemies.set("the_skeleton", {
     encounter: {
         minPlayerLevel: 25,
         maxPlayerLevel: Infinity,
-        rate: 5,
+        rate: 15,
         minLevel: 1,
         maxLevel: 1.1,
         relativeLevel: true,
@@ -189,7 +189,7 @@ enemies.set("u", {
     xpYield: 10000,
     helditems: [],
     encounter: {
-        rate: 1,
+        rate: 10,
         relativeLevel: true,
         minPlayerLevel: 30,
         maxPlayerLevel: Infinity,
@@ -217,7 +217,7 @@ enemies.set("o", {
     boss: true,
     xpYield: 10000,
     encounter: {
-        rate: 1,
+        rate: 10,
         relativeLevel: true,
         minPlayerLevel: 30,
         maxPlayerLevel: Infinity,
@@ -243,7 +243,7 @@ enemies.set("y", {
     boss: true,
     xpYield: 10000,
     encounter: {
-        rate: 1,
+        rate: 15,
         relativeLevel: true,
         minPlayerLevel: 30,
         maxPlayerLevel: Infinity,
@@ -271,7 +271,7 @@ enemies.set("sun", {
         selfSupportMult: 1.2,
     },
     encounter: {
-        rate: 1,
+        rate: 8,
         relativeLevel: true,
         minPlayerLevel: 30,
         maxPlayerLevel: Infinity,
