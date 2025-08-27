@@ -1,4 +1,4 @@
-import { ApplicationCommandType, ApplicationCommandOptionType, ChatInputCommandInteraction, codeBlock, ModalBuilder, StringSelectMenuBuilder, ContainerBuilder, ActionRowBuilder, TextDisplayBuilder, User, ButtonBuilder, ButtonStyle, ComponentType, ContainerComponent } from "discord.js";
+import { ApplicationCommandType, ApplicationCommandOptionType, ChatInputCommandInteraction, codeBlock, ModalBuilder, StringSelectMenuBuilder, ContainerBuilder, ActionRowBuilder, TextDisplayBuilder, User, ButtonBuilder, ButtonStyle, ComponentType, ContainerComponent, Integration, Interaction, CommandInteraction, ButtonInteraction, SectionBuilder } from "discord.js";
 import { abilities } from "../../abilities.js";
 import { Command } from "../../command-loader.js"
 import { ItemClass, items } from "../../helditem.js";
@@ -74,7 +74,7 @@ function heldItemComponent(user: User, presetId: string) {
         let options = [
             { value: "none", label: "None", default: false },
             ...items.filter((v, k) => v.class == itemClass && unlocks.items.has(k))
-            .map((v, k) => ({ value: k, label: v.name, emoji: v.icon, default: defaults.has(k) }))
+                .map((v, k) => ({ value: k, label: v.name, emoji: v.icon, default: defaults.has(k) }))
         ]
         if (options.every(v => !v.default)) {
             options[0].default = true
@@ -112,7 +112,7 @@ function heldItemComponent(user: User, presetId: string) {
     let abilityOptions = [
         { value: "none", label: "None", default: false },
         ...abilities.filter((_, k) => unlocks.abilities.has(k))
-        .map((v, k) => ({ value: k, label: v.name, default: preset.ability == k }))
+            .map((v, k) => ({ value: k, label: v.name, default: preset.ability == k }))
     ]
     if (abilityOptions.every(v => !v.default)) {
         abilityOptions[0].default = true
@@ -158,8 +158,14 @@ function heldItemComponent(user: User, presetId: string) {
                 new ButtonBuilder().setLabel("Save").setCustomId("stats:save_preset").setStyle(ButtonStyle.Primary)
             )]
 }
-function presetEditButtons(presetId: string) {
-    return new ActionRowBuilder<ButtonBuilder>().addComponents(
+function presetEditButtons(presetId: string, includeDelete: boolean = false, isCurrent: boolean = false) {
+    let actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`stats:edit/${presetId}/use`)
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji("✅")
+            .setDisabled(isCurrent)
+            .setLabel(isCurrent ? "Already Using" : "Apply"),
         new ButtonBuilder()
             .setCustomId(`stats:edit/${presetId}/allocate`)
             .setStyle(ButtonStyle.Secondary)
@@ -171,7 +177,14 @@ function presetEditButtons(presetId: string) {
             .setEmoji("🔧")
             .setLabel("Edit Items")
     )
-
+    if (includeDelete) {
+        actionRow.addComponents(new ButtonBuilder()
+            .setCustomId(`stats:edit/${presetId}/delete`)
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji("🗑️")
+            .setLabel("Delete"))
+    }
+    return actionRow
 }
 function normPresetName(name: string) {
     return name.toLowerCase().replace(/[^A-Za-z_\-0-9 ]/g, "-")
@@ -199,6 +212,89 @@ function initItemTmp(iid: string, preset: StatPreset, presetId: string) {
         stats: { preset: presetId, ability: preset.ability, itemSlots: slots, stats: preset.stats }
     }
 }
+function presetListComponent(user: User, page: number) {
+    let list = getPresetList(user)
+    let keys = Object.keys(list)
+    let current = getUser(user).preset
+    let customs = getUser(user).presets
+    let perPage = 5
+    let start = perPage * page
+    let end = Math.min(start + perPage, keys.length)
+    let pageCount = Math.ceil(keys.length / perPage)
+    let root = new ContainerBuilder()
+    for (let i = start; i < end; i++) {
+        let k = keys[i]
+        let p = list[k]
+        let isCustom = k in customs
+        let btnText = "View"
+        let btnStyle = ButtonStyle.Secondary
+        if (isCustom) {
+            btnStyle = ButtonStyle.Primary,
+                btnText = "View and Edit"
+        }
+        let statsSorted = Object.entries(p.stats)
+        let statsGrouped = new Map<number, string[]>()
+        for (let [stat, value] of statsSorted) {
+            if (!statsGrouped.has(value)) statsGrouped.set(value, [])
+            statsGrouped.get(value)!.push(stat)
+        }
+        let valuesSorted = [...statsGrouped.keys()].sort((a, b) => b - a).slice(0, 3)
+        let vstr = ""
+        for (let v of valuesSorted) {
+            if (vstr.length) {
+                vstr += " > "
+            }
+            let stats = statsGrouped.get(v)!
+            vstr += stats.map(v => `**${getString("stat." + v)}**`).join(" = ")
+        }
+        let section = new SectionBuilder()
+            .addTextDisplayComponents(new TextDisplayBuilder({
+                content: (current == k ? "✅ " : "") + `**${p.name}** \`${k}\`\n`
+                    + (p.ability ? `Ability: **${abilities.get(p.ability)!.name}**\n` : "")
+                    + vstr + "\n"
+                    + (isCustom ? "" : "-# Default preset, read-only.")
+            }))
+            .setButtonAccessory(
+                new ButtonBuilder()
+                    .setCustomId(`stats:edit/${k}/view`)
+                    .setLabel(btnText)
+                    .setStyle(btnStyle))
+        root.addSectionComponents(section)
+    }
+    root.addTextDisplayComponents(new TextDisplayBuilder({
+        content: `-# Page ${page + 1} of ${pageCount}`
+    }))
+    let lastPage = pageCount - 1
+    let nextPage = Math.min(page + 1, lastPage)
+    let prevPage = Math.max(page - 1, 0)
+    root.addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder({
+            emoji: "⏪",
+            style: ButtonStyle.Secondary,
+            customId: `stats:list/0/first`,
+            disabled: 0 == page
+        }),
+        new ButtonBuilder({
+            emoji: "◀️",
+            style: ButtonStyle.Primary,
+            customId: `stats:list/${prevPage}/prev`,
+            disabled: prevPage == page,
+        }),
+        new ButtonBuilder({
+            emoji: "▶️",
+            style: ButtonStyle.Primary,
+            customId: `stats:list/${nextPage}/next`,
+            disabled: nextPage == page,
+        }),
+        new ButtonBuilder({
+            emoji: "⏩",
+            style: ButtonStyle.Secondary,
+            customId: `stats:list/${lastPage}/last`,
+            disabled: lastPage == page
+        }),
+    ))
+    return root
+}
 function granularAllocationComponent(presetId: string, user: User) {
     let u = getUser(user)
     let preset = u.presets[presetId]
@@ -207,7 +303,7 @@ function granularAllocationComponent(presetId: string, user: User) {
     }
     let tmp = getTempData(`${user.id}_preset`)
     if (!tmp[presetId]) {
-        tmp[presetId] = {...preset.stats}
+        tmp[presetId] = { ...preset.stats }
     }
     let testLevel = 100
     let cap = getMaxTotal(preset)
@@ -244,6 +340,49 @@ function granularAllocationComponent(presetId: string, user: User) {
             .setCustomId(`stats:edit/${presetId}/g/r`)
             .setStyle(ButtonStyle.Secondary)))
     return root
+}
+async function sendPresetInfoMessage(i: CommandInteraction | ButtonInteraction, presetId: string) {
+    let p = getPreset(presetId, i.user)
+    if (!p) return await i.reply(`Preset not found`)
+    let current = getUser(i.user).preset
+    let presetList = getUser(i.user).presets
+    let stats = p.stats
+    let statsL50 = calcStats(50, stats)
+    let abilityInfo = p.ability ? abilities.get(p.ability) : null
+    let json = JSON.stringify({ weights: Object.values(p.stats), helditems: p.helditems, ability: p.ability })
+    let maxStat = Math.max(...Object.values(stats))
+    let maxDisp = Math.ceil(maxStat / 150) * 150
+    let string = codeBlock("ansi", `${"Base".padEnd(40)}Level 50` + "\n" + Object.keys(statsL50).map((key) => {
+        let statL50 = statsL50[key as StatID]
+        let stat = stats[key as StatID]
+        return `${getString("stat." + key).padEnd(12)} ${stat.toString().padStart(3)}|${bar(stat, maxDisp, 20)}|`.padEnd(40) + `${fnum(statL50)}`
+    }).join("\n")
+        + `\n\nAbility: ${abilityInfo === null ? "None" : abilityInfo?.name || "Invalid"}\n`
+        + (abilityInfo ? `${indent(abilityInfo.description, 4)}\n` : "")
+        + `Held Items:\n${p.helditems?.length ? p.helditems.map(v => {
+            let iteminfo = items.get(v)
+            if (!iteminfo) return "· Invalid"
+            return `· ${iteminfo.name}\n${indent(iteminfo.passiveEffect, 4)}`
+        }).join("\n") : "None"}`)
+    let isCustom = presetId in presetList
+    // @ts-ignore
+    await i.reply({
+        flags: ["Ephemeral"],
+        embeds: [
+            {
+                title: p.name,
+                description: `${string}\n` +
+                    (isCustom ? `` : `-# This is a default preset and cannot be modified, press the Clone button below to make an editable copy.`),
+            }
+        ],
+        components: [isCustom ? presetEditButtons(presetId, current != presetId, current == presetId) :
+            new ActionRowBuilder<ButtonBuilder>()
+                .addComponents(new ButtonBuilder({
+                    label: "Clone",
+                    customId: `stats:clone/${presetId}`,
+                    style: ButtonStyle.Primary
+                }))],
+    })
 }
 export let command: Command = {
     type: ApplicationCommandType.ChatInput,
@@ -356,14 +495,71 @@ export let command: Command = {
         },
     ],
     async interaction(i) {
+        if (i.customId.startsWith("stats:clone/")) {
+            let splits = i.customId.split("/")
+            let presetId = splits[1]
+            let cloneName = splits[2] ?? presetId
+            let preset = getPreset(presetId, i.user)
+            if (!preset) {
+                return
+            }
+            let newPreset = structuredClone(preset)
+            getUser(i.user).presets[cloneName] = newPreset
+            await i.reply({
+                flags: ["Ephemeral"],
+                content: `Preset cloned as \`${cloneName}\`, use the buttons below to customize.`,
+                components: [presetEditButtons(cloneName)]
+            })
+            return
+        }
+        if (i.customId.startsWith("stats:list/")) {
+            let splits = i.customId.split("/")
+            let page = parseInt(splits[1])
+            if (isNaN(page)) {
+                return
+            }
+            await i.update({
+                components: [presetListComponent(i.user, page)]
+            })
+        }
         if (i.customId.startsWith("stats:edit/")) {
             let splits = i.customId.split("/")
             let presetId = splits[1]
             let mode = splits[2]
             let u = getUser(i.user)
-            let preset = u.presets[presetId]
+            let customs = u.presets
+            let preset = getPreset(presetId, i.user)
             if (!preset) {
                 return await i.reply({ flags: ["Ephemeral"], content: `Unknown preset.` })
+            }
+            if (mode == "view" && i.isButton()) {
+                return await sendPresetInfoMessage(i, presetId)
+            }
+            if (mode == "use") {
+                applyPreset(i.user, presetId)
+                return await i.reply({
+                    flags: ["Ephemeral"],
+                    content: `Applied preset: \`${presetId}\`.`
+                })
+            }
+            if (!customs[presetId]) {
+                return await i.reply({
+                    flags: ["Ephemeral"],
+                    content: `You can't do this with a default preset.`
+                })
+            }
+            if (mode == "delete") {
+                if (presetId == u.preset) {
+                    return await i.reply({ flags: ["Ephemeral"], content: "Cannot delete your currently selected preset." })
+                }
+                delete u.presets[presetId]
+                return await i.update({
+                    content: "",
+                    components: [],
+                    embeds: [{
+                        description: "Preset deleted."
+                    }]
+                })
             }
             if (mode == "allocate") {
                 initAllocateTmp(i.id, presetId)
@@ -379,10 +575,10 @@ export let command: Command = {
             if (mode == "g") {
                 let op = splits[3]
                 let arg = splits[4] as StatID
-                
+
                 let tmp = getTempData(`${i.user.id}_preset`)
                 if (!tmp[presetId]) {
-                    tmp[presetId] = {...preset.stats}
+                    tmp[presetId] = { ...preset.stats }
                 }
                 let final = tmp[presetId]
                 let cap = getMaxTotal(preset)
@@ -397,9 +593,14 @@ export let command: Command = {
                     }
                 }
                 preset.stats = limitStats(final, cap)
-                return await i.update({ components: [
-                    granularAllocationComponent(presetId, i.user)
-                ] })
+                if (presetId == u.preset) {
+                    applyPreset(i.user, presetId)
+                }
+                return await i.update({
+                    components: [
+                        granularAllocationComponent(presetId, i.user)
+                    ]
+                })
             }
             return
         }
@@ -546,51 +747,14 @@ export let command: Command = {
                         + (el == cur ? " (current)" : "")
                 }
                 await i.reply({
-                    flags: ["Ephemeral"],
-                    embeds: [
-                        {
-                            description: `## Default Presets\n` +
-                                `-# These presets cannot be modified. Please use the \`/stats create\` command if you wish to have more extensive customization.\n` +
-                                `${defaultPresets.map((_, el) => presetInfo(el)).join("\n")}\n` +
-                                `## Custom Presets` +
-                                `\n${Object.keys(userPresets).map(el => presetInfo(el)).join("\n") || "None"}`
-                        }
-                    ]
+                    flags: ["Ephemeral", "IsComponentsV2"],
+                    components: [presetListComponent(i.user, 0)]
                 })
                 break;
             }
             case "preset": {
                 let presetId = normPresetName(i.options.getString("preset", false) || getUser(i.user).preset)
-                let p = getPreset(presetId, i.user)
-                if (!p) return await i.reply(`Preset not found`)
-                let stats = p.stats
-                let statsL50 = calcStats(50, stats)
-                let abilityInfo = p.ability ? abilities.get(p.ability) : null
-                let json = JSON.stringify({ weights: Object.values(p.stats), helditems: p.helditems, ability: p.ability })
-                let maxStat = Math.max(...Object.values(stats))
-                let maxDisp = Math.ceil(maxStat / 150) * 150
-                let string = codeBlock("ansi", `${"Base".padEnd(40)}Level 50` + "\n" + Object.keys(statsL50).map((key) => {
-                    let statL50 = statsL50[key as StatID]
-                    let stat = stats[key as StatID]
-                    return `${getString("stat." + key).padEnd(12)} ${stat.toString().padStart(3)}|${bar(stat, maxDisp, 20)}|`.padEnd(40) + `${fnum(statL50)}`
-                }).join("\n")
-                    + `\n\nAbility: ${abilityInfo === null ? "None" : abilityInfo?.name || "Invalid"}\n`
-                    + (abilityInfo ? `${indent(abilityInfo.description, 4)}\n` : "")
-                    + `Held Items:\n${p.helditems?.length ? p.helditems.map(v => {
-                        let iteminfo = items.get(v)
-                        if (!iteminfo) return "· Invalid"
-                        return `· ${iteminfo.name}\n${indent(iteminfo.passiveEffect, 4)}`
-                    }).join("\n") : "None"}`)
-                // @ts-ignore
-                await i.reply({
-                    flags: ["Ephemeral"],
-                    components: [presetEditButtons(presetId)],
-                    embeds: [
-                        {
-                            description: `Preset: **${p.name}**\n${string}\nJSON: \`${json}\``,
-                        }
-                    ]
-                })
+                await sendPresetInfoMessage(i, presetId)
                 break;
             }
             case "delete": {
