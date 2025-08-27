@@ -398,7 +398,7 @@ moves.set("summon_eh", new Move("Summon: Egg Hater", "status", 0, "status").set(
 moves.set("summon_u", new Move("Summon: ú", "status", 0, "status").set(move => {
     move.requiresMagic = 40
     move.onUse = summonOnUse("u", 0.6)
-    move.unlockLevel = 100
+    move.unlockLevel = 45
     queueMicrotask(() => {
         move.description = summonDesc("u", 0.6)
     })
@@ -637,7 +637,7 @@ moves.set("support_gacha", new Move("Support: Gacha", "status", 0, "status").set
     move.requiresMagic = 5
     move.maxEnhance = 2
     move.priority = 1
-    move.unlockLevel = 50
+    move.unlockLevel = 40
     move.targetSelf = true
     let baseMinRolls = 1
     let baseMaxRolls = 3
@@ -672,7 +672,7 @@ moves.set("shield_breaker", new Move("Break: Armor-Piercing Shell", "attack", 50
     move.breakshield = true
     move.power = null
     move.critMul = 2
-    move.unlockLevel = 50
+    move.unlockLevel = 30
     move.onUse = function (b, p, t) {
         let dmgMult = b.critRoll(p, t, 2)
         b.logL("dmg.breakthrough", { player: p.toString() })
@@ -806,7 +806,7 @@ moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
     move.setDamage = "set"
     move.targetSelf = true
     move.requiresMagic = 50
-    move.unlockLevel = 100
+    move.unlockLevel = 40
     move.checkFail = function (b, p, t) {
         return t.dead
     }

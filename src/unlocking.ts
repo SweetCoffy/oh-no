@@ -11,12 +11,12 @@ export const unlockContent: {
     
 }
 const bossLevelCap: Dict<number> = {
-    egg_lord: 30,
-    the_skeleton: 50,
-    o: 60,
-    u: 70,
+    egg_lord: 50,
+    the_skeleton: 60,
+    o: 70,
+    u: 80,
     y: 100,
-    the_sun: 120
+    the_sun: 9999
 }
 const defaultLevelCap = 10
 let maxMoves = 9999
