@@ -148,7 +148,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     let blockColor = "#c9c9c9ff"
     let bgColor = "#2b2b2bff"
     let hpPercent = p.hp / p.cstats.hp
-    let iconSize = barHeight - 4
+    let iconSize = barHeight
     let iconY = barHeight / 2 - iconSize / 2
     let iconPad = pad / 2
     let prevPercent = p.prevHp / p.cstats.hp

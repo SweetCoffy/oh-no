@@ -432,8 +432,8 @@ moves.set("reckless_rush", new Move("Reckless Rush", "status", 0, "status").set(
     move.maxEnhance = 2
     move.unlockLevel = 30
     let baseDuration = 2
-    move.onUse = (b, p, _, { enhance }) => {
-        let s = b.inflictStatus(p, "rush")
+    move.onUse = (b, p, t, { enhance }) => {
+        let s = b.inflictStatus(t, "rush", p)
         if (!s) return
         s.turnsLeft = s.duration = baseDuration + enhance - 1
     }
@@ -468,15 +468,15 @@ moves.set("mind_overwork", new Move("Neuro-Overclock", "status", 0, "status").se
     move.maxEnhance = 2
     move.unlockLevel = 30
     let baseDuration = 3
-    move.onUse = (b, p, _, { enhance }) => {
-        let s = p.status.find(v => v.type == "mind_overwork")
+    move.onUse = (b, p, t, { enhance }) => {
+        let s = t.status.find(v => v.type == "mind_overwork")
         if (s) {
             s.turnsLeft = s.duration
             let dmg = Math.min(Math.ceil(p.maxhp / 4), p.hp + p.plotArmor - 1)
             b.takeDamageO(p, dmg)
             return
         }
-        s = b.inflictStatus(p, "mind_overwork")
+        s = b.inflictStatus(t, "mind_overwork", p)
         if (!s) return
         s.turnsLeft = s.duration = baseDuration + enhance - 1
     }
@@ -799,16 +799,16 @@ moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
         return (healDelta * 100) + (1 - t.hp / t.maxhp) * 50
     }
 }))
-moves.set("support_advance", new Move("Support: After Me", "status", 0, "status").set(move => {
-    move.description = formatString("Forces the target to move after the user in the turn order. If the target has already moved, this move has no effect.")
+moves.set("support_advance", new Move("Support: You Next", "status", 0, "status").set(move => {
+    move.description = formatString("Forces the target to move next after the user. If the target has already moved, this move has no effect.")
     move.unlockLevel = 30
     move.onUse = function(b, p, t) {
         let speedDelta = p.cstats.spd - t.cstats.spd
         t.addModifier("spd", {
-            label: "Support: After Me",
+            label: "Support: You Next",
             expires: 1,
             type: "add",
-            value: speedDelta - 1
+            value: speedDelta + 1
         })
     }
 }))

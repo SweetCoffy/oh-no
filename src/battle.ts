@@ -353,8 +353,9 @@ type StatusModifierData = {
     mods: (StatModifier & { id: string, stat: ExtendedStatID })[]
 }
 let rush = new StatusType<StatusModifierData>("Reckless Rush", "Rush", (b, p, s) => {
-    let charge = p.charge
-    p.charge = 0
+    let rsource = s.inflictor ?? p
+    let charge = rsource.charge
+    rsource.charge = 0
     let mods = []
     let modValue = 1 + Math.min((charge + 20) / 100, 1)
     mods.push(p.addModifier("atk", {
@@ -375,7 +376,9 @@ let rush = new StatusType<StatusModifierData>("Reckless Rush", "Rush", (b, p, s)
     s.fillStyle = "#ff774d"
 })
 let overclock = new StatusType<StatusModifierData>("Overclock", "Overclock", (b, p, s) => {
-    let magic = p.magic
+    let rsource = s.inflictor ?? p
+    let magic = rsource.magic
+    rsource.magic = 0
     p.magic = p.maxMagic
     let mods = []
     let modValue = 1 + Math.min((magic + 25) / 200, 1)

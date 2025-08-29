@@ -16,7 +16,7 @@ const bossLevelCap: Dict<number> = {
     o: 70,
     u: 80,
     y: 100,
-    the_sun: 9999
+    sun: 9999
 }
 const defaultLevelCap = 10
 let maxMoves = 9999
@@ -46,7 +46,7 @@ export function getAvailableContent(u: UserInfo): AvailableContent {
 export function getBaseMpForLevel(level: number) {
     let maxMp = maxMoves + leftoverMp
     let minMp = 2
-    return Math.min(minMp + Math.floor(level/80 * (maxMp - minMp)), maxMp)
+    return Math.min(minMp + Math.floor(level/60 * (maxMp - minMp)), maxMp)
 }
 export function getBaseMp(info: UserInfo) {
     return getBaseMpForLevel(info.level)
