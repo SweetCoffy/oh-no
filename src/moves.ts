@@ -152,11 +152,8 @@ export class Move {
      * Function to run when the move is used. If present, it will override default behaviour
      */
     onUse?: (b: Battle, user: Player, target: Player, mOpts: MoveCastOpts) => void
-    /**
-     * Whether or not this move hits all enemies in PvE mode. Currently not implemented and probably getting removed
-     */
-    hitAll: boolean = false
-    targetSelf: boolean = false
+    supportTargetting: boolean = false
+    onlyTargetSelf: boolean = false
     multihit: number = 1
     wikiHeader: string = "This is a move, which may not have all of its information shown here. Please use /choose help move:<move name> to see the full description."
     constructor(name: string, type: MoveType = "attack", power: number, category: Category = "physical", accuracy: number = 100) {
@@ -419,7 +416,7 @@ moves.set("twitter", new Move("Twitter", "status", 0, "status", 100).set(move =>
 // Physical stat boosting moves
 moves.set("stronk", new Move("Stronk", "status", 0, "status").set(move => {
     move.targetStat.atk = 1
-    move.targetSelf = true
+    move.supportTargetting = true
     move.unlockLevel = 25
 }).setDesc(formatString("Increases the user's [a]ATK[r] by [a]1[r] stage.")))
 
@@ -429,7 +426,8 @@ moves.set("stronk", new Move("Stronk", "status", 0, "status").set(move => {
 // }).setDesc(formatString("Increases the user's [a]DEF[r] by [a]1[r] stage.")))
 
 moves.set("reckless_rush", new Move("Reckless Rush", "status", 0, "status").set(move => {
-    move.targetSelf = true
+    move.supportTargetting = true
+    move.onlyTargetSelf = true
     move.requiresCharge = 20
     move.maxEnhance = 2
     move.unlockLevel = 30
@@ -454,7 +452,7 @@ moves.set("reckless_rush", new Move("Reckless Rush", "status", 0, "status").set(
 // Special stat boosting moves
 moves.set("spstronk", new Move("Magik Sord", "status", 0, "status").set(move => {
     move.targetStat.spatk = 1
-    move.targetSelf = true
+    move.supportTargetting = true
     move.unlockLevel = 25
 }).setDesc(formatString("Increases the user's [a]SPATK[r] by [a]1[r] stage.")))
 
@@ -464,7 +462,8 @@ moves.set("spstronk", new Move("Magik Sord", "status", 0, "status").set(move => 
 // }).setDesc(formatString("Increases the user's [a]SPDEF[r] by [a]1[r] stage.")))
 
 moves.set("mind_overwork", new Move("Neuro-Overclock", "status", 0, "status").set(move => {
-    move.targetSelf = true
+    move.supportTargetting = true
+    move.onlyTargetSelf = true
     move.requiresMagic = 25
     move.maxEnhance = 2
     move.unlockLevel = 30
@@ -524,7 +523,7 @@ moves.set("protect", new Move("Protect", "protect", 0, "status").set(move => {
 
 moves.set("support_absorption", new Move("Support: Iron Dome Defense System", "status", 90, "status", 100).set(move => {
     move.requiresMagic = 20
-    move.targetSelf = true
+    move.supportTargetting = true
     move.maxEnhance = 4
     move.enhanceFactor = 0.5
     move.unlockLevel = 35
@@ -638,7 +637,7 @@ moves.set("support_gacha", new Move("Support: Gacha", "status", 0, "status").set
     move.maxEnhance = 2
     move.priority = 1
     move.unlockLevel = 40
-    move.targetSelf = true
+    move.supportTargetting = true
     let baseMinRolls = 1
     let baseMaxRolls = 3
     let chances = weightedDistribution(gachaRarityPools.map(v => v[0]), 1)
@@ -751,7 +750,7 @@ moves.set("release", new Move("Counter: High Explosive Squash Head", "attack", 0
 
 moves.set("regen", new Move("Regeneration", "status", 0, "status", 100).set(move => {
     move.requiresMagic = 20
-    move.targetSelf = true
+    move.supportTargetting = true
     move.unlockLevel = 50
     move.inflictStatus.push({
         chance: 1,
@@ -771,7 +770,7 @@ function enhanceLevelDesc(el: number = 1) {
 }
 moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
     move.requiresMagic = 30
-    move.targetSelf = true
+    move.supportTargetting = true
     move.maxEnhance = 4
     move.enhanceFactor = 0.6
     move.onUseOverride = false
@@ -800,11 +799,24 @@ moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
         return (healDelta * 100) + (1 - t.hp / t.maxhp) * 50
     }
 }))
+moves.set("support_advance", new Move("Support: After Me", "status", 0, "status").set(move => {
+    move.description = formatString("Forces the target to move after the user in the turn order. If the target has already moved, this move has no effect.")
+    move.unlockLevel = 30
+    move.onUse = function(b, p, t) {
+        let speedDelta = p.cstats.spd - t.cstats.spd
+        t.addModifier("spd", {
+            label: "Support: After Me",
+            expires: 1,
+            type: "add",
+            value: speedDelta - 1
+        })
+    }
+}))
 moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
     move.accuracy = 100
     move.priority = 1
     move.setDamage = "set"
-    move.targetSelf = true
+    move.supportTargetting = true
     move.requiresMagic = 50
     move.unlockLevel = 40
     move.checkFail = function (b, p, t) {

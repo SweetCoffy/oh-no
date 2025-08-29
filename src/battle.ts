@@ -402,9 +402,9 @@ let overclock = new StatusType<StatusModifierData>("Overclock", "Overclock", (b,
 let healthBoost = new StatusType<StatusModifierData>("Health Boost", "HP Boost", (b, p, s) => {
     let mods = []
     let base = (s.infStats?.hp ?? p.cstats.hp)
-    // if (p == s.inflictor) {
-    //     base = p.stats.hp
-    // }
+    if (p == s.inflictor) {
+        base = p.stats.hp
+    }
     let modValue = base * 0.15
     let oldMax = p.cstats.hp
     mods.push(p.addModifier("hp", {
@@ -424,7 +424,7 @@ let healthBoost = new StatusType<StatusModifierData>("Health Boost", "HP Boost",
 }).set(s => {
     s.description = formatString("[a]Max HP[r] is increased.")
     s.fillStyle = "#68ff4d"
-    s.duration = 4
+    s.duration = 5
 })
 statusTypes.set("health_boost", healthBoost)
 statusTypes.set("rush", rush)
@@ -465,6 +465,7 @@ export interface StatModifier {
     type?: "add" | "multiply",
     multCombine?: "add" | "multiply",
     value: number,
+    expires?: number,
     disabled?: boolean,
     label?: string,
 }
@@ -1499,7 +1500,7 @@ export class Battle extends EventEmitter {
                 move.applyEnhance(mOpts, mOpts.enhance)
                 let supportTarget = action.player
                 if (!this.isEnemy(action.player, action.target)) supportTarget = action.target
-                if (move.targetSelf) {
+                if (move.supportTargetting) {
                     action.target = supportTarget
                 }
                 mOpts.pow = move.getPower(this, action.player, action.target, mOpts.enhance)
@@ -1718,6 +1719,21 @@ export class Battle extends EventEmitter {
             this.logIndent = 1
             for (let s of u.status) {
                 this.doStatusUpdate(u, s)
+            }
+            for (let k in u.modifiers) {
+                let mods = u.modifiers[k as ExtendedStatID]
+                let modExpired = false
+                for (let mod of mods) {
+                    if (mod.expires == undefined) {
+                        continue
+                    }
+                    mod.expires--
+                    modExpired ||= mod.expires <= 0
+                }
+                if (modExpired) {
+                    u.modifiers[k as ExtendedStatID] = mods.filter(v => v.expires == undefined || v.expires > 0)
+                    u.updateStats()
+                }
             }
             u.status = u.status.filter(el => {
                 if (el.turnsLeft <= 0) {

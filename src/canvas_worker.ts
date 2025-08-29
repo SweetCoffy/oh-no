@@ -12,6 +12,7 @@ const statusIcons: { [x in string]: string } = {
     mind_overwork: "boost",
     rush: "boost",
     regen: "regen",
+    health_boost: "regen",
     broken: "broken"
 }
 const assetsRoot = resolve("./assets")
@@ -246,7 +247,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     ctx.lineWidth = 4
     if (heartIcon) {
         ctx.shadowColor = "#0000007a"
-        ctx.shadowOffsetY = 4
+        ctx.shadowOffsetY = 2
         ctx.drawImage(heartIcon, tx, iconY, iconSize, iconSize)
         ctx.globalCompositeOperation = "normal"
         ctx.shadowColor = "#00000000"
@@ -256,13 +257,13 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     ctx.fillText(hpText, tx, barMiddle)
     tx += Math.max(measured.width, 64) + pad
     if (p.absorb > 0) {
-        let absorbText = numFormat.format(p.absorb)
+        let absorbText = numFormat.format(Math.ceil(p.absorb))
         let ptx = tx
         measured = ctx.measureText(absorbText)
         if (tx + measured.width + iconPad + iconSize < barWidth) {
             if (shieldIcon) {
                 ctx.shadowColor = "#0000007a"
-                ctx.shadowOffsetY = 4
+                ctx.shadowOffsetY = 2
                 ctx.drawImage(shieldIcon, tx, iconY, iconSize, iconSize)
                 ctx.globalCompositeOperation = "normal"
                 ctx.shadowColor = "#00000000"
@@ -291,8 +292,9 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     let statusPad = pad / 2
     let maxStatusTextW = barWidth / 3
     ctx.textBaseline = "middle"
-    ctx.font = `bold 16px ${fontFamily}`
+    ctx.font = `800 18px ${fontFamily}`
     ctx.strokeStyle = "#0000007a"
+    ctx.textAlign = "center"
     if (p.charge > 0) {
         let chargeText = `${p.charge}`
         let percent = Math.min(p.charge / p.cstats.chglimit, 1)
@@ -303,8 +305,9 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
         ctx.fillStyle = "#ff1c3e"
         ctx.fillRect(x, 0, percent * (w + statusPad * 2), statusH)
         ctx.fillStyle = "#fff"
-        ctx.strokeText(chargeText, x + statusPad, statusH / 2)
-        ctx.fillText(chargeText, x + statusPad, statusH / 2)
+        let textX = x + (w + statusPad*2)/2
+        ctx.strokeText(chargeText, textX, statusH / 2)
+        ctx.fillText(chargeText, textX, statusH / 2)
         x += w + statusPad * 2 + pad
     }
     if (p.magic > 0) {
@@ -317,10 +320,12 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
         ctx.fillStyle = "#1c7eff"
         ctx.fillRect(x, 0, percent * (w + statusPad * 2), statusH)
         ctx.fillStyle = "#fff"
-        ctx.strokeText(magicText, x + statusPad, statusH / 2)
-        ctx.fillText(magicText, x + statusPad, statusH / 2)
+        let textX = x + (w + statusPad*2)/2
+        ctx.strokeText(magicText, textX, statusH / 2)
+        ctx.fillText(magicText, textX, statusH / 2)
         x += w + statusPad * 2 + pad
     }
+    ctx.textAlign = "left"
     let statusMaxW = barWidth
     let overflowCount = 0
     // p.status = [
@@ -413,7 +418,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
                 ctx.fillStyle = "#eee"
                 ctx.globalCompositeOperation = "hard-light"
             } else {
-                ctx.fillStyle = "#999"
+                ctx.fillStyle = "#888"
                 ctx.globalCompositeOperation = "hard-light"
             }
             ctx.fillRect(sx, segmentY, segmentW, segmentH)
