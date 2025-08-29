@@ -1133,113 +1133,18 @@ export class Battle extends EventEmitter {
         if (!this.hasTeams) return true
         return player.team != target.team
     }
+    lastImg?: Buffer
     async infoMessage(channel: SendableChannels) {
         let b = this
-        function getIcons(player: Player) {
-            let icons = ""
-            for (let s of player.status) {
-                let icon = statusTypes.get(s.type)?.icon;
-                if (s.duration <= 0) continue;
-                if (!icon) continue;
-                icons += icon;
-            }
-            if (player.bruh) icons += "⌃"
-            return icons;
-        }
-        function playerInfo(p: Player) {
-            if (p.dead) return `${Start}0;${FG_Gray}m- ${p.name}${Reset}`
-            let icons = getIcons(p)
-            let barColor = "green"
-            if (p.hp <= p.maxhp / 2) barColor = "yellow"
-            if (p.hp <= p.maxhp / 4) barColor = "red"
-            let hpString = xOutOfY(p.hp, p.maxhp, true)
-            let absorb = p.getTotalAbsorption()
-            if (p.maxhp != p.stats.hp) {
-                hpString += formatString(`[u]/${fnum(p.stats.hp)}[r]`)
-            }
-            let barW = Math.min(Math.max(Math.floor(10 * p.maxhp / p.stats.hp), 1), 20)
-            let str = `${Start}0;${FG_Gray}m${icons}${Reset}${p.name}` + "\n" +
-                formatString(`[${barColor}]${barDelta(p.hp, p.prevHp, p.maxhp, barW)}| ${hpString}`)
-            str += "\n"
-            if (p.charge || p.magic) {
-                if (absorb > 0) {
-                    str += formatString(`🛡[a]${fnum(absorb)}[r] `)
-                }
-                if (p.charge) {
-                    str += formatString(`[red]C ${xOutOfY(p.charge, p.maxCharge, true)} `)
-                }
-                if (p.magic) {
-                    str += formatString(`[blue]M ${xOutOfY(p.magic, p.maxMagic, true)} `)
-                }
-            }
-            if (p.status.length > 0) {
-                str += p.status.map(v => statusTypes.get(v.type)?.short || "UNKN").join(" ")
-            }
-            return str.trimEnd()
-        }
-        let str = ""
-        if (true) {
-            let teams: Player[][] = []
-            for (let p of this.players) {
-                if (!teams[p.team]) teams[p.team] = []
-                teams[p.team].push(p)
-            }
-            if (this.hasTeams) {
-                for (let i in teams) {
-                    let damageDealt = 0
-                    let damageTaken = 0
-
-                    let totalMaxHealth = 0
-                    let totalHealth = 0
-
-                    let players = teams[i]
-                    str += formatString(`[${teamColors[i]}]Team ${teamNames[i]}[r]\n`)
-                    for (let p of players) {
-                        damageDealt += p.damageDealt
-                        damageTaken += p.damageTaken
-                        totalMaxHealth += p.maxhp + p.plotArmor
-                        totalHealth += p.hp + p.plotArmor
-                        str += "\n" + playerInfo(p)
-                    }
-
-                    let hpColor = "red"
-                    if (totalHealth > totalMaxHealth / 5) hpColor = "yellow"
-                    if (totalHealth > totalMaxHealth / 2) hpColor = "green"
-
-                    str += "\n"
-                    if (players.length > 1) {
-                        str += formatString(`[${teamColors[i]}]Team Health[r]\n`)
-                        str += formatString(`[${teamColors[i]}]${bar(totalHealth, totalMaxHealth, 25)}|\n[${hpColor}]${xOutOfY(Math.ceil(totalHealth), totalMaxHealth, true)}\n`)
-                    }
-                    str += "—————————————————————\n"
-                }
-            } else {
-                for (let p of this.players) {
-                    str += "\n" + playerInfo(p)
-                }
-            }
-            str = `\`\`\`ansi\n${str}\n\`\`\``
-        }
-        let fields: APIEmbedField[] = []
-        let summaryEmbed: APIEmbed = {
+        let canvas_threads = await import("./canvas_threads.js")
+        let img = this.lastImg ? this.lastImg : (this.lastImg = await canvas_threads.generateImage(this))
+        let files = [
+            new AttachmentBuilder(img, { name: "h.png" })
+        ]
+        let summaryEmbed = {
             title: "Summary",
-            description: str,
-            fields: [
-                ...fields,
-            ]
-        }
-        let files: AttachmentBuilder[] = []
-        if (experimental.battle_info_canvas) {
-            let canvas_threads = await import("./canvas_threads.js")
-            let img = await canvas_threads.generateImage(this)
-            files = [
-                new AttachmentBuilder(img, { name: "h.png" })
-            ]
-            summaryEmbed = {
-                title: "Summary",
-                image: {
-                    url: "attachment://h.png",
-                }
+            image: {
+                url: "attachment://h.png",
             }
         }
         let msg = await channel.send({
@@ -1771,6 +1676,7 @@ export class Battle extends EventEmitter {
                 }
             }
         }
+        this.lastImg = undefined
         if (BattleTypeInfo[this.type].endCondition(this) || this.turn >= this.turnLimit) {
             this.ended = true
             let winner = BattleTypeInfo[this.type].getWinner(this, BattleTypeInfo[this.type].ranker)
