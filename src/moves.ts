@@ -145,7 +145,7 @@ export class Move {
         if (this.maxEnhance == 1) {
             return 1
         }
-        return 1 + (el - 1)*(this.enhanceFactor / (this.maxEnhance - 1))
+        return 1 + (el - 1) * (this.enhanceFactor / (this.maxEnhance - 1))
     }
     onUseOverride: boolean = true
     /**
@@ -264,9 +264,9 @@ moves.set("nerf_gun", new Move("Nerf Gun", "attack", 85, "special").set(move => 
         let bounceMul = baseBounceMul
         let targets = getAoeTargets(b, u, t)
         targets.push(t)
-        let target = targets[Math.floor(b.rng.get01()*targets.length)]
+        let target = targets[Math.floor(b.rng.get01() * targets.length)]
         if (!target) target = t
-        let dmg = u.cstats.spatk*bounceMul
+        let dmg = u.cstats.spatk * bounceMul
         b.takeDamageO(target, dmg, {
             atkLvl: u.level,
             defStat: "spdef",
@@ -312,7 +312,7 @@ moves.set("slap", new Move("Slap", "attack", 220).set(move => {
         }
         return desc
     }
-    move.onUse = (b, u, t, {enhance}) => {
+    move.onUse = (b, u, t, { enhance }) => {
         if (enhance >= 2) {
             let targets = getAoeTargets(b, u, t)
             let blast = blastMult * move.getEnhanceMult(enhance)
@@ -342,12 +342,12 @@ moves.set("boulder", new Move("Break: Tactical Homing Boulder", "attack", 130, "
     move.critMul = 0
     move.unlockLevel = 40
     move.getDescription = (el) => {
-        let multstr = ffrac(move.getBasePower(el)/100)
+        let multstr = ffrac(move.getBasePower(el) / 100)
         return formatString(`Deals [a]defense-ignoring[r] damage equal to [a]${multstr}[r] of [a]ATK[r] + [a]${multstr}[r] of [a]Special ATK[r] and inflicts [a]Broken[r].\nThis move [a]cannot CRIT[r].`)
     }
     move.description = move.getDescription(1)
     move.onUse = (b, p, t, { enhance }) => {
-        const dmg = (p.cstats.atk + p.cstats.spatk)*move.getBasePower(enhance)/100
+        const dmg = (p.cstats.atk + p.cstats.spatk) * move.getBasePower(enhance) / 100
         let s = b.inflictStatus(t, "broken")
         b.takeDamageO(t, dmg, {
             inflictor: p,
@@ -356,7 +356,7 @@ moves.set("boulder", new Move("Break: Tactical Homing Boulder", "attack", 130, "
     }
 }))
 function summonOnUse(summonType: string, levelFrac: number = 0.9) {
-    return function(b: Battle, p: Player, t: Player) {
+    return function (b: Battle, p: Player, t: Player) {
         let found = p.findSummon(summonType)
         if (!found) {
             let s = p.createSummon(b, summonType, levelFrac)
@@ -371,7 +371,7 @@ function summonDesc(summonType: string, levelFrac: number = 0.9) {
     let testLevels = [20, 50, 100]
     let e = enemies.get(summonType)
     if (!e) return ""
-    let testStats = testLevels.map(level => calcStats(Math.ceil(level*levelFrac), e.stats))
+    let testStats = testLevels.map(level => calcStats(Math.ceil(level * levelFrac), e.stats))
     let statList = Object.keys(testStats[0]) as StatID[]
     let pad = 6
     let statsString = `${"(Levels:".padEnd(14)} ${testLevels.map(level => `[a]${level.toString().padStart(pad)}[r]`).join("/")})\n` + statList.map(stat => {
@@ -635,7 +635,6 @@ function applyGachaEffect(b: Battle, p: Player, e: GachaBuff, inf?: Player) {
 moves.set("support_gacha", new Move("Support: Gacha", "status", 0, "status").set(move => {
     move.requiresMagic = 5
     move.maxEnhance = 2
-    move.priority = 1
     move.unlockLevel = 40
     move.supportTargetting = true
     let baseMinRolls = 1
@@ -654,7 +653,7 @@ moves.set("support_gacha", new Move("Support: Gacha", "status", 0, "status").set
     move.onUse = (b, u, t, { enhance }) => {
         let minRolls = baseMinRolls + enhance - 1
         let maxRolls = baseMaxRolls + enhance - 1
-        let pullCount = minRolls + Math.floor(b.rng.get01()*(maxRolls-minRolls-1))
+        let pullCount = minRolls + Math.floor(b.rng.get01() * (maxRolls - minRolls - 1))
         for (let _ = 0; _ < pullCount; _++) {
             let pool = weightedRandom(gachaRarityPools.map(([a, b]) => [b, a] as const), b.rng.get01.bind(b.rng))
             let result = pool.pool[Math.floor(pool.pool.length * b.rng.get01())]
@@ -785,7 +784,7 @@ moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
         return formatString(desc)
     }
     move.description = move.getDescription(1)
-    move.onUse = (b, u, t, {enhance}) => {
+    move.onUse = (b, u, t, { enhance }) => {
         if (enhance >= 4) {
             b.inflictStatus(t, "health_boost", u)
         }
@@ -799,17 +798,36 @@ moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
         return (healDelta * 100) + (1 - t.hp / t.maxhp) * 50
     }
 }))
-moves.set("support_advance", new Move("Support: You Next", "status", 0, "status").set(move => {
-    move.description = formatString("Forces the target to move next after the user. If the target has already moved, this move has no effect.")
-    move.unlockLevel = 30
-    move.onUse = function(b, p, t) {
+moves.set("support_advance", new Move("Support: After Me", "status", 0, "status").set(move => {
+    move.description = formatString("For the duration of the turn, makes the target's [a]Speed[r] equal to the user's.")
+    move.unlockLevel = 20
+    move.maxEnhance = 2
+    move.getDescription = (el) => {
+        let desc = move.description
+        if (el >= 2) {
+            desc += formatString(`${enhanceLevelDesc(2)}: Additionally increases [a]CRIT Rate[r] by [a]20%[r] and, if the target is an enemy, makes their action target the user instead.`)
+        }
+        return desc
+    }
+    move.onUse = function (b, p, t, { enhance }) {
         let speedDelta = p.cstats.spd - t.cstats.spd
         t.addModifier("spd", {
-            label: "Support: You Next",
+            label: "Support: After Me",
             expires: 1,
             type: "add",
             value: speedDelta + 1
         })
+        if (enhance) {
+            t.addModifier("crit", {
+                label: "Support: After Me (E2)",
+                expires: 1,
+                type: "add",
+                value: 20
+            })
+            if (b.isEnemy(p, t)) {
+                t.forceTarget = p
+            }
+        }
     }
 }))
 moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
@@ -838,7 +856,6 @@ moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
 
 moves.set("pingcheck", new Move("Pingcheck", "attack", 0, "special", 100).set(el => {
     el.critMul = 0
-    el.priority = -2
     el.selectable = false
     el.recoil = 0.25
     el.requiresCharge = 30

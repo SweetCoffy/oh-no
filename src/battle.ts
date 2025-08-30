@@ -579,6 +579,7 @@ export class Player {
     get maxhp() {
         return this.cstats.hp;
     }
+    forceTarget?: Player
     summonId: string = ""
     /** HP can reach up to`overheal` × `maxhp` */
     overheal: number = 1
@@ -1411,6 +1412,10 @@ export class Battle extends EventEmitter {
                 if (move.supportTargetting) {
                     action.target = supportTarget
                 }
+                if (action.player.forceTarget) {
+                    action.target = action.player.forceTarget
+                    action.player.forceTarget = undefined
+                }
                 mOpts.pow = move.getPower(this, action.player, action.target, mOpts.enhance)
                 if (user.itemSlots.offense) {
                     let item = user.itemSlots.offense
@@ -1552,7 +1557,7 @@ export class Battle extends EventEmitter {
     /** @returns `true` if `a` should be done before `b` */
     cmpActions(a: TurnAction, b: TurnAction) {
         let spda = a.player.cstats.spd
-        let spdb = a.player.cstats.spd
+        let spdb = b.player.cstats.spd
         let prioa = getPriority(a)
         let priob = getPriority(b)
         if (prioa > priob) return true
@@ -1625,6 +1630,7 @@ export class Battle extends EventEmitter {
         this.log("Status", "accent")
         for (let u of this.players) {
             this.logIndent = 1
+            u.forceTarget = undefined
             for (let s of u.status) {
                 this.doStatusUpdate(u, s)
             }
