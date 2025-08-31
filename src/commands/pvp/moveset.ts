@@ -27,6 +27,7 @@ function mpAllocateComponent(user: User) {
         }
         root.addTextDisplayComponents(new TextDisplayBuilder().setContent(`**${v.name}**\n-# ${"✦".repeat(curEnhance + 1)}`))
         let actionRow = new ActionRowBuilder<ButtonBuilder>()
+        let actionRows: ActionRowBuilder<ButtonBuilder>[] = []
         for (let i = 1; i <= v.maxEnhance; i++) {
             let button = new ButtonBuilder().setLabel(`${i}✦`).setCustomId(`moveset:mp/${mi}/${i}`)
             let budgetDelta = (i - 1) - curEnhance
@@ -41,8 +42,15 @@ function mpAllocateComponent(user: User) {
                 button.setEmoji("🔘")
             }
             actionRow.addComponents(button)
+            if (actionRow.components.length >= 5) {
+                actionRows.push(actionRow)
+                actionRow = new ActionRowBuilder<ButtonBuilder>()
+            }
         }
-        root.addActionRowComponents(actionRow)
+        if (actionRow.components.length > 0) {
+            actionRows.push(actionRow)
+        }
+        root.addActionRowComponents(actionRows)
     })
     return root
 }

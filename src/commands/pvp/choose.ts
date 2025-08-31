@@ -47,6 +47,7 @@ function enhanceLevelComponent(current: number, max: number, mid: string) {
     let actionRow = new ActionRowBuilder<ButtonBuilder>()
     let move = moves.get(mid)!
     let specials = move.specialEnhance
+    let actionRows: ActionRowBuilder<ButtonBuilder>[] = []
     for (let i = 1; i <= max; i++) {
         let button = new ButtonBuilder().setLabel(`${i}✦`).setCustomId(`choose:h/${mid}/${i}`)
         button.setDisabled(i == current)
@@ -56,8 +57,15 @@ function enhanceLevelComponent(current: number, max: number, mid: string) {
             button.setStyle(ButtonStyle.Secondary)
         }
         actionRow.addComponents(button)
+        if (actionRow.components.length >= 5) {
+            actionRows.push(actionRow)
+            actionRow = new ActionRowBuilder<ButtonBuilder>()
+        }
     }
-    return actionRow
+    if (actionRow.components.length > 0) {
+        actionRows.push(actionRow)
+    }
+    return actionRows
 }
 export let command: Command = {
     name: "choose",
@@ -145,7 +153,7 @@ export let command: Command = {
                 }
                 let component = enhanceLevelComponent(e, moveInfo.maxEnhance, mid)
                 return await i.update({
-                    components: [component], embeds: [{
+                    components: component, embeds: [{
                         title: `${moveInfo.name}`,
                         description: codeBlock("ansi", moveDescription(moveInfo, e)),
                         //footer: move.maxEnhance > 1 ? { text: "Use the buttons below to view different Enhancement Levels." } : undefined
@@ -364,9 +372,9 @@ export let command: Command = {
                 let moveId = i.options.getString("move", true);
                 let move = moves.get(moveId)
                 if (move) {
-                    let components = []
+                    let components: ActionRowBuilder<ButtonBuilder>[] = []
                     if (move.maxEnhance > 1) {
-                        components.push(enhanceLevelComponent(1, move.maxEnhance, moveId))
+                        components = enhanceLevelComponent(1, move.maxEnhance, moveId)
                     }
                     await i.reply({
                         flags: ["Ephemeral"],
