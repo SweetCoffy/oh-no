@@ -1,6 +1,6 @@
 import { Command } from "../command-loader.js"
 import fetch from "node-fetch"
-import {Message, ComponentType, ApplicationCommandOptionType, ApplicationCommandType, ActionRowBuilder, ButtonBuilder, ButtonStyle, APIActionRowComponent, APIEmbed, ChatInputCommandInteraction } from "discord.js"
+import {Message, ComponentType, ApplicationCommandOptionType, ApplicationCommandType, ActionRowBuilder, ButtonBuilder, ButtonStyle, APIActionRowComponent, APIEmbed, ChatInputCommandInteraction, InteractionCallbackResponse } from "discord.js"
 const BASE_URL = "http://api.urbandictionary.com/v0/define"
 interface UDDefinitionData {
     permalink: string,
@@ -92,30 +92,23 @@ export let command: Command = {
             last.timestamp = d.written_on
             return embeds
         }
-        await i.reply({
-            ephemeral: true,
-            content: "b"
-        })
-        let msgs: Message[] = []
+        let msg: Message | undefined
         async function update() {
-            for (let m of msgs) {
-                await m.delete()
-            }
-            msgs = []
-            let e = funi()
-            for (let j = 0; j < e.length; j += 2) {
-                let embeds = e.slice(j, j + 2)
-                let components: APIActionRowComponent<any>[] = []
-                if (j >= e.length - 2) {
-                    components = [
-                        new ActionRowBuilder().addComponents(new ButtonBuilder({ emoji: "◀️", style: ButtonStyle.Primary, customId: "prev" }),
-                        new ButtonBuilder({ emoji: "▶️", style: ButtonStyle.Primary, customId: "next" })).toJSON(),
-                    ]
-                }
-                msgs.push(await i.followUp({embeds: [...embeds], components: [...components] }) as Message)
+            let embeds = funi()
+            let components: APIActionRowComponent<any>[] = []
+            components = [
+                new ActionRowBuilder().addComponents(new ButtonBuilder({ emoji: "◀️", style: ButtonStyle.Primary, customId: "prev" }),
+                new ButtonBuilder({ emoji: "▶️", style: ButtonStyle.Primary, customId: "next" })).toJSON(),
+            ]
+            
+            if (!msg) {
+                let cb = await i.reply({ embeds: [...embeds], components: [...components] })
+                msg = await cb.fetch()
+            } else {
+                await msg.edit({ embeds: [...embeds], components: [...components] })
             }
             try {
-                let btn = await msgs[msgs.length - 1].awaitMessageComponent({
+                let btn = await msg.awaitMessageComponent({
                     time: 1000 * 60,
                     componentType: ComponentType.Button,
                     filter(i) {
