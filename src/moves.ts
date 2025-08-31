@@ -355,20 +355,24 @@ moves.set("boulder", new Move("Break: Tactical Homing Boulder", "attack", 130, "
         })
     }
 }))
+function utilSummon(b: Battle, p: Player, summonType: string, levelFrac: number = 0.9) {
+    let found = p.findSummon(summonType)
+    if (!found) {
+        let s = p.createSummon(b, summonType, levelFrac)
+        if (!s) b.logL("move.fail", {})
+        return s
+    }
+    let healAmount = found.cstats.hp - found.hp
+    b.heal(found, healAmount)
+    return found
+}
 function summonOnUse(summonType: string, levelFrac: number = 0.9) {
     return function (b: Battle, p: Player, t: Player) {
-        let found = p.findSummon(summonType)
-        if (!found) {
-            let s = p.createSummon(b, summonType, levelFrac)
-            if (!s) b.logL("move.fail", {})
-            return
-        }
-        let healAmount = found.cstats.hp - found.hp
-        b.heal(found, healAmount)
+        utilSummon(b, p, summonType, levelFrac)
     }
 }
 function summonDesc(summonType: string, levelFrac: number = 0.9) {
-    let testLevels = [20, 50, 100]
+    let testLevels = [50, 100]
     let e = enemies.get(summonType)
     if (!e) return ""
     let testStats = testLevels.map(level => calcStats(Math.ceil(level * levelFrac), e.stats))
@@ -382,7 +386,7 @@ function summonDesc(summonType: string, levelFrac: number = 0.9) {
         }).join("/")}`
     }).join("\n")
     let movesString = e.moveset.map(m => moves.get(m)?.name).join(", ")
-    return formatString(`[a]${e.name}[r]:\n${e.description}\n${statsString}\nMoves: ${movesString}`)
+    return formatString(`[a]${e.name}[r]:\n${e.description}\n${statsString}\nMoves: ${movesString}\nIf this move is used when the user has a [a]Summon[r] of the same type, that [a]Summon[r]'s [a]HP[r] is fully restored.`)
 }
 moves.set("summon_eh", new Move("Summon: Egg Hater", "status", 0, "status").set(move => {
     move.requiresMagic = 30
@@ -394,11 +398,22 @@ moves.set("summon_eh", new Move("Summon: Egg Hater", "status", 0, "status").set(
 }))
 moves.set("summon_u", new Move("Summon: ú", "status", 0, "status").set(move => {
     move.requiresMagic = 40
-    move.onUse = summonOnUse("u", 0.6)
+    move.maxEnhance = 4
+    move.onUse = (b, u, t, { enhance }) => {
+        let levelFrac = 0.6 + (enhance - 1) * 0.05
+        let s = utilSummon(b, u, "u", levelFrac)
+        if (s) {
+            s.movesetEnhance.pingcheck = enhance
+        }
+    }
     move.unlockLevel = 45
-    queueMicrotask(() => {
-        move.description = summonDesc("u", 0.6)
-    })
+    move.getDescription = (el) => {
+        let desc = summonDesc("u", 0.6 + (el - 1)*0.05)
+        if (el >= 2) {
+            desc += formatString(`\n${enhanceLevelDesc(2)}: ú's exclusive move [a]Pingcheck[r] will match the [a]Enhancement Level[r] of its summoner's [a]Summon: ú[r].`)
+        }
+        return desc
+    }
 }))
 // Status inflicting moves
 moves.set("twitter", new Move("Twitter", "status", 0, "status", 100).set(move => {
@@ -854,28 +869,47 @@ moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
 //}).setDesc("Heals 150% of the user's max HP, but severely lowers attack, special attack and speed"))
 
 
-moves.set("pingcheck", new Move("Pingcheck", "attack", 0, "special", 100).set(el => {
-    el.critMul = 0
-    el.selectable = false
-    el.recoil = 0.25
-    el.requiresCharge = 30
-    el.setDamage = "set"
-    el.getPower = (b, u, t, enhance = 1) => {
-        return u.cstats.hp * 1.5 * el.getEnhanceMult(enhance)
+moves.set("pingcheck", new Move("Pingcheck", "attack", 0, "special", 100).set(move => {
+    move.critMul = 0
+    move.selectable = false
+    move.recoil = 0.25
+    move.requiresCharge = 30
+    move.setDamage = "set"
+    move.maxEnhance = 4
+    move.getBasePower = (el = 1) => {
+        return 150 / move.getEnhanceMult(el)
     }
-    el.onUse = (b, u, t) => {
-        let pow = el.getPower(b, u, t, u.getEnhanceLevel(el.id))
-        if (u.summoner) {
-            u.moveset = u.moveset.filter(m => m != "pingcheck")
+    move.getPower = (b, u, t, enhance = 1) => {
+        let bp = move.getBasePower(enhance)
+        return u.cstats.hp * bp/100
+    }
+    move.getDescription = (el) => {
+        let pow = move.getBasePower(el)
+        let mult = ffrac(pow / 100)
+        let desc = `[a]ú[r]'s exclusive move that deals damage equal to [a]${mult}[r] of its [a]Max HP[r], while consuming [a]HP[r] equal to [a]25%[r] of its [a]Max HP[r].`
+        if (el >= 2) {
+            desc += `\nThis move's [a]Enhancement Level[r] is reduced to [a]${el - 1}✦[r] after use.`
+        } else {
+            desc += `\n${enhanceLevelDesc(1)}: If ú is a [a]Summon[r], this move is removed from its move list after use.`
         }
+        return formatString(desc)
+    }
+    move.onUse = (b, u, t, { enhance }) => {
+        let pow = move.getPower(b, u, t, u.getEnhanceLevel(move.id))
         b.takeDamageO(t, pow, {
             atkLvl: u.level,
             defStat: "def",
             type: "physical"
         })
+        if (u.summoner) {
+            u.movesetEnhance.pingcheck = enhance - 1
+            if (u.movesetEnhance.pingcheck) {
+                u.moveset = u.moveset.filter(m => m != "pingcheck")
+            }
+        }
     }
-    el.inflictStatus.push({ status: "bleed", chance: 1 })
-}).setDesc(formatString("[a]ú[r]'s exclusive move that deals damage equal to [a]150%[r] of its own [a]Max HP[r], while consuming [a]HP[r] equal to [a]25%[r] of its [a]Max HP[r]. If ú was summoned by a player, this move cannot be used again.")))
+    move.inflictStatus.push({ status: "bleed", chance: 1 })
+}))
 
 moves.set("sf_slap", new Move("SF Slap", "attack", 50).set(move => {
     move.selectable = false
