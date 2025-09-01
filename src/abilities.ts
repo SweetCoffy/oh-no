@@ -296,9 +296,14 @@ u_exclusive.onDamage = (b, p, dmg) => {
     if (heal <= 0) {
         return
     }
-    b.takeDamageO(p.summoner, heal, { type: "none" })
+    b.logL("ability.u_exclusive", { player: p.toString() })
+    b.logIndent++
     b.healO(p, heal, { overheal: true, fixed: true })
+    b.logIndent++
+    b.takeDamageO(p.summoner, heal, { type: "none" })
+    b.logIndent--
     b.addCharge(p, Math.ceil(heal/p.cstats.hp * 100))
+    b.logIndent--
     p.addModifier("chgbuildup", {
         label: "Soul Conversion",
         type: "add",

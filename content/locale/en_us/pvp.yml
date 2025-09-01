@@ -17,6 +17,7 @@ dmg.none: "n:$.player; took no damage."
 dmg.death: "n:$.player; died."
 dmg.absorb: "n:$.player; absorbed n:$.damage; damage."
 dmg.dead: "n:$.player; is already dead."
+dmg.drain: "n:$.inf; drained n:$.damage; from n:$.player;."
 dmg.death.player: "n:$.player; was killed by n:$.Inf;"
 dmg.overkill: "n:$.player; got erased from existence."
 dmg.overkill.player: "n:$.player; was erased from existence by n:$.Inf;"
@@ -124,6 +125,7 @@ hunt.threatening: "[u]>[r] n:$.name;'s Threatening Aura"
 # Abilities
 ability.massive_health_bar: "[u]>[r] n:$.name;'s Massive Health Bar"
 ability.beserker_soul: "[u]>[r] n:$.name;'s Beserker Soul"
+ability.u_exclusive: "> n:$.player;'s Soul Conversion"
 
 # Battle
 battle.ffa: "Free for All"
