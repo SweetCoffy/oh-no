@@ -1,7 +1,7 @@
 import { Collection } from "discord.js";
 import { AbsorptionModWithID, Battle, isDamageDirect, Player, StatModifierWithID, TakeDamageOptions } from "./battle.js";
 import { DescriptionBuilder } from "./battle-description.js";
-import { lerp } from "./util.js";
+import { formatString, lerp } from "./util.js";
 
 export class Ability<Data extends {} = {}> {
     name: string
@@ -274,3 +274,45 @@ blood_is_fuel.description = DescriptionBuilder.new()
     .line("· [a]Hard Damage[r] temporarily [f]reduces[r] the user's [a]MAX HP[r].")
     .line("· [a]Hard Damage[r] is reduced by [a]5%[r] of [a]MAX HP[r] every turn.")
     .build()
+let u_exclusive = new Ability("Soul Conversion", 0)
+u_exclusive.damageTakenModifierOrder = 0
+u_exclusive.onInit = (b, p) => {
+
+}
+u_exclusive.onTurn = (b, p) => {
+
+}
+u_exclusive.onDamage = (b, p, dmg) => {
+    if (!p.summoner) {
+        return
+    }
+    let thresh = 0.5
+    if ((p.hp - dmg) > p.cstats.hp*thresh) {
+        return
+    }
+    let maxHeal = Math.floor(p.hp * 0.5)
+    let desiredHeal = p.cstats.hp - (p.hp - dmg)
+    let heal = Math.min(desiredHeal, maxHeal)
+    if (heal <= 0) {
+        return
+    }
+    b.takeDamageO(p.summoner, heal, { type: "none" })
+    b.healO(p, heal, { overheal: true, fixed: true })
+    b.addCharge(p, Math.ceil(heal/p.cstats.hp * 100))
+    p.addModifier("chgbuildup", {
+        label: "Soul Conversion",
+        type: "add",
+        value: heal/p.cstats.hp * 50,
+        expires: 2
+    })
+    return
+}
+u_exclusive.selectable = false
+u_exclusive.description = formatString(
+    `Exclusive ability for the [a]Summon ú[r].\n` + 
+    `Whenever ú takes damage that would take it below [a]50%[r] of its [a]Max HP[r], ` + 
+    `ú will drain up to [a]50%[r] of its summoner's [a]current HP[r] to heal itself back to [a]full HP[r].` +
+    `\nFor every [a]1%[r] of [a]HP[r] restored by ú, it gains [a]1[r] point of [a]Charge[r] and ` +
+    `increases its [a]Charge Buildup[r] by [a]0.5%[r] for [a]2[r] turns. This boost stacks.`
+)
+Ability.add("u_exclusive", u_exclusive)

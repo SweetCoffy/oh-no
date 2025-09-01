@@ -111,7 +111,7 @@ function heldItemComponent(user: User, presetId: string) {
             .setContent("# Ability"))
     let abilityOptions = [
         { value: "none", label: "None", default: false },
-        ...abilities.filter((_, k) => unlocks.abilities.has(k))
+        ...abilities.filter((v, k) => unlocks.abilities.has(k) && v.selectable)
             .map((v, k) => ({ value: k, label: v.name, default: preset.ability == k }))
     ]
     if (abilityOptions.every(v => !v.default)) {
@@ -714,7 +714,7 @@ export let command: Command = {
     },
     async autocomplete(i) {
         let focus = i.options.getFocused(true)
-        if (focus.name == "ability") return await i.respond(abilities.map((v, k) => ({ value: k, name: v.name })))
+        if (focus.name == "ability") return await i.respond(abilities.filter(v => v.selectable).map((v, k) => ({ value: k, name: v.name })))
         return await i.respond([])
     },
     async run(i: ChatInputCommandInteraction) {

@@ -355,10 +355,10 @@ moves.set("boulder", new Move("Break: Tactical Homing Boulder", "attack", 130, "
         })
     }
 }))
-function utilSummon(b: Battle, p: Player, summonType: string, levelFrac: number = 0.9) {
+function utilSummon(b: Battle, p: Player, summonType: string, levelFrac: number = 0.9, override: Partial<Player> = {}) {
     let found = p.findSummon(summonType)
     if (!found) {
-        let s = p.createSummon(b, summonType, levelFrac)
+        let s = p.createSummon(b, summonType, levelFrac, override)
         if (!s) b.logL("move.fail", {})
         return s
     }
@@ -401,7 +401,7 @@ moves.set("summon_u", new Move("Summon: ú", "status", 0, "status").set(move => 
     move.maxEnhance = 4
     move.onUse = (b, u, t, { enhance }) => {
         let levelFrac = 0.6 + (enhance - 1) * 0.05
-        let s = utilSummon(b, u, "u", levelFrac)
+        let s = utilSummon(b, u, "u", levelFrac, { ability: "u_exclusive" })
         if (s) {
             s.movesetEnhance.pingcheck = enhance
         }
@@ -853,7 +853,7 @@ moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
 moves.set("pingcheck", new Move("Pingcheck", "attack", 0, "special", 100).set(move => {
     move.critMul = 0
     move.selectable = false
-    move.recoil = 0.25
+    move.recoil = 0.1
     move.requiresCharge = 30
     move.setDamage = "set"
     move.maxEnhance = 4
@@ -868,7 +868,7 @@ moves.set("pingcheck", new Move("Pingcheck", "attack", 0, "special", 100).set(mo
     move.getDescription = (el) => {
         let pow = move.getBasePower(el)
         let mult = ffrac(pow / 100)
-        let desc = `[a]ú[r]'s exclusive move that deals damage equal to [a]${mult}[r] of its [a]Max HP[r], while consuming [a]HP[r] equal to [a]25%[r] of its [a]Max HP[r].`
+        let desc = `[a]ú[r]'s exclusive move that deals damage equal to [a]${mult}[r] of its [a]Max HP[r], while consuming [a]HP[r] equal to [a]10%[r] of its [a]Max HP[r].`
         if (el >= 2) {
             desc += `\nThis move's [a]Enhancement Level[r] is reduced to [a]${el - 1}✦[r] after use.`
         } else {

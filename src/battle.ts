@@ -665,7 +665,7 @@ export class Player<AbilityData extends {} = {}> {
         if (found) return found
         return null
     }
-    createSummon(b: Battle, preset: string, levelFrac: number = 0.9): Player | null {
+    createSummon(b: Battle, preset: string, levelFrac: number = 0.9, override: Partial<Player> = {}): Player | null {
         this.cleanupSummons()
         if (this.summons.length >= this.summonCap) {
             return null
@@ -686,6 +686,10 @@ export class Player<AbilityData extends {} = {}> {
         p.team = this.team
         p.summonId = preset
         p.summoner = this
+        for (let k in override) {
+            //@ts-ignore
+            p[k] = override[k]
+        }
         this.summons.push(p)
         p.aiState = new BotAI(b, p)
         b.players.push(p)
