@@ -84,6 +84,8 @@ stat.dr: "DR%"          # 2
 
 stat.crit: "CRIT Rate%"
 stat.critdmg: "CRIT DMG%"
+stat.inheal: "In. Heal%"
+stat.outheal: "Out. Heal%"
 
 # Stat changes
 stat.change.rose: "n:$.player[r]'s [a]$.stat; [s]increased[r][r]!"

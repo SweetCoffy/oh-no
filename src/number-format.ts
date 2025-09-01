@@ -2,9 +2,9 @@ import { formats } from "./formats.js"
 import type { ExtendedStatID } from "./stats.js"
 
 export const CURRENCY_ICON = "$"
-export const numfmt = new Intl.NumberFormat("en-US", { style: "decimal", maximumFractionDigits: 2, signDisplay: "auto" })
+export const numfmt = new Intl.NumberFormat("en-US", { style: "decimal", maximumFractionDigits: 0, signDisplay: "auto" })
 export const fracfmt = new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 2 })
-export const numdeltafmt = new Intl.NumberFormat("en-US", { style: "decimal", maximumFractionDigits: 2, signDisplay: "always" })
+export const numdeltafmt = new Intl.NumberFormat("en-US", { style: "decimal", maximumFractionDigits: 0, signDisplay: "always" })
 export const fracdeltafmt = new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 2, signDisplay: "always" })
 
 function abs(number: bigint | number) {
@@ -12,7 +12,7 @@ function abs(number: bigint | number) {
     return number
 }
 export function fstat(value: number, stat: ExtendedStatID) {
-    const percentStats: ExtendedStatID[] = ["dr", "crit", "critdmg", "chgbuildup", "magbuildup"]
+    const percentStats: ExtendedStatID[] = ["dr", "crit", "critdmg", "chgbuildup", "magbuildup", "inheal", "outheal"]
     if (percentStats.includes(stat)) return ffrac(value / 100)
     return fnum(value)
 }

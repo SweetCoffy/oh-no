@@ -58,7 +58,7 @@ export let items: Collection<string, HeldItemType> = new Collection()
 items.set("eggs",
     new HeldItemType("Eggs", (b, p, item) => {
         if (p.dead) return
-        b.heal(p, Math.floor(p.maxhp * 0.025), false, "heal.eggs")
+        b.healO(p, Math.floor(p.maxhp * 0.025), { message: "heal.eggs" })
     })
         .setEffect(formatString("Every turn:\nHeals the user by [a]2.5%[r] of their [a]MAX HP[r].")).setIcon("🥚"))
 
@@ -109,21 +109,21 @@ export const bruhOrbBoosts: {
     "": {
         mult: {
             hp: 1.025,
-            atk: 1.05,
-            def: 1.05,
-            spatk: 1.05,
-            spdef: 1.05,
-            spd: 1.1,
+            atk: 1.025,
+            def: 1.025,
+            spatk: 1.025,
+            spdef: 1.025,
+            spd: 1.025,
         },
         add: {}
     },
     "attack": {
         mult: {
-            atk: 1.3,
-            spatk: 1.3,
-            spd: 1.05,
-            def: 0.9,
-            spdef: 0.9,
+            atk: 1.2,
+            spatk: 1.2,
+            spd: 1.1,
+            def: 0.7,
+            spdef: 0.7,
         },
         add: {
             crit: 5,
@@ -132,23 +132,20 @@ export const bruhOrbBoosts: {
     },
     "speed": {
         mult: {
-            atk: 1.025,
-            spatk: 1.025,
-            def: 0.95,
-            spdef: 0.95,
-            spd: 2,
+            def: 0.7,
+            spdef: 0.7,
+            spd: 1.5,
         },
         add: {
-            crit: 5
+            crit: 10
         }
     },
     "defense": {
         mult: {
-            hp: 1.025,
-            def: 1.3,
-            spdef: 1.3,
-            atk: 0.95,
-            spatk: 0.95,
+            def: 1.35,
+            spdef: 1.35,
+            atk: 0.5,
+            spatk: 0.5,
         },
         add: {
             dr: 5
@@ -156,9 +153,9 @@ export const bruhOrbBoosts: {
     },
     "hp": {
         mult: {
-            hp: 1.2,
-            def: 1.05,
-            spdef: 1.05,
+            hp: 1.35,
+            def: 0.1,
+            spdef: 0.1,
             atk: 0.9,
             spatk: 0.9,
         },

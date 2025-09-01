@@ -210,6 +210,7 @@ if (experimental.test_canvas) {
         turn: 0,
         players: players
     }
+    await Bun.sleep(3000)
     const buf = await canvas_threads.generateImage(testBattle)
     await Bun.write("/tmp/ohno_canvas_test.png", buf)
     //Bun.$`xdg-open /tmp/ohno_canvas_test.png`

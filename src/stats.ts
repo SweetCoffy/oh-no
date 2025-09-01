@@ -3,7 +3,7 @@ import { getUser, PresetList } from "./users.js"
 import { weightedDistribution } from "./util.js"
 import { MoveID } from "./gen.js"
 export type StatID = "hp" | "atk" | "def" | "spatk" | "spdef" | "spd"
-export type ExtendedStatID = StatID | "chglimit" | "maglimit" | "chgbuildup" | "magbuildup" | "dr" | "crit" | "critdmg"
+export type ExtendedStatID = StatID | "chglimit" | "maglimit" | "chgbuildup" | "magbuildup" | "dr" | "crit" | "critdmg" | "inheal" | "outheal"
 export type Stats = {
     [x in StatID]: number
 }
@@ -129,6 +129,8 @@ export function makeExtendedStats(obj?: { [key: string]: number }): ExtendedStat
         dr: 0,
         crit: 0,
         critdmg: 0,
+        inheal: 0,
+        outheal: 0,
     }
     if (obj) {
         for (let k in obj) {
@@ -137,8 +139,12 @@ export function makeExtendedStats(obj?: { [key: string]: number }): ExtendedStat
     }
     return o
 }
+function levelBonus(level: number) {
+    return Math.pow((level - 1)/79, 0.7) * 8
+}
 export function calcStat(base: number, level: number) {
-    let v = Math.ceil(20 + base + level * base * 0.25)
+    //let v = Math.ceil(20 + base + level * base * 0.25)
+    let v = Math.ceil(base * (1 + levelBonus(level)) + 20*levelBonus(level))
     return v
 }
 export function calcStats(level: number, baseStats: Stats): Stats {
@@ -146,7 +152,7 @@ export function calcStats(level: number, baseStats: Stats): Stats {
     for (let k in baseStats) {
         s[k as StatID] = calcStat(baseStats[k as StatID], level)
     }
-    s.hp += level*150 + Math.floor(s.hp*0.2)
+    s.hp = Math.ceil(s.hp * 4.75 + 800 * (levelBonus(level) + 1))
     return s
 }
 export function getPreset(name: string, user?: User) {

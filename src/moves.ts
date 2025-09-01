@@ -363,7 +363,7 @@ function utilSummon(b: Battle, p: Player, summonType: string, levelFrac: number 
         return s
     }
     let healAmount = found.cstats.hp - found.hp
-    b.heal(found, healAmount)
+    b.healO(found, healAmount, { fixed: true })
     return found
 }
 function summonOnUse(summonType: string, levelFrac: number = 0.9) {
@@ -408,14 +408,14 @@ moves.set("summon_u", new Move("Summon: ú", "status", 0, "status").set(move => 
     }
     move.unlockLevel = 45
     move.getDescription = (el) => {
-        let desc = summonDesc("u", 0.6 + (el - 1)*0.05)
+        let desc = summonDesc("u", 0.6 + (el - 1) * 0.05)
         if (el >= 2) {
             desc += formatString(`\n${enhanceLevelDesc(2)}: ú's exclusive move [a]Pingcheck[r] will match the [a]Enhancement Level[r] of its summoner's [a]Summon: ú[r].`)
         }
         return desc
     }
 }))
-// Status inflicting moves
+
 moves.set("twitter", new Move("Twitter", "status", 0, "status", 100).set(move => {
     move.inflictStatus.push({ chance: 1, status: "poison" })
     move.requiresMagic = 10
@@ -428,17 +428,11 @@ moves.set("twitter", new Move("Twitter", "status", 0, "status", 100).set(move =>
     }
 }).setDesc(formatString("Inflicts the target with [a]Poison[r]")))
 
-// Physical stat boosting moves
 moves.set("stronk", new Move("Stronk", "status", 0, "status").set(move => {
     move.targetStat.atk = 1
     move.supportTargetting = true
     move.unlockLevel = 25
 }).setDesc(formatString("Increases the user's [a]ATK[r] by [a]1[r] stage.")))
-
-// moves.set("tonk", new Move("Tonk", "status", 0, "status").set(move => {
-//     move.targetStat.def = 1
-//     move.targetSelf = true
-// }).setDesc(formatString("Increases the user's [a]DEF[r] by [a]1[r] stage.")))
 
 moves.set("reckless_rush", new Move("Reckless Rush", "status", 0, "status").set(move => {
     move.supportTargetting = true
@@ -464,17 +458,11 @@ moves.set("reckless_rush", new Move("Reckless Rush", "status", 0, "status").set(
     move.description = move.getDescription(1)
 }))
 
-// Special stat boosting moves
 moves.set("spstronk", new Move("Magik Sord", "status", 0, "status").set(move => {
     move.targetStat.spatk = 1
     move.supportTargetting = true
     move.unlockLevel = 25
 }).setDesc(formatString("Increases the user's [a]SPATK[r] by [a]1[r] stage.")))
-
-// moves.set("sptonk", new Move("Magik Sheld", "status", 0, "status").set(move => {
-//     move.targetStat.spdef = 1
-//     move.targetSelf = true
-// }).setDesc(formatString("Increases the user's [a]SPDEF[r] by [a]1[r] stage.")))
 
 moves.set("mind_overwork", new Move("Neuro-Overclock", "status", 0, "status").set(move => {
     move.supportTargetting = true
@@ -632,7 +620,7 @@ function applyGachaEffect(b: Battle, p: Player, e: GachaBuff, inf?: Player) {
             })
             break
         case "heal":
-            b.heal(p, Math.ceil(e.amount * p.cstats.hp))
+            b.healO(p, Math.ceil(e.amount * p.cstats.hp), { inf })
             break
         case "stage_boost":
             b.statBoost(p, e.stat, e.amount)
@@ -740,7 +728,7 @@ moves.set("release", new Move("Counter: High Explosive Squash Head", "attack", 0
         return Math.ceil(u.damageBlockedInTurn * 0.9 + u.damageTakenInTurn * 1.5)
     }
     move.selectDialogExtra = (b, p) => {
-        let dmg = Math.ceil(p.damageBlockedInTurn * 0.8)
+        let dmg = move.getPower(b, p, p)
         return `ℹ️ Estimated damage: **${fnum(dmg)}**`
     }
     move.getAiAttackRank = function (b, p, t) {
@@ -760,7 +748,7 @@ moves.set("release", new Move("Counter: High Explosive Squash Head", "attack", 0
         }
         b.logL(`dmg.release`, { damage: total })
     }
-}).setDesc(formatString("Deals damage to [a]all enemies[r] on the target's team, adding up to [a]80%[r] of the damage blocked by [a]Protect[r] in the previous turn. The [a]DEF[r] stats of the targets are taken into account.\nThis move [f]cannot[r] [a]CRIT[r].")))
+}).setDesc(formatString("Deals damage to [a]all enemies[r] on the target's team, adding up to [a]90%[r] of the damage blocked by [a]Protect[r] + [a]150%[r] of the damage taken in the previous turn.\nThis move [f]cannot[r] [a]CRIT[r].")))
 
 moves.set("regen", new Move("Regeneration", "status", 0, "status", 100).set(move => {
     move.requiresMagic = 20
@@ -832,7 +820,7 @@ moves.set("support_advance", new Move("Support: After Me", "status", 0, "status"
             type: "add",
             value: speedDelta + 1
         })
-        if (enhance) {
+        if (enhance >= 2) {
             t.addModifier("crit", {
                 label: "Support: After Me (E2)",
                 expires: 1,
@@ -857,17 +845,10 @@ moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
     }
     move.onUse = function (b, p, t) {
         t.hp = 1
-        b.heal(t, t.maxhp - 1)
+        b.healO(t, t.maxhp - 1, { fixed: true })
         b.logL("heal.revive", { player: t.toString() })
     }
 }).setDesc(formatString("Revives the target with their full [a]HP[r] restored.")))
-//moves.set("overheal", new Move("Overheal", "heal", 150, "status", 100).set(move => {
-//    move.requiresMagic = 30
-//    move.userStat.atk = -12
-//    move.userStat.spatk = -12
-//    move.userStat.spd = -12
-//}).setDesc("Heals 150% of the user's max HP, but severely lowers attack, special attack and speed"))
-
 
 moves.set("pingcheck", new Move("Pingcheck", "attack", 0, "special", 100).set(move => {
     move.critMul = 0
@@ -876,12 +857,13 @@ moves.set("pingcheck", new Move("Pingcheck", "attack", 0, "special", 100).set(mo
     move.requiresCharge = 30
     move.setDamage = "set"
     move.maxEnhance = 4
+    move.enhanceFactor = 0.2
     move.getBasePower = (el = 1) => {
-        return 150 / move.getEnhanceMult(el)
+        return 150 * move.getEnhanceMult(el)
     }
     move.getPower = (b, u, t, enhance = 1) => {
         let bp = move.getBasePower(enhance)
-        return u.cstats.hp * bp/100
+        return u.cstats.hp * bp / 100
     }
     move.getDescription = (el) => {
         let pow = move.getBasePower(el)
@@ -903,7 +885,7 @@ moves.set("pingcheck", new Move("Pingcheck", "attack", 0, "special", 100).set(mo
         })
         if (u.summoner) {
             u.movesetEnhance.pingcheck = enhance - 1
-            if (u.movesetEnhance.pingcheck) {
+            if (u.movesetEnhance.pingcheck < 1) {
                 u.moveset = u.moveset.filter(m => m != "pingcheck")
             }
         }

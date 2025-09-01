@@ -25,7 +25,8 @@ function mpAllocateComponent(user: User) {
             root.addTextDisplayComponents(new TextDisplayBuilder().setContent(`**${v.name}**\n-# This move cannot be enhanced.`))
             return
         }
-        root.addTextDisplayComponents(new TextDisplayBuilder().setContent(`**${v.name}**\n-# ${"✦".repeat(curEnhance + 1)}`))
+        let el = curEnhance + 1
+        root.addTextDisplayComponents(new TextDisplayBuilder().setContent(`**${v.name}**\nEnhancement Level: **${el}** — **${"✦".repeat(el)}**${"✧".repeat(v.maxEnhance - el)}`))
         let actionRow = new ActionRowBuilder<ButtonBuilder>()
         let actionRows: ActionRowBuilder<ButtonBuilder>[] = []
         for (let i = 1; i <= v.maxEnhance; i++) {

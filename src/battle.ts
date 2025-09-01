@@ -1,26 +1,26 @@
 import { EventEmitter } from "events"
-import { User, Collection, APIEmbedField, AttachmentBuilder, SendableChannels, ActionRowBuilder, ButtonBuilder, ButtonStyle, RawFile, Embed, EmbedData, APIEmbed, APIAttachment, Attachment } from "discord.js"
-import { setKeys, rng, bar, Dictionary, getID, xOutOfY, formatString, getName, barDelta, abs, RNG, experimental } from "./util.js"
-import { makeStats, calcStats, Stats, baseStats, StatID, calcStat, ExtendedStatID, ExtendedStats, makeExtendedStats } from "./stats.js"
+import { User, Collection, AttachmentBuilder, SendableChannels, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js"
+import { setKeys, Dictionary, getID, formatString, getName, RNG } from "./util.js"
+import { calcStats, Stats, baseStats, StatID, calcStat, ExtendedStatID, ExtendedStats, makeExtendedStats } from "./stats.js"
 import { moves, Category } from "./moves.js"
 import { BattleLobby } from "./lobby.js"
-import { getString, Locales, LocaleString } from "./locale.js"
+import { getString, LocaleString } from "./locale.js"
 import { getUser } from "./users.js"
 import { HeldItem, ItemClass, items } from "./helditem.js"
-import { FG_Gray, Start, Reset, LogColor, LogColorWAccent } from "./ansi.js"
+import { LogColor, LogColorWAccent } from "./ansi.js"
 import { abilities } from "./abilities.js"
 import { BotAI, BotAISettings } from "./battle-ai.js"
 import { dispDelta, fnum } from "./number-format.js"
 import { enemies } from "./enemies.js"
 
-export const BASELINE_DEF = 250
+export const BASELINE_DEF = 100
 
 export function calcDamage(dmg: number, def: number, level: number) {
     return dmg * getDamageDEFMul(def, level)
 }
 export function getDamageDEFMul(def: number, level: number) {
-    //let lf = calcStat(BASELINE_DEF, level)
-    return 1 - (def / (def + (level + 1)*20))
+    let lf = calcStat(BASELINE_DEF, level)
+    return lf / (lf + def)
 }
 export function calcMoveDamage(pow: number, atk: number, def: number, level: number) {
     return calcDamage((atk * pow / 100), def, level)
@@ -291,7 +291,7 @@ statusTypes.set("regen", new StatusType("Regeneration", "Regen", (b, p, s) => {
 }, function (b, p, s) {
     let base = s.infStats?.hp ?? p.maxhp
     let mult = 0.6 / 5
-    b.heal(p, Math.ceil(base * mult), false, "heal.regeneration")
+    b.healO(p, Math.ceil(base * mult), { message: "heal.regeneration", inf: s.inflictor })
 }, undefined).set(s => {
     s.description = formatString("Heals for [a]12%[r] of the inflictor's [a]MAX HP[r] (at the time of application) every turn")
     s.fillStyle = "#68ff4d"
@@ -327,6 +327,10 @@ statusTypes.set("bleed", new StatusType<StatusModifierData>("Bleeding", "Bleed",
             multCombine: "multiply",
             type: "multiply",
             label: "Bleeding"
+        }), p.addModifier("inheal", {
+            label: "Bleeding",
+            value: -9999,
+            type: "add",
         })]
     }
 }, (b, p, s) => {
@@ -416,7 +420,7 @@ let healthBoost = new StatusType<StatusModifierData>("Health Boost", "HP Boost",
         value: modValue,
     }))
     let delta = p.cstats.hp - oldMax
-    b.heal(p, delta)
+    b.healO(p, delta, { fixed: true })
     let data: StatusModifierData = { mods }
     s.data = data
 }, undefined, (b, p, s) => {
@@ -558,6 +562,8 @@ const defaultStats: ExtendedStats = {
     maglimit: 50,
     crit: 10,
     critdmg: 50,
+    inheal: 100,
+    outheal: 100,
 }
 export type AbsorptionMod = {
     initialValue: number,
@@ -610,11 +616,11 @@ export class Player {
     private _charge: number = 0
     private _magic: number = 0
     isBot() {
-    	if (this.user) return false
-    	if (this.summoner && !this.summoner.isBot()) {
-    		return false
-    	}
-    	return true
+        if (this.user) return false
+        if (this.summoner && !this.summoner.isBot()) {
+            return false
+        }
+        return true
     }
     get maxMagic() {
         return this.cstats.maglimit
@@ -643,6 +649,8 @@ export class Player {
         dr: [],
         crit: [],
         critdmg: [],
+        inheal: [],
+        outheal: [],
     }
     abilityData: any = {}
     ability?: string
@@ -662,7 +670,7 @@ export class Player {
         if (this.summons.length >= this.summonCap) {
             return null
         }
-        if (b.players.length + 1 > 25 ) {
+        if (b.players.length + 1 > 25) {
             return null
         }
         let e = enemies.get(preset)
@@ -671,7 +679,7 @@ export class Player {
         }
         let p = new Player()
         p._nickname = `${this.name}'s ${e.name}`
-        p.baseStats = {...e.stats}
+        p.baseStats = { ...e.stats }
         p.moveset = [...e.moveset]
         p.ability = e.ability
         p.level = Math.ceil(this.level * levelFrac)
@@ -786,7 +794,7 @@ export class Player {
                 }
             }
         }
-        return Math.max(Math.round(((value + value * multAddAccumulator) * multAccumulator) + addAccumulator), 0)
+        return Math.max(((value + value * multAddAccumulator) * multAccumulator) + addAccumulator, 0)
     }
     addModifier(stat: ExtendedStatID, mod: StatModifier) {
         let id = getID();
@@ -899,7 +907,7 @@ export class Player {
             let stat = k as ExtendedStatID
             this.cstats[stat] = this.getModifierValue(this.stats[stat], this.modifiers[stat])
         }
-        this.cstats.hp = Math.max(this.cstats.hp, 1)
+        this.cstats.hp = Math.ceil(Math.max(this.cstats.hp, 1))
         this.cstats.dr = Math.min(this.cstats.dr, 99)
         if (this.critMod != null) {
             this.critMod.value = this.cstats.spd / this.stats.spd
@@ -915,8 +923,8 @@ export class Player {
         setKeys(defaultStats, this.stats)
         let resourceBaseline = calcStat(100, this.level)
         setKeys(calcStats(this.level, this.baseStats), this.stats)
-        this.stats.chglimit = Math.ceil(Math.max(40 + (this.stats.atk + this.stats.def*0.76) / resourceBaseline * 40, 60) / 5) * 5
-        this.stats.maglimit = Math.ceil(Math.max(40 + (this.stats.spatk + this.stats.spdef*0.76) / resourceBaseline * 40, 60) / 5) * 5
+        this.stats.chglimit = Math.ceil(Math.max(40 + (this.stats.atk + this.stats.def * 0.76) / resourceBaseline * 40, 60) / 5) * 5
+        this.stats.maglimit = Math.ceil(Math.max(40 + (this.stats.spatk + this.stats.spdef * 0.76) / resourceBaseline * 40, 60) / 5) * 5
         this.stats.crit = Math.min(Math.ceil(this.stats.spd / resourceBaseline * 10), 100)
         this.recalculateStats()
         this.cstats.crit = Math.min(this.cstats.crit, 200)
@@ -1153,7 +1161,7 @@ export class Battle extends EventEmitter {
             content: this.players.filter(v => !v.dead && v.user).map(v => v.user?.toString()).join(" "),
             embeds: [
                 {
-                    
+
                     title: "Log",
                     description: "```ansi" + "\n" + b.logs.slice(-60).join("\n").slice(-3800) + "\n```"
                 },
@@ -1317,20 +1325,32 @@ export class Battle extends EventEmitter {
             this.logL("dmg.plotarmor", { player: target.toString() })
         }
     }
-    heal(user: Player, amount: number, silent: boolean = false, message: LocaleString = "heal.generic", overheal: boolean = false) {
-        if (user.status.some((s) => s.type == "bleed")) return false
-        if (user.hp >= user.maxhp * user.overheal && !overheal) return false
+    healO(user: Player, amount: number, opts: { silent?: boolean, message?: LocaleString, overheal?: boolean, inf?: Player, fixed?: boolean } = {}) {
+        if (user.hp >= user.maxhp * user.overheal && !opts.overheal) return false
         if (user.dead) return false
         user.addEvent({ type: "heal", amount }, this.turn)
         let max = user.maxhp * user.overheal
+        if (!opts.fixed) {
+            amount *= (user.cstats.inheal / 100)
+            if (opts.inf) {
+                amount *= (opts.inf.cstats.outheal / 100)
+            }
+        }
         // Healing becomes less effective the higher above max HP the player is
         amount /= Math.max(Math.ceil(user.hp / user.maxhp), 1)
+        amount = Math.round(amount)
+        if (amount <= 0) return false
         let hp = Math.max(Math.min(max - user.hp, amount), 0)
-        if (overheal) hp = amount;
-        if (hp <= 0) return
+        if (opts.overheal) hp = amount;
+        if (hp <= 0) return false
         user.hp += hp
         user.healingInTurn += hp
-        if (!silent) this.log(getString(message, { player: user.toString(), AMOUNT: Math.floor(amount) }), "green")
+        if (!opts.silent)
+            this.log(getString(opts.message ?? "heal.generic", { player: user.toString(), AMOUNT: Math.floor(amount) }), "green")
+        return true
+    }
+    heal(user: Player, amount: number, silent: boolean = false, message: LocaleString = "heal.generic", overheal: boolean = false) {
+        return this.healO(user, amount, { silent, message, overheal })
     }
     get isPve() {
         return this.type == "boss" || this.type == "pve"
@@ -1360,25 +1380,25 @@ export class Battle extends EventEmitter {
         return fmult
     }
     addCharge(p: Player, amt: number, silent: boolean = false) {
-        let mult = p.cstats.chgbuildup/100
+        let mult = p.cstats.chgbuildup / 100
         amt = Math.ceil(amt * mult)
         p.charge += amt
         if (!silent) {
             this.logL("move.charge.gain", { player: p.toString(), amount: amt })
         }
         if (p.summoner) {
-            this.addCharge(p.summoner, amt*0.3, true)
+            this.addCharge(p.summoner, amt * 0.3, true)
         }
     }
     addMagic(p: Player, amt: number, silent: boolean = false) {
-        let mult = p.cstats.magbuildup/100
+        let mult = p.cstats.magbuildup / 100
         amt = Math.ceil(amt * mult)
         p.magic += amt
         if (!silent) {
             this.logL("move.magic.gain", { player: p.toString(), amount: amt })
         }
         if (p.summoner) {
-            this.addMagic(p.summoner, amt*0.3, true)
+            this.addMagic(p.summoner, amt * 0.3, true)
         }
     }
 
@@ -1473,7 +1493,10 @@ export class Battle extends EventEmitter {
                     supportTarget.protect = true
                 } else if (move.type == "heal") {
                     let pow = move.getPower(this, action.player, supportTarget) / 100
-                    this.heal(supportTarget, Math.floor(user.maxhp * pow), false, undefined, move.overheal)
+                    this.healO(supportTarget, Math.floor(user.maxhp * pow), {
+                        overheal: move.overheal,
+                        inf: action.player
+                    })
                 } else if (move.type == "absorption") {
                     let pow = move.getPower(this, action.player, supportTarget) / 100
                     //this.addAbsorption(supportTarget, Math.floor(supportTarget.maxhp * pow), move.absorptionTier)

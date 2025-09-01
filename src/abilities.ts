@@ -242,7 +242,7 @@ blood_is_fuel.onTurn = (b, p) => {
 blood_is_fuel.onDamageDealt = (b, p, dmg, _v) => {
     let s = p.status.findIndex(s => s.type == "bleed")
     if (s != -1) p.status.splice(s)
-    b.heal(p, Math.ceil(dmg * 0.3), false, "heal.uk", false)
+    b.healO(p, Math.ceil(dmg * 0.3), { message: "heal.uk", fixed: true })
 }
 blood_is_fuel.onDamage = (b, p, dmg, inf, opts) => {
     if (!isDamageDirect(opts)) return

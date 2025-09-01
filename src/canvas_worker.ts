@@ -60,7 +60,7 @@ const playerWidth = 320
 const playerHeight = 80
 const pad = 8
 console.log("still alive")
-const numFormat = new Intl.NumberFormat("en-US", { style: "decimal", maximumFractionDigits: 2, signDisplay: "auto" })
+const numFormat = new Intl.NumberFormat("en-US", { style: "decimal", maximumFractionDigits: 0, signDisplay: "auto" })
 const teamColors = [
     "#0051ff",
     "#ff0015",
@@ -328,51 +328,31 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     ctx.textAlign = "left"
     let statusMaxW = barWidth
     let overflowCount = 0
-    // p.status = [
-    //     {
-    //         type: "poison",
-    //         turnsLeft: 2,
-    //     },
-    //     {
-    //         type: "rush",
-    //         turnsLeft: 2,
-    //     },
-    //     {
-    //         type: "mind_overwork",
-    //         turnsLeft: 2,
-    //     },
-    //     {
-    //         type: "delayed_pain",
-    //         turnsLeft: 2,
-    //     },
-    //     {
-    //         type: "regen",
-    //         turnsLeft: 2,
-    //     },
-    //     {
-    //         type: "broken",
-    //         turnsLeft: 2,
-    //     },
-    //     {
-    //         type: "bleed",
-    //         turnsLeft: 2,
-    //     }
-    // ]
     let sorted = p.status.sort((a, b) => b.turnsLeft - a.turnsLeft)
-    iconSize = statusH - 6
+    iconSize = statusH - 4
     iconY = statusH / 2 - iconSize / 2
-    //iconPad = pad /2
     for (let s of sorted) {
         let type = statusTypes.get(s.type)
         if (!type) continue
+        let targetW = Math.min(maxStatusTextW, statusMaxW - x)
         let statusText = type.name
         ctx.font = `bold 14px ${fontFamily}`
         measured = ctx.measureText(statusText)
         let fsize = 12
-        while (measured.width > maxStatusTextW && fsize > 8) {
+        while (measured.width > targetW && fsize > 8) {
             ctx.font = `bold ${fsize}px ${fontFamily}`
             measured = ctx.measureText(statusText)
             fsize -= 2
+        }
+        // still doesn't fit?????????
+        if (measured.width > targetW) {
+            statusText = type.short
+            fsize = 12
+            while (measured.width > targetW && fsize > 8) {
+                ctx.font = `bold ${fsize}px ${fontFamily}`
+                measured = ctx.measureText(statusText)
+                fsize -= 2
+            }
         }
         let width = measured.width + iconSize + iconPad
         if (overflowCount > 0 || x + width + statusPad * 2 > statusMaxW) {
