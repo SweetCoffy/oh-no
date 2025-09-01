@@ -12,6 +12,7 @@ const statusIcons: { [x in string]: string } = {
     mind_overwork: "boost",
     rush: "boost",
     regen: "regen",
+    delayed_pain: "bomb",
     health_boost: "regen",
     broken: "broken"
 }
@@ -70,6 +71,18 @@ const teamColors = [
 ]
 function icon(name: string): Image | null {
     return icons.get(name) ?? null
+}
+function getSegmentW(totalW: number, count: number, gap: number) {
+    let segmentW = 0
+    let availSpace = totalW - (segmentW*count + (count - 1)*gap)
+    console.log(availSpace)
+    while (availSpace > 0) {
+        let expand = availSpace / count
+        segmentW += expand
+        availSpace = totalW - (segmentW*count + (count - 1)*gap)
+    }
+    console.log(segmentW)
+    return segmentW
 }
 function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) {
     ctx.font = `bold 20px ${fontFamily}`
@@ -190,9 +203,17 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
             ctx.fillStyle = "#b6b6b6ff"
             let mWidth = barWidth - finalBarWidth
             ctx.fillRect(barWidth - mWidth, 0, mWidth, barHeight)
-        }   
-        ctx.fillStyle = bgGradient
+        }
         ctx.globalCompositeOperation = "hard-light"
+        ctx.fillStyle = "#868686ff"
+        let segmentRef = p.cstats.hp
+        let segmentGap = 2
+        let segmentCount = Math.ceil(segmentRef/500)
+        let segmentW = getSegmentW(finalBarWidth - segmentGap*2, segmentCount, segmentGap)
+        for (let i = 0; i < segmentCount; i++) {
+            ctx.fillRect(segmentGap + i*(segmentW+segmentGap), 2, segmentW, barHeight - 4)
+        }
+        ctx.fillStyle = bgGradient
         ctx.fillRect(0, 0, finalBarWidth, barHeight)
         ctx.globalCompositeOperation = "normal"
         ctx.fillStyle = barColor
@@ -290,18 +311,30 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     let statusH = 26
     let x = 0
     let statusPad = pad / 2
-    let maxStatusTextW = barWidth / 3
+    let maxStatusTextW = w / 4
     ctx.textBaseline = "middle"
     ctx.font = `800 18px ${fontFamily}`
     ctx.strokeStyle = "#0000007a"
     ctx.textAlign = "center"
+    let resourceSegValue = 10
     if (p.charge > 0) {
         let chargeText = `${p.charge}`
         let percent = Math.min(p.charge / p.cstats.chglimit, 1)
         let measured = ctx.measureText(chargeText)
-        let w = Math.max(measured.width, 24)
-        ctx.fillStyle = "#111"
+        let segCount = Math.ceil(p.cstats.chglimit / resourceSegValue)
+        let w = Math.max(measured.width, segCount*3)
+        ctx.fillStyle = "#111111"
         ctx.fillRect(x, 0, w + statusPad * 2, statusH)
+        let segStart = x + 2
+        let segTotalW = (w + statusPad * 2) - 4
+        let segValue = p.cstats.chglimit / segCount
+        let segW = getSegmentW(segTotalW, segCount, 2)
+        ctx.fillStyle = "#868686"
+        ctx.globalCompositeOperation = "hard-light"
+        for (let i = 0; i < segCount; i++) {
+            ctx.fillRect(segStart + i*(segW+2), 2, segW, statusH - 4)
+        }
+        ctx.globalCompositeOperation = "normal"
         ctx.fillStyle = "#ff1c3e"
         ctx.fillRect(x, 0, percent * (w + statusPad * 2), statusH)
         ctx.fillStyle = "#fff"
@@ -314,9 +347,20 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
         let magicText = `${p.magic}`
         let percent = Math.min(p.magic / p.cstats.maglimit, 1)
         let measured = ctx.measureText(magicText)
-        let w = Math.max(measured.width, 24)
+        let segCount = Math.ceil(p.cstats.maglimit / resourceSegValue)
+        let w = Math.max(measured.width, segCount*3)
         ctx.fillStyle = "#111"
         ctx.fillRect(x, 0, w + statusPad * 2, statusH)
+        let segStart = x + 2
+        let segTotalW = (w + statusPad * 2) - 4
+        let segValue = p.cstats.maglimit / segCount
+        let segW = getSegmentW(segTotalW, segCount, 2)
+        ctx.fillStyle = "#868686"
+        ctx.globalCompositeOperation = "hard-light"
+        for (let i = 0; i < segCount; i++) {
+            ctx.fillRect(segStart + i*(segW+2), 2, segW, statusH - 4)
+        }
+        ctx.globalCompositeOperation = "normal"
         ctx.fillStyle = "#1c7eff"
         ctx.fillRect(x, 0, percent * (w + statusPad * 2), statusH)
         ctx.fillStyle = "#fff"
@@ -326,7 +370,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
         x += w + statusPad * 2 + pad
     }
     ctx.textAlign = "left"
-    let statusMaxW = barWidth
+    let statusMaxW = w - 24
     let overflowCount = 0
     let sorted = p.status.sort((a, b) => b.turnsLeft - a.turnsLeft)
     iconSize = statusH - 4
@@ -334,7 +378,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     for (let s of sorted) {
         let type = statusTypes.get(s.type)
         if (!type) continue
-        let targetW = Math.min(maxStatusTextW, statusMaxW - x)
+        let targetW = Math.min(maxStatusTextW, statusMaxW - x - statusPad)
         let statusText = type.name
         ctx.font = `bold 14px ${fontFamily}`
         measured = ctx.measureText(statusText)
@@ -347,15 +391,22 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
         // still doesn't fit?????????
         if (measured.width > targetW) {
             statusText = type.short
-            fsize = 12
+            fsize = 14
             while (measured.width > targetW && fsize > 8) {
                 ctx.font = `bold ${fsize}px ${fontFamily}`
                 measured = ctx.measureText(statusText)
                 fsize -= 2
             }
         }
+        let centerIcon = false
+        // this is ridiculous
+        if (measured.width > targetW) {
+            statusText = ""
+            measured = ctx.measureText(statusText)
+            centerIcon = true
+        }
         let width = measured.width + iconSize + iconPad
-        if (overflowCount > 0 || x + width + statusPad * 2 > statusMaxW) {
+        if (overflowCount > 0 || x + width > statusMaxW) {
             let h = Math.max(statusH - overflowCount * 2, statusH * 0.5)
             let w = Math.max(6 - overflowCount, 2)
             ctx.fillStyle = type.fillStyle
@@ -410,7 +461,11 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
         if (iconImg) {
             ctx.shadowColor = "#0000007a"
             ctx.shadowOffsetY = 2
-            ctx.drawImage(iconImg, x + statusPad, iconY, iconSize, iconSize)
+            let iconX = x + statusPad
+            if (centerIcon) {
+                iconX = x + (width + statusPad*2) / 2 - iconSize/2
+            }
+            ctx.drawImage(iconImg, iconX, iconY, iconSize, iconSize)
             ctx.shadowColor = "#00000000"
         }
         ctx.strokeText(statusText, x + statusPad + iconSize + iconPad, statusH / 2)

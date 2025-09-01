@@ -12,7 +12,7 @@ import { writeFileSync, readFileSync } from "fs"
 import { shopItems } from "./items.js"
 
 import { resolve } from "path"
-import { Stats, baseStats, calcStat, limitStats, makeExtendedStats } from "./stats.js"
+import { Stats, baseStats, calcStat, calcStats, limitStats, makeExtendedStats } from "./stats.js"
 import { calcMoveDamage } from "./battle.js"
 import { generate } from "./codegen.js"
 import { PartialBattle, PartialPlayer } from "./canvas_types.js"
@@ -161,7 +161,7 @@ if (experimental.test_canvas) {
     //const l = new lobby.BattleLobby(null)
     //const b = new battle.Battle()
     const players: PartialPlayer[] = []
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < 20; i++) {
         let p: PartialPlayer = {
             hp: 0,
             prevHp: 0,
@@ -176,19 +176,23 @@ if (experimental.test_canvas) {
             magic: 0,
             charge: 0,
             level: 50 + Math.floor(Math.random() * 51),
-            team: Math.floor(i / 2),
+            team: Math.floor(i / 2) % 2,
             name: "player " + (i + 1),
             healingInTurn: 0,
             id: "",
             summons: [],
             actionOrder: 0
         }
-        p.cstats.maglimit = 100
-        p.cstats.chglimit = 100
+        p.stats = {...makeExtendedStats(), ...calcStats(p.level, baseStats)}
+        p.cstats = {...p.stats}
+        p.stats.maglimit = p.cstats.maglimit = 60 + Math.round((Math.random() - 0.5)*100/5)*5
+        p.stats.chglimit = p.cstats.chglimit = 60 + Math.round((Math.random() - 0.5)*100/5)*5
+        p.magic = Math.round(Math.random()*p.cstats.maglimit)
+        p.charge = Math.round(Math.random()*p.cstats.chglimit)
         p.hp = Math.ceil(Math.random() * p.cstats.hp)
         p.prevHp = p.hp + Math.random()*p.hp*0.25
         if (Math.random() < 0.5) {
-            p.cstats.hp += Math.round(Math.random()*100 - 50)
+            p.cstats.hp += Math.round(p.stats.hp*(Math.random() - 0.5))
             p.hp = Math.round(p.cstats.hp * 0.75)
         }
         for (let [k, _] of battle.statusTypes) {

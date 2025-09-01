@@ -575,7 +575,7 @@ export type AbsorptionModWithID = AbsorptionMod & { id: string, value: number, a
 /**
  * Represents an in-battle player
  */
-export class Player {
+export class Player<AbilityData extends {} = {}> {
     /** The player's current HP */
     hp: number = 0
     prevHp: number = 0
@@ -652,7 +652,7 @@ export class Player {
         inheal: [],
         outheal: [],
     }
-    abilityData: any = {}
+    abilityData!: AbilityData
     ability?: string
     summoner?: Player
     summons: Player[]
@@ -691,6 +691,7 @@ export class Player {
         b.players.push(p)
         p.updateStats()
         p.prevHp = p.hp
+        p.initAbility(b)
         return p
     }
     toString() {
@@ -1010,6 +1011,13 @@ export class Player {
     getTotalMaxAbsorption(): number {
         return this.absorptionMods.filter(v => v.active).reduce((prev, cur) => prev + cur.initialValue, 0)
     }
+    initAbility(b: Battle) {
+        if (!this.ability) {
+            return
+        }
+        let a = abilities.get(this.ability)!
+        a.init(b, this)
+    }
     constructor(user?: User) {
         this.summons = []
         this.movesetEnhance = {}
@@ -1129,6 +1137,7 @@ export class Battle extends EventEmitter {
             p.prevHp = p.hp
             p.charge = 20
             p.magic = 30
+            p.initAbility(this)
         }
         let start = BattleTypeInfo[this.type].onStart
         if (start) start(this)

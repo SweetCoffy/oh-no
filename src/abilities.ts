@@ -3,59 +3,71 @@ import { AbsorptionModWithID, Battle, isDamageDirect, Player, StatModifierWithID
 import { DescriptionBuilder } from "./battle-description.js";
 import { lerp } from "./util.js";
 
-export class Ability {
+export class Ability<Data extends {} = {}> {
     name: string
     unlockLevel: number = 20
     description: string
+    selectable: boolean = true
     // The ability's cost in base stat points, a negative cost increases the user's effective base stat total.
     cost: number
-    damage(b: Battle, p: Player, dmg: number, inf?: Player, opts: TakeDamageOptions = {}) {
+    damage(b: Battle, p: Player<Data>, dmg: number, inf?: Player, opts: TakeDamageOptions = {}) {
         return this.onDamage?.(b, p, dmg, inf, opts)
     }
-    damageDealt(b: Battle, p: Player, dmg: number, victim: Player, opts: TakeDamageOptions = {}) {
+    damageDealt(b: Battle, p: Player<Data>, dmg: number, victim: Player, opts: TakeDamageOptions = {}) {
         return this.onDamageDealt?.(b, p, dmg, victim, opts)
     }
-    turn(b: Battle, p: Player) {
+    turn(b: Battle, p: Player<Data>) {
         this.onTurn?.(b, p)
+    }
+    init(b: Battle, p: Player<Data>) {
+        this.onInit?.(b, p)
     }
     damageTakenModifierOrder: number = 0
     damageDealtModifierOrder: number = 0
-    onDamage?: (b: Battle, p: Player, dmg: number, inf: Player | undefined, opts: TakeDamageOptions) => number | void
-    onDamageDealt?: (b: Battle, p: Player, dmg: number, victim: Player, opts: TakeDamageOptions) => number | void
-    onTurn?: (b: Battle, p: Player) => any
+    onDamage?: (b: Battle, p: Player<Data>, dmg: number, inf: Player | undefined, opts: TakeDamageOptions) => number | void
+    onDamageDealt?: (b: Battle, p: Player<Data>, dmg: number, victim: Player, opts: TakeDamageOptions) => number | void
+    onTurn?: (b: Battle, p: Player<Data>) => any
+    onInit?: (b: Battle, p: Player<Data>) => any
     constructor(name: string, cost: number, description: string = "N/A") {
         this.name = name;
         this.cost = cost;
         this.description = description
     }
-    static add(id: string, ability: Ability) {
+    static add(id: string, ability: Ability<any>) {
         abilities.set(id, ability)
         return ability
     }
 }
 
-export const abilities: Collection<string, Ability> = new Collection();
+export const abilities: Collection<string, Ability<any>> = new Collection();
 
-let hardening = Ability.add("hardening", new Ability("Bone Hardening", 300))
-hardening.onTurn = function (b, p) {
-    let a
-    if (p.abilityData.mod) {
-        a = p.abilityData.mod as AbsorptionModWithID
-    } else {
-        p.abilityData.mod = a = p.addAbsorption({
+let hardening = Ability.add("hardening", new Ability<{
+    mod: AbsorptionModWithID
+}>("Bone Hardening", 300))
+hardening.onInit = (b, p) => {
+    p.abilityData = {
+        mod: p.addAbsorption({
             initialValue: 1,
             efficiency: 0.5
         })
     }
+}
+hardening.onTurn = function (b, p) {
+    let a = p.abilityData.mod
     a.active = true
     if (a.value <= 0) {
-        
+
     }
     a.value = a.initialValue = Math.ceil(p.cstats.def * 0.2)
 }
 hardening.description = DescriptionBuilder.new().line("Grants [a]50% Efficient[r] [a]Absorption[r] equal to the [a]20%[r] of user's [a]DEF[r]. If still active, refreshes every turn.")
     .build()
-let massive_health_bar = Ability.add("massive_health_bar", new Ability("Massive Health Bar", 300))
+let massive_health_bar = Ability.add("massive_health_bar", new Ability<{
+    activated: boolean
+}>("Massive Health Bar", 300))
+massive_health_bar.onInit = (b, p) => {
+    p.abilityData = { activated: false }
+}
 massive_health_bar.onDamage = function (b, p, dmg, inf) {
     if (!p.abilityData.activated) {
         b.logL("ability.massive_health_bar", { name: p.toString() })
@@ -87,36 +99,42 @@ plot_armor.description = DescriptionBuilder.new().line("Every turn:")
     .line("· [a]Plot Armor[r] acts a buffer for the user's [a]HP[r], allowing it to go into the negatives before dying.")
     .line("· [a]Plot Armor[r] does not affect mechanics that scale with [a]MAX HP[r].")
     .build()
-
-let beserker_soul = Ability.add("beserker_soul", new Ability("Beserker Soul", 120))
-beserker_soul.onTurn = function (b, p) {
-    if (p.abilityData?.type != "beserker_soul") {
-        p.abilityData = {
-            type: "beserker_soul",
-            buffActive: false,
-            atkMod: p.addModifier("atk", {
-                label: "Beserker Soul",
-                type: "multiply",
-                value: 1,
-            }),
-            spatkMod: p.addModifier("spatk", {
-                label: "Beserker Soul",
-                type: "multiply",
-                value: 1,
-            }),
-            defMod: p.addModifier("def", {
-                label: "Beserker Soul",
-                type: "multiply",
-                value: 1,
-            }),
-            spdefMod: p.addModifier("spdef", {
-                label: "Beserker Soul",
-                type: "multiply",
-                value: 1,
-            })
-        }
+type BeserkerAbilityData = {
+    type: "beserker_soul",
+    buffActive: boolean,
+    atkMod: StatModifierWithID,
+    spatkMod: StatModifierWithID,
+    defMod: StatModifierWithID,
+    spdefMod: StatModifierWithID,
+}
+let beserker_soul = Ability.add("beserker_soul", new Ability<BeserkerAbilityData>("Beserker Soul", 120))
+beserker_soul.onInit = (b, p) => {
+    p.abilityData = {
+        type: "beserker_soul",
+        buffActive: false,
+        atkMod: p.addModifier("atk", {
+            label: "Beserker Soul",
+            type: "multiply",
+            value: 1,
+        }),
+        spatkMod: p.addModifier("spatk", {
+            label: "Beserker Soul",
+            type: "multiply",
+            value: 1,
+        }),
+        defMod: p.addModifier("def", {
+            label: "Beserker Soul",
+            type: "multiply",
+            value: 1,
+        }),
+        spdefMod: p.addModifier("spdef", {
+            label: "Beserker Soul",
+            type: "multiply",
+            value: 1,
+        })
     }
-
+}
+beserker_soul.onTurn = function (b, p) {
     let atkMod = p.abilityData.atkMod
     let spatkMod = p.abilityData.spatkMod
     let defMod = p.abilityData.defMod
@@ -212,28 +230,26 @@ training_arc.description = DescriptionBuilder.new().line("At the start of battle
     .line("Every turn:")
     .line("· [a]All stats[r] [f]decrease[r] gradually, down to [a]25%[r] on turn [a]8[r]")
     .build()
-let blood_is_fuel = Ability.add("blood_is_fuel", new Ability("Blood is Fuel", 0))
+let blood_is_fuel = Ability.add("blood_is_fuel", new Ability<UKAbilityData>("Blood is Fuel", 0))
 type UKAbilityData = {
-    type: "uk"
     hardDamage: StatModifierWithID
 }
 function ukMaxHP(modid: string, p: Player) {
     return Math.max(p.getModifierValue(p.stats.hp, p.modifiers.hp, [modid]), 1)
 }
-blood_is_fuel.onTurn = (b, p) => {
-    if (p.abilityData?.type != "uk") {
-        let mod = p.addModifier("hp", {
-            label: "Hard Damage (Blood is Fuel)",
-            value: 0,
-            type: "add",
-        })
-        p.abilityData = {
-            type: "uk",
-            hardDamage: mod
-        }
+blood_is_fuel.onInit = (b, p) => {
+    let mod = p.addModifier("hp", {
+        label: "Hard Damage (Blood is Fuel)",
+        value: 0,
+        type: "add",
+    })
+    p.abilityData = {
+        hardDamage: mod
     }
+}
+blood_is_fuel.onTurn = (b, p) => {
     let maxhp = ukMaxHP(p.abilityData.hardDamage.id, p)
-    let data = p.abilityData as UKAbilityData
+    let data = p.abilityData
     if (data.hardDamage.value < 0) data.hardDamage.value += Math.ceil(maxhp / 20)
     if (data.hardDamage.value > 0) data.hardDamage.value = 0
     if (data.hardDamage.value < -maxhp + 1) data.hardDamage.value = -maxhp + 1
@@ -246,7 +262,7 @@ blood_is_fuel.onDamageDealt = (b, p, dmg, _v) => {
 }
 blood_is_fuel.onDamage = (b, p, dmg, inf, opts) => {
     if (!isDamageDirect(opts)) return
-    let data = p.abilityData as UKAbilityData
+    let data = p.abilityData
     data.hardDamage.value -= Math.floor(dmg * 0.9)
     let maxhp = ukMaxHP(p.abilityData.hardDamage.id, p)
     if (data.hardDamage.value < -maxhp + 1) data.hardDamage.value = -maxhp + 1
