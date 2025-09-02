@@ -399,18 +399,26 @@ moves.set("summon_eh", new Move("Summon: Egg Hater", "status", 0, "status").set(
 moves.set("summon_u", new Move("Summon: ú", "status", 0, "status").set(move => {
     move.requiresMagic = 40
     move.maxEnhance = 4
+    let baseChgRegen = 20
+    move.specialEnhance = [2]
     move.onUse = (b, u, t, { enhance }) => {
         let levelFrac = 0.6 + (enhance - 1) * 0.05
-        let s = utilSummon(b, u, "u", levelFrac, { ability: "u_exclusive" })
+        let s = utilSummon(b, u, "u", levelFrac, { ability: enhance >= 2 ? "u_exclusive" : undefined })
         if (s) {
             s.movesetEnhance.pingcheck = enhance
+            if (enhance >= 2) {
+                let chg = baseChgRegen + (enhance - 2) * 5
+                b.addCharge(s, chg)
+            }
         }
     }
     move.unlockLevel = 45
     move.getDescription = (el) => {
-        let desc = summonDesc("u", 0.6 + (el - 1) * 0.05)
+        let chg = baseChgRegen + (el - 2) * 5
+        let desc = summonDesc("u", 0.6 + (el - 1) * 0.05) +
+        formatString(`\nú's exclusive move [a]Pingcheck[r] will match the [a]Enhancement Level[r] of its summoner's [a]Summon: ú[r].`)
         if (el >= 2) {
-            desc += formatString(`\n${enhanceLevelDesc(2)}: ú's exclusive move [a]Pingcheck[r] will match the [a]Enhancement Level[r] of its summoner's [a]Summon: ú[r].`)
+            desc += formatString(`\n${enhanceLevelDesc(2)}: ú gains its exclusive ability [a]Soul Conversion[r] and regenerates [a]${chg} Charge[r].`)
         }
         return desc
     }
@@ -853,8 +861,8 @@ moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
 moves.set("pingcheck", new Move("Pingcheck", "attack", 0, "special", 100).set(move => {
     move.critMul = 0
     move.selectable = false
-    move.recoil = 0.1
-    move.requiresCharge = 30
+    move.recoil = 0.4
+    move.requiresCharge = 20
     move.setDamage = "set"
     move.maxEnhance = 4
     move.enhanceFactor = 0.2
@@ -868,7 +876,7 @@ moves.set("pingcheck", new Move("Pingcheck", "attack", 0, "special", 100).set(mo
     move.getDescription = (el) => {
         let pow = move.getBasePower(el)
         let mult = ffrac(pow / 100)
-        let desc = `[a]ú[r]'s exclusive move that deals damage equal to [a]${mult}[r] of its [a]Max HP[r], while consuming [a]HP[r] equal to [a]10%[r] of its [a]Max HP[r].`
+        let desc = `[a]ú[r]'s exclusive move that deals damage equal to [a]${mult}[r] of its [a]Max HP[r], while consuming [a]HP[r] equal to [a]${ffrac(move.recoil)}[r] of its [a]Max HP[r].`
         if (el >= 2) {
             desc += `\nThis move's [a]Enhancement Level[r] is reduced to [a]${el - 1}✦[r] after use.`
         } else {

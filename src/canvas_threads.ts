@@ -60,6 +60,7 @@ export function generateImage(b: Battle | PartialBattle): Promise<Buffer> {
                     vaporized: p.vaporized,
                     healingInTurn: p.healingInTurn,
                     actionOrder: 0,
+                    bruh: p.bruh,
                     status: p.status.map(s => ({
                         type: s.type,
                         turnsLeft: s.turnsLeft,

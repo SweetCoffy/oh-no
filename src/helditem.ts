@@ -184,6 +184,7 @@ function bruhOrbEffect(id: string) {
                 type: "add",
             })
         }
+        p.bruh = id
         p.hp = Math.floor(p.maxhp * hpFrac)
     }
 }

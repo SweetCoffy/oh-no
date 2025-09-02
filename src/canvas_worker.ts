@@ -108,6 +108,21 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     ctx.fillStyle = "#ffffff"
     ctx.fillText(orderText, playerPad + 4, 10)
     namePad += 8
+    if (p.bruh) {
+        let bruhIcon = icon(p.bruh == "" ? `bruh_orb` : `bruh_orb_${p.bruh}`)
+        if (bruhIcon) {
+            ctx.shadowColor = "#0000007a"
+            ctx.shadowOffsetY = 2
+            let fIconSize = 28
+            let bIconSize = fIconSize*1.25
+            let ofsX = Math.round(fIconSize / 2 - bIconSize / 2)
+            let ofsY = ofsX - 5
+            ctx.drawImage(bruhIcon, playerPad + 2 + namePad + ofsX, ofsY, bIconSize, bIconSize)
+            namePad += fIconSize + 8
+            ctx.shadowColor = "#00000000"
+            ctx.shadowOffsetY = 0
+        }
+    }
     ctx.textAlign = "left"
     ctx.textBaseline = "top"
 
@@ -276,7 +291,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
     }
     ctx.strokeText(hpText, tx, barMiddle)
     ctx.fillText(hpText, tx, barMiddle)
-    tx += Math.max(measured.width, 64) + pad
+    tx += measured.width + pad
     if (p.absorb > 0) {
         let absorbText = numFormat.format(Math.ceil(p.absorb))
         let ptx = tx
@@ -288,7 +303,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, p: PartialPlayer, w: number) 
                 ctx.drawImage(shieldIcon, tx, iconY, iconSize, iconSize)
                 ctx.globalCompositeOperation = "normal"
                 ctx.shadowColor = "#00000000"
-                tx += iconSize + pad
+                tx += iconSize + pad*0.5
             }
             ctx.strokeText(absorbText, tx, barMiddle)
             ctx.fillText(absorbText, tx, barMiddle)

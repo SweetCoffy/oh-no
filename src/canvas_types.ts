@@ -26,6 +26,7 @@ export type PartialPlayer = {
     prevAbsorb: number,
     dmgBlocked: number,
     absorb: number,
+    bruh?: string,
     stats: ExtendedStats,
     cstats: ExtendedStats,
     status: { type: string, turnsLeft: number, duration: number }[],

@@ -290,7 +290,7 @@ u_exclusive.onDamage = (b, p, dmg) => {
     if ((p.hp - dmg) > p.cstats.hp*thresh) {
         return
     }
-    let maxHeal = Math.floor(p.hp * 0.5)
+    let maxHeal = Math.floor(p.summoner.hp * 0.5)
     let desiredHeal = p.cstats.hp - (p.hp - dmg)
     let heal = Math.min(desiredHeal, maxHeal)
     if (heal <= 0) {
@@ -300,7 +300,7 @@ u_exclusive.onDamage = (b, p, dmg) => {
     b.logIndent++
     b.healO(p, heal, { overheal: true, fixed: true })
     b.logIndent++
-    b.takeDamageO(p.summoner, heal, { type: "none" })
+    b.takeDamageO(p.summoner, heal, { type: "none", message: "dmg.drain", inflictor: p })
     b.logIndent--
     b.addCharge(p, Math.ceil(heal/p.cstats.hp * 100))
     b.logIndent--

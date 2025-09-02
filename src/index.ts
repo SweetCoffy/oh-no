@@ -175,6 +175,7 @@ if (experimental.test_canvas) {
             dmgBlocked: 0,
             magic: 0,
             charge: 0,
+            bruh: "attack",
             level: 50 + Math.floor(Math.random() * 51),
             team: Math.floor(i / 2) % 2,
             name: "player " + (i + 1),
