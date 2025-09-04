@@ -878,7 +878,7 @@ moves.set("pingcheck", new Move("Pingcheck", "attack", 0, "special", 100).set(mo
     move.maxEnhance = 4
     move.enhanceFactor = 0.2
     move.getBasePower = (el = 1) => {
-        return 150 * move.getEnhanceMult(el)
+        return 90 * move.getEnhanceMult(el)
     }
     move.getPower = (b, u, t, enhance = 1) => {
         let bp = move.getBasePower(enhance)

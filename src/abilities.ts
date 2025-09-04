@@ -297,11 +297,9 @@ u_exclusive.onDamage = (b, p, dmg) => {
         return
     }
     b.logL("ability.u_exclusive", { player: p.toString() })
-    b.logIndent++
-    b.healO(p, heal, { overheal: true, fixed: true })
+    b.healO(p, heal, { overheal: true, fixed: true, silent: true })
     b.logIndent++
     b.takeDamageO(p.summoner, heal, { type: "none", message: "dmg.drain", inflictor: p })
-    b.logIndent--
     b.addCharge(p, Math.ceil(heal/p.cstats.hp * 100))
     b.logIndent--
     p.addModifier("chgbuildup", {
