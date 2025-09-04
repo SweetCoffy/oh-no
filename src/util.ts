@@ -1,5 +1,5 @@
 import { Start, Reset, color2ANSIAlias, color2ANSITable, LogColor, LogColorWAccent } from "./ansi.js"
-import { ActionRowBuilder, APIActionRowComponent, AutocompleteInteraction, ButtonBuilder, ButtonInteraction, ButtonStyle, Collection, CommandInteraction, ComponentType, ContextMenuCommandInteraction, Message, StringSelectMenuBuilder } from "discord.js"
+import { ActionRowBuilder, APIActionRowComponent, AutocompleteInteraction, ButtonBuilder, ButtonInteraction, ButtonStyle, codeBlock, Collection, CommandInteraction, ComponentType, ContextMenuCommandInteraction, Message, StringSelectMenuBuilder } from "discord.js"
 import { abilities } from "./abilities.js"
 import { ItemResponse, ItemStack, shopItems } from "./items.js"
 import { BASE_STAT_TOTAL } from "./params.js"
@@ -12,8 +12,9 @@ import { calcStats, StatID } from "./stats.js"
 import { getString } from "./locale.js"
 import { Battle, Player, teamEmojis } from "./battle.js"
 import { fnum, fracfmt } from "./number-format.js"
-import { huntData } from "./save_special.js"
+import { huntData, prefData } from "./save_special.js"
 import { getAvailableContentForLevel, getBaseMpForLevel, getLevelCap, unlockContent, UnlockMeta } from "./unlocking.js"
+import { fail } from "assert"
 
 export function lexer(str: string) {
     let ar: string[] = []
@@ -449,6 +450,43 @@ export function formatString(str: string, color: LogColorWAccent = "white") {
         if (format == "reset" || format == "r") return `${Start}0;${colorToANSI(color)}m`;
         return `${Start}0;${colorToANSI(format as LogColor)}m`
     }) + Reset
+}
+export function ansiToMarkdown(str: string): string {
+    let final = ""
+    let bold = false
+    for (let i = 0; i < str.length; i++) {
+        let c = str[i]
+        if (c == "\x1b") {
+            let end = str.indexOf("m", i)
+            if (end == -1) continue;
+            let codes = str.slice(i + 1, end).split(";")
+            i = end
+            if (((codes.length == 1) || codes[1] == "0") && codes[0] == "[0") {
+                if (bold) {
+                    final += "**"
+                    bold = false
+                }
+                continue
+            }
+            if (codes.length == 2) {
+                if (!bold) {
+                    final += "**"
+                    bold = true
+                }
+                continue
+            }
+            continue
+        }
+        final += c
+    }
+    return final
+}
+export function ansiRespectPrefs(str: string, u: UserInfo): string {
+    let pref = prefData.get(u)
+    if (pref.preferMarkdown) {
+        return ansiToMarkdown(str)
+    }
+    return codeBlock("ansi", str)
 }
 export function playerSelectorComponent(player: Player, battle: Battle, customId: string, defaultPlayerId: string = "") {
     let targets = battle.players

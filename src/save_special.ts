@@ -8,6 +8,9 @@ type HuntSpecial = {
     moveset: MoveID[],
     bossesDefeated: string[],
 }
+type PrefSpecial = {
+    preferMarkdown: boolean
+}
 export const huntData = 
     new UserSpecialData<HuntSpecial>("hunt", {
         stats: limitStats(baseStats, BASE_STAT_TOTAL),
@@ -15,9 +18,14 @@ export const huntData =
         moveset: ["bonk", "nerf_gun", "protect"],
         bossesDefeated: []
     })
+export const prefData = 
+    new UserSpecialData<PrefSpecial>("pref", {
+        preferMarkdown: true
+    })
 
 queueMicrotask(() => {
     huntData.register()
+    prefData.register()
 })
 
 const FULL_RECOVERY_TIME = 1000 * 60

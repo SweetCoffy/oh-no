@@ -286,7 +286,7 @@ u_exclusive.onDamage = (b, p, dmg) => {
     if (!p.summoner) {
         return
     }
-    let thresh = 0.5
+    let thresh = 0.6
     if ((p.hp - dmg) > p.cstats.hp*thresh) {
         return
     }
@@ -315,7 +315,7 @@ u_exclusive.onDamage = (b, p, dmg) => {
 u_exclusive.selectable = false
 u_exclusive.description = formatString(
     `Exclusive ability for the [a]Summon ú[r].\n` + 
-    `Whenever ú takes damage that would take it below [a]50%[r] of its [a]Max HP[r], ` + 
+    `Whenever ú takes damage that would take it below [a]60%[r] of its [a]Max HP[r], ` + 
     `ú will drain up to [a]50%[r] of its summoner's [a]current HP[r] to heal itself back to [a]full HP[r].` +
     `\nFor every [a]1%[r] of [a]HP[r] restored by ú, it gains [a]1[r] point of [a]Charge[r] and ` +
     `increases its [a]Charge Buildup[r] by [a]0.5%[r] for [a]2[r] turns. This boost stacks.`

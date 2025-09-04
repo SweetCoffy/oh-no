@@ -1596,7 +1596,7 @@ export class Battle extends EventEmitter {
         let spdb = b.player.cstats.spd
         let prioa = getPriority(a)
         let priob = getPriority(b)
-        if (prioa > priob) return true
+        if (prioa != priob) return prioa > priob
         return spda > spdb
     }
     doActions() {

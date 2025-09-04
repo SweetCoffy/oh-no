@@ -8,9 +8,20 @@ import { StatusID } from "./gen.js"
 import { enemies } from "./enemies.js"
 import { getString } from "./locale.js"
 
-export type MoveType = "attack" | "status" | "protect" | "heal" | "absorption" | "noop"
+export type MoveType = "attack" | "status" | "status_buff" | "status_debuff" | "summon" | "protect" | "heal" | "absorption" | "noop"
 export type Category = "physical" | "special" | "status"
 export type DamageType = "regular" | "set" | "percent"
+export const moveTypeInfo: { [x in MoveType]: { emoji: string, name: string, listOrder: number } } = {
+    attack: { emoji: "<:move_attack:1412964656607264828>", name: "Attack", listOrder: 0 },
+    protect: { emoji: "<:move_defend:1412964676450648186>", name: "Defend", listOrder: 1 },
+    heal: { emoji: "<:move_restore:1412964699665993809>", name: "Restore", listOrder: 2 },
+    absorption: { emoji: "<:move_absorb:1412964688064417822>", name: "Absorb", listOrder: 3 },
+    status_buff: { emoji: "<:move_buff:1412984746455203940>", name: "Support", listOrder: 4 },
+    status_debuff: { emoji: "<:move_debuff:1412984757033238630>", name: "Impair", listOrder: 5 },
+    status: { emoji: "<:move_support:1412964715654807684>", name: "Other Non-Damaging", listOrder: 6 },
+    summon: { emoji: "<:move_summon:1412964732494807172>", name: "Summon", listOrder: 7 },
+    noop: { emoji: "❓", name: "Other", listOrder: 99 }
+}
 export interface InflictStatus {
     status: string,
     chance: number,
@@ -245,7 +256,7 @@ moves.set("needle", new Move("Needle", "attack", 5, "physical", 100).set(move =>
     move.setDamage = "percent"
     move.requiresCharge = 5
     move.unlockLevel = 20
-}).setDesc(formatString("Deals fixed damage equal to [a]5%[r] of the target's [a]MAX HP[r] and inflicts them with [a]Bleed[r]")))
+}).setDesc(formatString("Deals [a]Physical[r] damage equal to [a]5%[r] of the target's [a]Max HP[r] and inflicts [a]Bleeding[r].")))
 moves.set("nerf_gun", new Move("Nerf Gun", "attack", 85, "special").set(move => {
     move.multihit = 2
     move.critMul = 1.1
@@ -388,7 +399,7 @@ function summonDesc(summonType: string, levelFrac: number = 0.9) {
     let movesString = e.moveset.map(m => moves.get(m)?.name).join(", ")
     return formatString(`[a]${e.name}[r]:\n${e.description}\n${statsString}\nMoves: ${movesString}\nIf this move is used when the user has a [a]Summon[r] of the same type, that [a]Summon[r]'s [a]HP[r] is fully restored.`)
 }
-moves.set("summon_eh", new Move("Summon: Egg Hater", "status", 0, "status").set(move => {
+moves.set("summon_eh", new Move("Summon: Egg Hater", "summon", 0, "status").set(move => {
     move.requiresMagic = 30
     move.onUse = summonOnUse("egg_hater", 1.0)
     move.unlockLevel = 40
@@ -396,7 +407,7 @@ moves.set("summon_eh", new Move("Summon: Egg Hater", "status", 0, "status").set(
         move.description = summonDesc("egg_hater")
     })
 }))
-moves.set("summon_u", new Move("Summon: ú", "status", 0, "status").set(move => {
+moves.set("summon_u", new Move("Summon: ú", "summon", 0, "status").set(move => {
     move.requiresMagic = 40
     move.maxEnhance = 4
     let baseChgRegen = 20
@@ -424,7 +435,7 @@ moves.set("summon_u", new Move("Summon: ú", "status", 0, "status").set(move => 
     }
 }))
 
-moves.set("twitter", new Move("Twitter", "status", 0, "status", 100).set(move => {
+moves.set("twitter", new Move("Twitter", "status_debuff", 0, "status", 100).set(move => {
     move.inflictStatus.push({ chance: 1, status: "poison" })
     move.requiresMagic = 10
     move.unlockLevel = 30
@@ -436,13 +447,13 @@ moves.set("twitter", new Move("Twitter", "status", 0, "status", 100).set(move =>
     }
 }).setDesc(formatString("Inflicts the target with [a]Poison[r]")))
 
-moves.set("stronk", new Move("Stronk", "status", 0, "status").set(move => {
+moves.set("stronk", new Move("Stronk", "status_buff", 0, "status").set(move => {
     move.targetStat.atk = 1
     move.supportTargetting = true
     move.unlockLevel = 25
 }).setDesc(formatString("Increases the user's [a]ATK[r] by [a]1[r] stage.")))
 
-moves.set("reckless_rush", new Move("Reckless Rush", "status", 0, "status").set(move => {
+moves.set("reckless_rush", new Move("Reckless Rush", "status_buff", 0, "status").set(move => {
     move.supportTargetting = true
     move.onlyTargetSelf = true
     move.requiresCharge = 20
@@ -466,13 +477,13 @@ moves.set("reckless_rush", new Move("Reckless Rush", "status", 0, "status").set(
     move.description = move.getDescription(1)
 }))
 
-moves.set("spstronk", new Move("Magik Sord", "status", 0, "status").set(move => {
+moves.set("spstronk", new Move("Magik Sord", "status_buff", 0, "status").set(move => {
     move.targetStat.spatk = 1
     move.supportTargetting = true
     move.unlockLevel = 25
 }).setDesc(formatString("Increases the user's [a]SPATK[r] by [a]1[r] stage.")))
 
-moves.set("mind_overwork", new Move("Neuro-Overclock", "status", 0, "status").set(move => {
+moves.set("mind_overwork", new Move("Neuro-Overclock", "status_buff", 0, "status").set(move => {
     move.supportTargetting = true
     move.onlyTargetSelf = true
     move.requiresMagic = 25
@@ -532,7 +543,7 @@ moves.set("protect", new Move("Protect", "protect", 0, "status").set(move => {
 })
     .setDesc(formatString("Significantly reduces [a]all damage[r] taken by the user for the whole turn. [a]Repeated uses decrease the move's success rate.[r]\nThe maximum damage blocked per instance is equal to [a]70%[r] of the [a]incoming damage[r] plus the user's [a]DEF[r]/[a]Special DEF[r] for [a]Physical[r]/[a]Special[r] damage.\nFor [a]Status[r] damage, a fixed [a]50%[r] is blocked instead.")))
 
-moves.set("support_absorption", new Move("Support: Iron Dome Defense System", "status", 90, "status", 100).set(move => {
+moves.set("support_absorption", new Move("Iron Dome Defense System", "absorption", 90, "status", 100).set(move => {
     move.requiresMagic = 20
     move.supportTargetting = true
     move.maxEnhance = 4
@@ -643,7 +654,7 @@ function applyGachaEffect(b: Battle, p: Player, e: GachaBuff, inf?: Player) {
             break
     }
 }
-moves.set("support_gacha", new Move("Support: Gacha", "status", 0, "status").set(move => {
+moves.set("support_gacha", new Move("Support: Gacha", "status_buff", 0, "status").set(move => {
     move.requiresMagic = 5
     move.maxEnhance = 2
     move.unlockLevel = 40
@@ -758,7 +769,7 @@ moves.set("release", new Move("Counter: High Explosive Squash Head", "attack", 0
     }
 }).setDesc(formatString("Deals damage to [a]all enemies[r] on the target's team, adding up to [a]90%[r] of the damage blocked by [a]Protect[r] + [a]150%[r] of the damage taken in the previous turn.\nThis move [f]cannot[r] [a]CRIT[r].")))
 
-moves.set("regen", new Move("Regeneration", "status", 0, "status", 100).set(move => {
+moves.set("regen", new Move("Regeneration", "heal", 0, "status", 100).set(move => {
     move.requiresMagic = 20
     move.supportTargetting = true
     move.unlockLevel = 50
@@ -809,7 +820,7 @@ moves.set("heal", new Move("Heal", "heal", 40, "status", 100).set(move => {
         return (healDelta * 100) + (1 - t.hp / t.maxhp) * 50
     }
 }))
-moves.set("support_advance", new Move("Support: After Me", "status", 0, "status").set(move => {
+moves.set("support_advance", new Move("After Me", "status", 0, "status").set(move => {
     move.description = formatString("For the duration of the turn, makes the target's [a]Speed[r] equal to the user's.")
     move.unlockLevel = 20
     move.maxEnhance = 2
@@ -823,14 +834,14 @@ moves.set("support_advance", new Move("Support: After Me", "status", 0, "status"
     move.onUse = function (b, p, t, { enhance }) {
         let speedDelta = p.cstats.spd - t.cstats.spd
         t.addModifier("spd", {
-            label: "Support: After Me",
+            label: "After Me",
             expires: 1,
             type: "add",
             value: speedDelta + 1
         })
         if (enhance >= 2) {
             t.addModifier("crit", {
-                label: "Support: After Me (E2)",
+                label: "After Me (E2)",
                 expires: 1,
                 type: "add",
                 value: 20
@@ -841,7 +852,7 @@ moves.set("support_advance", new Move("Support: After Me", "status", 0, "status"
         }
     }
 }))
-moves.set("revive", new Move("Revive", "status", 100, "status").set(move => {
+moves.set("revive", new Move("Revive", "heal", 100, "status").set(move => {
     move.accuracy = 100
     move.priority = 1
     move.setDamage = "set"
@@ -904,7 +915,11 @@ moves.set("pingcheck", new Move("Pingcheck", "attack", 0, "special", 100).set(mo
 moves.set("sf_slap", new Move("SF Slap", "attack", 50).set(move => {
     move.selectable = false
 }).setDesc("Special move for the Slap Fight and Team Slap Fight battle types"))
-
+moves.sort((a, b) => {
+    let typeInfoA = moveTypeInfo[a.type]
+    let typeInfoB = moveTypeInfo[b.type]
+    return typeInfoA.listOrder - typeInfoB.listOrder
+})
 for (let [k, v] of moves) {
     v.id = k
 }

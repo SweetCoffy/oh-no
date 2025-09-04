@@ -1,15 +1,19 @@
 import { Command, commands } from '../../command-loader.js'
 import { getTempData, getUser } from '../../users.js';
-import { ActionRowBuilder, APIEmbedField, ApplicationCommandOptionChoiceData, ApplicationCommandOptionType, ApplicationCommandType, AutocompleteInteraction, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, codeBlock, Collection, StringSelectMenuBuilder, TextChannel } from 'discord.js';
-import { Move, moves } from '../../moves.js';
+import { ActionRowBuilder, ApplicationCommandOptionType, ApplicationCommandType, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, StringSelectMenuBuilder, TextChannel } from 'discord.js';
+import { Move, moves, moveTypeInfo } from '../../moves.js';
 import { getString } from '../../locale.js';
 import { items } from '../../helditem.js';
 import { abilities } from '../../abilities.js';
-import { collectionAutocomplete, formatString, playerSelectorComponent, snapTo } from '../../util.js';
+import { ansiRespectPrefs, collectionAutocomplete, formatString, playerSelectorComponent, snapTo } from '../../util.js';
 import { ffrac, dispDelta } from '../../number-format.js';
 function moveDescription(move: Move, enhance: number = 1) {
+    let typeInfo = moveTypeInfo[move.type]
     //@ts-ignore
-    let desc = formatString(`Enhancement Level: [a]${enhance}[r] — [a]${"✦".repeat(enhance)}[r][u]${"✧".repeat(move.maxEnhance - enhance)}[r]\nAccuracy: [a]${ffrac(move.accuracy / 100)}[r]\nCategory: [a]${getString("move.category." + move.category)}[r]`)
+    let desc = formatString(`Enhancement Level: [a]${enhance}[r] — [a]${"✦".repeat(enhance)}[u]${"✧".repeat(move.maxEnhance - enhance)}[r]` +
+        `\nAccuracy: [a]${ffrac(move.accuracy / 100)}[r]\n` +
+        `Category: [a]${getString("move.category." + move.category)}[r]\n` +
+        `Class: [a]${typeInfo.name}[r]`)
     if (move.type == "attack") {
         //@ts-ignore
         desc += formatString(`\nDamage Type: [a]${getString("move.dmgtype." + move.setDamage)}[r]`)
@@ -139,6 +143,7 @@ export let command: Command = {
         }
     ],
     async interaction(i) {
+        let u = getUser(i.user)
         if (i.isButton()) {
             if (i.customId.startsWith("choose:h/")) {
                 let splits = i.customId.split("/")
@@ -155,13 +160,12 @@ export let command: Command = {
                 return await i.update({
                     components: component, embeds: [{
                         title: `${moveInfo.name}`,
-                        description: codeBlock("ansi", moveDescription(moveInfo, e)),
+                        description: ansiRespectPrefs(moveDescription(moveInfo, e), u),
                         //footer: move.maxEnhance > 1 ? { text: "Use the buttons below to view different Enhancement Levels." } : undefined
                     }]
                 })
             }
         }
-        let u = getUser(i.user)
         let battle = u.lobby?.battle
         if (!battle)
             return await i.reply({ flags: ["Ephemeral"], content: "What are you even doing." })
@@ -178,18 +182,40 @@ export let command: Command = {
         player = first
         let moveset = player.moveset
         function moveSelectorComponent(moveset: string[]) {
+            let sorted = [...moveset].sort((a, b) => {
+                let typeInfoA = moveTypeInfo[moves.get(a)!.type]
+                let typeInfoB = moveTypeInfo[moves.get(b)!.type]
+                return typeInfoA.listOrder - typeInfoB.listOrder
+            })
             return new ActionRowBuilder<StringSelectMenuBuilder>()
                 .setComponents(new StringSelectMenuBuilder()
                     .setCustomId("choose:move")
                     .setMaxValues(1)
                     .setMinValues(1)
                     .setPlaceholder("Select a move.")
-                    .setOptions(moveset.map(k => {
-                        let info = moves.get(k)
+                    .setOptions(sorted.map(k => {
+                        let info = moves.get(k)!
+                        let typeInfo = moveTypeInfo[info.type]
+                        let warnStr = ""
+                        let enhance = player!.getEnhanceLevel(k)
+                        if (info.requiresMagic || info.requiresCharge) {
+                            warnStr += " — "
+                            let warns: string[] = []
+                            if (info.requiresCharge) {
+                                warns.push((player!.charge < info.requiresCharge ? "⚠️ " : "") +
+                                    `${player!.charge}/${info.requiresCharge} 🔴`)
+                            }
+                            if (info.requiresMagic) {
+                                warns.push((player!.magic < info.requiresMagic ? "⚠️ " : "") +
+                                    `${player!.magic}/${info.requiresMagic} 🔵`)
+                            }
+                            warnStr += warns.join(" — ")
+                        }
                         return {
                             label: info?.name ?? "????",
                             value: k,
-                            description: k,
+                            description: typeInfo.name + warnStr + " — " + "✦".repeat(enhance),
+                            emoji: typeInfo.emoji,
                         }
                     })))
         }
@@ -198,8 +224,8 @@ export let command: Command = {
             if (i.customId == "choose:open_selector") {
                 tmp.move = null
                 return await i.reply({
-                    flags: ["Ephemeral"], 
-                    content: mSelectorString, 
+                    flags: ["Ephemeral"],
+                    content: mSelectorString,
                     components: [moveSelectorComponent(moveset)]
                 })
             }
@@ -218,12 +244,12 @@ export let command: Command = {
                 })
                 return await i.reply({
                     flags: ["Ephemeral"],
-                    content: codeBlock("ansi", moveDescription(info, player.getEnhanceLevel(tmp.move)))
+                    content: ansiRespectPrefs(moveDescription(info, player.getEnhanceLevel(tmp.move)), u)
                 })
             }
         }
         if (i.isStringSelectMenu()) {
-            
+
             if (i.customId == "choose:move") {
                 tmp.move = i.values[0]
                 let moveInfo = moves.get(tmp.move)
@@ -380,7 +406,7 @@ export let command: Command = {
                         flags: ["Ephemeral"],
                         embeds: [{
                             title: `${move.name}`,
-                            description: codeBlock("ansi", moveDescription(move)),
+                            description: ansiRespectPrefs(moveDescription(move), u),
                             //footer: move.maxEnhance > 1 ? { text: "Use the buttons below to view different Enhancement Levels." } : undefined
                         }],
                         components
@@ -394,7 +420,8 @@ export let command: Command = {
                 await i.reply({
                     embeds: [{
                         title: `${item.icon || "❓"} ${item.name}`,
-                        description: codeBlock("ansi", `Item ID: ${i.options.getString("item", true)}\n${item.passiveEffect || "N/A"}`)
+                        description:
+                            ansiRespectPrefs(`Item ID: ${i.options.getString("item", true)}\n${item.passiveEffect || "N/A"}`, u)
                     }]
                 })
                 break;
@@ -405,7 +432,8 @@ export let command: Command = {
                 await i.reply({
                     embeds: [{
                         title: `${ability.name}`,
-                        description: codeBlock("ansi", `BSP ${dispDelta(-ability.cost)}\n Ability ID: ${i.options.getString("ability", true)}\n${ability.description}`)
+                        description:
+                            ansiRespectPrefs(`BSP ${dispDelta(-ability.cost)}\n Ability ID: ${i.options.getString("ability", true)}\n${ability.description}`, u)
                     }]
                 })
                 break;
