@@ -1658,6 +1658,15 @@ export class Battle extends EventEmitter {
             } catch (er) {
                 console.error(er)
             }
+            for (let k in a.player.statStages) {
+                let stat = k as StatID
+                let v = a.player.statStages[stat]
+                if (v == 0) continue
+                let decay = 0.25 + Math.floor(Math.abs(v / 2))*0.25
+                let delta = Math.min(Math.max(-v, -decay), decay)
+                a.player.statStages[stat] = v + delta
+            }
+            a.player.updateStatStages()
         }
         while (this.actions.length > 0) {
             this.actions.pop()

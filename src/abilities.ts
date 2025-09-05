@@ -1,4 +1,7 @@
 import { Collection } from "discord.js";
+
+export const abilities: Collection<string, Ability<any>> = new Collection();
+
 import { AbsorptionModWithID, Battle, isDamageDirect, Player, StatModifierWithID, TakeDamageOptions } from "./battle.js";
 import { DescriptionBuilder } from "./battle-description.js";
 import { formatString, lerp } from "./util.js";
@@ -39,7 +42,6 @@ export class Ability<Data extends {} = {}> {
     }
 }
 
-export const abilities: Collection<string, Ability<any>> = new Collection();
 
 let hardening = Ability.add("hardening", new Ability<{
     mod: AbsorptionModWithID

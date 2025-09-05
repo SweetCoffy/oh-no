@@ -8,7 +8,7 @@ type HuntSpecial = {
     moveset: MoveID[],
     bossesDefeated: string[],
 }
-type PrefSpecial = {
+export type PrefSpecial = {
     preferMarkdown: boolean
 }
 export const huntData = 
@@ -20,7 +20,7 @@ export const huntData =
     })
 export const prefData = 
     new UserSpecialData<PrefSpecial>("pref", {
-        preferMarkdown: true
+        preferMarkdown: false
     })
 
 queueMicrotask(() => {

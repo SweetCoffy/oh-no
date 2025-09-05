@@ -21,34 +21,36 @@ function playerInfoString(player: Player, details: boolean, refPlayer?: Player) 
     function statsString() {
         let alwaysShow: string[] = ["hp", "atk", "def", "spatk", "spdef", "spd", "crit"]
         return Object.keys(player.modifiers)
-        //@ts-ignore
-        .filter(el => alwaysShow.includes(el) || player.stats[el] != player.cstats[el])
-        .map(el => {
-            let stat = el as ExtendedStatID
-            let mds = player.modifiers[stat]
-            let extra = ""
-            if (stat == "def" || stat == "spdef") {
-                let refLvl = player.level
-                if (refPlayer) {
-                    refLvl = refPlayer.level
+            //@ts-ignore
+            .filter(el => alwaysShow.includes(el) || player.stats[el] != player.cstats[el])
+            .map(el => {
+                let stat = el as ExtendedStatID
+                let mds = player.modifiers[stat]
+                let extra = ""
+                if (stat == "def" || stat == "spdef") {
+                    let refLvl = player.level
+                    if (refPlayer) {
+                        refLvl = refPlayer.level
+                    }
+                    let mult = getDamageDEFMul(finalStats[stat], refLvl)
+                    let dr = 1 - mult
+                    extra = ` (${ffrac(dr)} effective DR)`
                 }
-                let mult = getDamageDEFMul(finalStats[stat], refLvl)
-                let dr = 1 - mult
-                extra = ` (${ffrac(dr)} effective DR)`
-            }
-            return formatString(`[a]${getString("stat." + stat).padEnd(12, " ")}[r] [a]${fstat(player.stats[stat], stat)}[r] -> ${modStatDisp(player.stats[stat], finalStats[stat], true, stat)}${extra}`
-                + (details ? `\n${mds.filter(el => !el.disabled)
-                    .map(el => {
-                        return `· ${el.label || "Unknown Modifier"}: ${dispMod(el)}`
-                    })
-                    .join("\n")}` : ``).trimEnd())
-        }).join("\n")
+                return formatString(`[a]${getString("stat." + stat).padEnd(12, " ")}[r] [a]${fstat(player.stats[stat], stat)}[r] -> ${modStatDisp(player.stats[stat], finalStats[stat], true, stat)}${extra}`
+                    + (details ? `\n${mds.filter(el => !el.disabled
+                        && !(el.type == "add" && el.value == 0)
+                        && !(el.type == "multiply" && el.value == 1))
+                        .map(el => {
+                            return `· ${el.label || "Unknown Modifier"}: ${dispMod(el)}`
+                        })
+                        .join("\n")}` : ``).trimEnd())
+            }).join("\n")
     }
     let absorption = player.getTotalAbsorption()
     return codeBlock("ansi",
-        `${player.name} Lv ${player.level}\n${barDelta(player.hp, player.prevHp, player.maxhp, 32)}|\n` + 
-        `${fnum(player.hp)}/${fnum(player.maxhp)}${absorption > 0 ? `\n🛡️${bar(absorption, player.maxhp, 20)}|\n${fnum(absorption)}\n` : ``}\n` + 
-        `CHG ${player.charge.toString().padStart(3, " ")} | MAG ${player.magic.toString().padStart(3, " ")}\n` + 
+        `${player.name} Lv ${player.level}\n${barDelta(player.hp, player.prevHp, player.maxhp, 32)}|\n` +
+        `${fnum(player.hp)}/${fnum(player.maxhp)}${absorption > 0 ? `\n🛡️${bar(absorption, player.maxhp, 20)}|\n${fnum(absorption)}\n` : ``}\n` +
+        `CHG ${player.charge.toString().padStart(3, " ")} | MAG ${player.magic.toString().padStart(3, " ")}\n` +
         `${player.status.map(el => {
             return `· ${statusTypes.get(el.type)?.name} — ⏳${el.turnsLeft.toString().padEnd(2, " ")}`
         }).join("\n") || "No status effects."}\n` +
@@ -101,7 +103,7 @@ export let command: Command = {
         let u = getUser(i.user)
         if (!u.lobby?.battle) return await i.respond([])
         let b = u.lobby.battle;
-        return await i.respond(b.players.map((el, i) => ({name: `#${i} ${el.name} (${Math.floor(el.hp / el.maxhp * 100)}%, Team ${teamNames[el.team]})`, value: i + ""})))
+        return await i.respond(b.players.map((el, i) => ({ name: `#${i} ${el.name} (${Math.floor(el.hp / el.maxhp * 100)}%, Team ${teamNames[el.team]})`, value: i + "" })))
     },
     async run(i: ChatInputCommandInteraction) {
         function findPlayerID(name: string) {

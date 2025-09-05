@@ -1,5 +1,5 @@
 import { UserInfo } from "./users"
-//import { Dictionary, settings } from "./util"
+import { settings } from "./util"
 //import type { Ability } from "./abilities"
 //import type { HeldItemType } from "./helditem"
 //import type { Move } from "./moves"
@@ -52,13 +52,14 @@ export function getBaseMp(info: UserInfo) {
     return getBaseMpForLevel(info.level)
 }
 queueMicrotask(async() => {
+    //const util = await import("./util")
     const moves = await import("./moves")
-    const abilities = await import("./abilities")
     const helditem = await import("./helditem")
-    const util = await import("./util")
-    unlockContent.moves = moves.moves
+    const abilities = await import("./abilities")
+    await Bun.sleep(100)
     unlockContent.abilities = abilities.abilities
+    unlockContent.moves = moves.moves
     unlockContent.items = helditem.items
-    maxMoves = util.settings.maxMoves
-    leftoverMp = util.settings.leftoverMp
+    maxMoves = settings.maxMoves
+    leftoverMp = settings.leftoverMp
 })

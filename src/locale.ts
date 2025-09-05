@@ -36,9 +36,3 @@ export function getString(key: string, obj: { [key: string]: any } | string[] = 
         return v + ""
     })
 }
-(async () => {
-    let util = await import("./util")
-    if (util.experimental.april_fools) {
-        replacer = (str) => util.owoSpecial(str)
-    }
-})()
