@@ -34,12 +34,12 @@ interface UserPref<K extends string, V extends number|string> {
 export const prefList: { [k in keyof PrefSpecial]: UserPref<string, number> } = {
     preferMarkdown: {
         name: "Prefer Markdown (experimental)",
-        description: "If enabled, the colored text in descriptions will be replaced by bold text whenever possible.",
+        description: "Disables fancy colored text and replaces it with markdown whenever possible. Recommended for mobile, where colors aren't rendered.",
         key: "preferMarkdown",
         default: 0,
         values: genValues({
-            "disabled": 0,
-            "enabled": 1,
+            "Off": 0,
+            "On": 1,
         })
     }
 }
