@@ -119,9 +119,9 @@ export const bruhOrbBoosts: {
     },
     "attack": {
         mult: {
-            atk: 1.2,
-            spatk: 1.2,
-            spd: 1.1,
+            atk: 1.1,
+            spatk: 1.1,
+            spd: 1.05,
             def: 0.7,
             spdef: 0.7,
         },
@@ -134,7 +134,7 @@ export const bruhOrbBoosts: {
         mult: {
             def: 0.7,
             spdef: 0.7,
-            spd: 1.5,
+            spd: 1.35,
         },
         add: {
             crit: 10
@@ -142,8 +142,8 @@ export const bruhOrbBoosts: {
     },
     "defense": {
         mult: {
-            def: 1.35,
-            spdef: 1.35,
+            def: 1.25,
+            spdef: 1.25,
             atk: 0.5,
             spatk: 0.5,
         },
@@ -153,11 +153,11 @@ export const bruhOrbBoosts: {
     },
     "hp": {
         mult: {
-            hp: 1.35,
-            def: 0.1,
-            spdef: 0.1,
-            atk: 0.9,
-            spatk: 0.9,
+            hp: 1.15,
+            def: 0.6,
+            spdef: 0.6,
+            atk: 0.8,
+            spatk: 0.8,
         },
         add: {}
     }

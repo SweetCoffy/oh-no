@@ -53,7 +53,7 @@ moves.set("summon_u", new Move("Summon: ú", "summon", 0, "status").set(move => 
     let baseChgRegen = 20
     move.specialEnhance = [2]
     move.onUse = (b, u, t, { enhance }) => {
-        let levelFrac = 0.6 + (enhance - 1) * 0.05
+        let levelFrac = 0.5 + (enhance - 1) * 0.05
         let s = utilSummon(b, u, "u", levelFrac, { ability: enhance >= 2 ? "u_exclusive" : undefined })
         if (s) {
             s.movesetEnhance.pingcheck = enhance
@@ -66,7 +66,7 @@ moves.set("summon_u", new Move("Summon: ú", "summon", 0, "status").set(move => 
     move.unlockLevel = 45
     move.getDescription = (el) => {
         let chg = baseChgRegen + (el - 2) * 5
-        let desc = summonDesc("u", 0.6 + (el - 1) * 0.05) +
+        let desc = summonDesc("u", 0.5 + (el - 1) * 0.05) +
         formatString(`\nú's exclusive move [a]Pingcheck[r] will match the [a]Enhancement Level[r] of its summoner's [a]Summon: ú[r].`)
         if (el >= 2) {
             desc += formatString(`\n${enhanceLevelDesc(2)}: ú gains its exclusive ability [a]Soul Conversion[r] and regenerates [a]${chg} Charge[r].`)

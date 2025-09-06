@@ -75,14 +75,7 @@ stat.chglimit: "CHG Limit"
 stat.maglimit: "MAG Limit"
 stat.chgbuildup: "CHG Buildup%"
 stat.magbuildup: "MAG Buildup%"
-
-#stat.dr: "DMG Reduction" # 1, too long
-stat.dr: "DR%"          # 2
-#stat.dr: "DMG Resist %"  # 3
-#stat.dr: "DMG RES %"     # 4
-#stat.dr: "RES %"         # 5
-#stat.dr: "Absolute DEF"  # 6, too long
-
+stat.dr: "DR%"
 stat.crit: "CRIT Rate%"
 stat.critdmg: "CRIT DMG%"
 stat.inheal: "In. Heal%"
