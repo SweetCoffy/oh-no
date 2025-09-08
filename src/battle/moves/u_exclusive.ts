@@ -33,7 +33,8 @@ moves.set("pingcheck", new Move("Pingcheck", "attack", 0, "special", 100).set(mo
         b.takeDamageO(t, pow, {
             atkLvl: u.level,
             defStat: "def",
-            type: "physical"
+            type: "physical",
+            inflictor: u
         })
         if (u.summoner) {
             u.movesetEnhance.pingcheck = enhance - 1

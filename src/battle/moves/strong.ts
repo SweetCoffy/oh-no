@@ -57,6 +57,7 @@ moves.set("boulder", new Move("Break: Tactical Homing Boulder", "attack", 130, "
     move.maxEnhance = 2
     move.critMul = 0
     move.unlockLevel = 40
+    move.atkTypeless = true
     move.getDescription = (el) => {
         let multstr = ffrac(move.getBasePower(el) / 100)
         return formatString(`Deals [a]defense-ignoring[r] damage equal to [a]${multstr}[r] of [a]ATK[r] + [a]${multstr}[r] of [a]Special ATK[r] and inflicts [a]Broken[r].\nThis move [a]cannot CRIT[r].`)

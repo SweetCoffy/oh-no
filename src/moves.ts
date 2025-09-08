@@ -75,6 +75,7 @@ export class Move {
      * `absorption` Increases the user's absorption by power %
      */
     type: MoveType = "attack"
+    atkTypeless: boolean = false
     /**
      * Whether or not to allow overhealing when `type` is set to `heal`
      */
@@ -238,6 +239,11 @@ export async function reloadMoves() {
         }
     }    
     moves.sort((a, b) => {
+        if (a.type == b.type) {
+            let costA = a.requiresCharge + a.requiresMagic
+            let costB = a.requiresCharge + a.requiresMagic
+            return costA - costB
+        }
         let typeInfoA = moveTypeInfo[a.type]
         let typeInfoB = moveTypeInfo[b.type]
         return typeInfoA.listOrder - typeInfoB.listOrder

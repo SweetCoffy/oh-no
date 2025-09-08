@@ -1,10 +1,11 @@
 import { ActionRowBuilder, APIActionRowComponent, ApplicationCommandType, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, ContainerBuilder, Message, SelectMenuBuilder, StringSelectMenuBuilder, TextDisplayBuilder, User } from "discord.js";
 import { Command } from "../../command-loader.js";
-import { moves } from "../../moves.js";
+import { moves, moveTypeInfo } from "../../moves.js";
 import { getUser } from "../../users.js";
 import { settings } from "../../util.js";
-import { dispDelta } from "../../number-format.js";
+import { dispDelta, ffrac } from "../../number-format.js";
 import { getAvailableContent, getBaseMp } from "../../unlocking.js";
+import { getString } from "../../locale.js";
 function getMpLeft(moveset: string[], enhance: number[], base: number) {
     let remMp = base - moveset.length
     for (let l of enhance) {
@@ -126,12 +127,14 @@ export let command: Command = {
                             options: moves
                             .filter((el, k) => el.selectable && unlocks.moves.has(k))
                             .map((v, k) => {
-
+                                let typeInfo = moveTypeInfo[v.type]
+                                let catName = getString("move.category." + v.category)
                                 return {
                                     value: k,
                                     label: v.name,
                                     default: moveset.includes(k),
-                                    description: `${k}`,
+                                    description: `${typeInfo.name} — ${v.atkTypeless ? "Typeless" : catName}${v.power ? (" — " + ffrac(v.power/100)) : ""}`,
+                                    emoji: typeInfo.emoji,
                                     //disabled: ""
                                 }
                             })
